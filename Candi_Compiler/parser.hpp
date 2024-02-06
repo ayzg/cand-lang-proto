@@ -354,6 +354,7 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveVar);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveFunc);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveClass);
+	caoco_PARSING_PROCESS_DEF(ParseDirectiveNone);
 
 	// Functional block statements
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); // <#return> <expr> <eos>
@@ -611,6 +612,9 @@ namespace caoco {
 			break;
 		case Tk::eType::alnumus:
 			return ParseAlnumusLiteral()(begin, end);
+			break;
+		case Tk::eType::none_literal_:
+			return ParseDirectiveNone()(begin,end);
 			break;
 		default:
 			return make_error(begin, *begin, "ParseLiteral: Invalid literal.");
@@ -887,6 +891,11 @@ namespace caoco {
 		node.push_back(class_definition.node());
 		return make_success(node, std::next(class_scope.scope_end(), 1));
 	}
+	caoco_PARSING_PROCESS_IMPL(ParseDirectiveNone) {
+		assert(begin->type() == Tk::eType::none_literal_ && "[LOGIC ERROR][ParseCsoValue] begin is not avalue_ token.");
+		return make_success({ Node::eType::none_literal_, begin, std::next(begin) });
+	}
+
 
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveReturn) {
 		TokenCursor cursor(begin, end);

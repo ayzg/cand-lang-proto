@@ -227,6 +227,7 @@ std::string token_type_to_string(caoco::Tk::eType type) {
 	case(caoco::Tk::eType::continue_): return "continue_";
 	case(caoco::Tk::eType::return_): return "return_";
 	case(caoco::Tk::eType::into_): return "into_";
+	case(caoco::Tk::eType::none_literal_): return "none_literal_";
 	default: return "This token type is not string-convertible. Please implement a string conversion for this token type in the token_type_to_string function in test.cpp.";
 	}
 }
@@ -249,10 +250,6 @@ std::ostream& operator<<(std::ostream& os, const char8_t * u8_cstr) {
 }
 
 using tk_etype = caoco::Tk::eType;
-struct expected_token {
-	caoco::Tk::eType type;
-	std::string literal;
-};
 
 #define caoco_CaocoTokenizer_Tokens 1
 
@@ -294,13 +291,14 @@ TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 	// Directives
 	// Functional
 	// #enter,#start,#type,#var,#class,#print,#func
-	test_single_token(u8"#enter\0", tk_etype::enter_, u8"#enter"); // error wrong tk type
+	test_single_token(u8"#enter\0", tk_etype::enter_, u8"#enter"); 
 	test_single_token(u8"#start\0", tk_etype::start_, u8"#start");
 	test_single_token(u8"#type\0", tk_etype::type_, u8"#type");
 	test_single_token(u8"#var\0", tk_etype::var_, u8"#var");
 	test_single_token(u8"#class\0", tk_etype::class_, u8"#class");
 	test_single_token(u8"#print\0", tk_etype::print_, u8"#print");
 	test_single_token(u8"#func\0", tk_etype::func_, u8"#func");
+	test_single_token(u8"#none\0", tk_etype::none_literal_, u8"#none"); 
 
 	// Modifiers
 	// #public,#const,#static,#ref,

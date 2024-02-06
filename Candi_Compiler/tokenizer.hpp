@@ -387,6 +387,7 @@ namespace caoco {
 			//		if_[#if] | else_[#else] | elif_[#elif] | while_[#while] | for_[#for] |
 			//		switch_[#switch] | case_[#case] | default_[#default] | break_[#break] |
 			//		continue_[#continue] | ret_[#return] | into_[#into] | print_[#print]
+			// 		func_[#func], none_literal_[#none]
 			if (find_forward(keyword_begin, u8"enter")) {
 				return make_result(Tk::eType::enter_, begin, it);
 			}
@@ -455,6 +456,9 @@ namespace caoco {
 			}
 			else if (find_forward(keyword_begin, u8"func")) {
 				return make_result(Tk::eType::func_, begin, it);
+			}
+			else if (find_forward(keyword_begin, u8"none")) {
+				return make_result(Tk::eType::none_literal_, begin, it);
 			}
 			else {
 				return make_invalid_result(begin, "Invalid directive keyword:" + std::string(begin,it));

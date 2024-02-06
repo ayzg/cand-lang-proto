@@ -24,6 +24,7 @@ namespace caoco {
 			string_literal_,
 			number_literal_,
 			real_literal_,
+			none_literal_,
 			alnumus_,
 
 			// . operator
