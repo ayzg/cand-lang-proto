@@ -1,0 +1,10 @@
+#var x = 0;
+
+#func foo {
+	#return 1;
+};
+
+#class Foo {
+	#var bar;
+	#func foobar {#return 1;};
+};

@@ -1,0 +1,5 @@
+() // Empty Scope
+(1) // Scope with 1 element
+((1)) // Double Scope
+(1 + (a) - (a+(abc+(a+a+a)))) // Complex scope
+(1 + (a) - (a+(abc+(a+a+a))) // Invalid scope
