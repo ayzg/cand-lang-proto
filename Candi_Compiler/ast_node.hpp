@@ -369,7 +369,7 @@ namespace caoco {
 			return debug_string;
 		}
 	};
-	//
+
 	const Node::traits_map_t Node::statement_traits{
 	{eType::alnumus_, {INT_MAX, eAssoc::none_, eOperation::none_}},
 	{eType::number_literal_, {INT_MAX, eAssoc::none_, eOperation::none_}},

@@ -99,8 +99,8 @@ namespace caoco {
 
 		// Returns character at the iterator + n, or EOF_CHAR if the iterator is anything but a valid iterator
 		constexpr char_t peek(char_vector::const_iterator it,int n){
-			auto peek_it = std::next(it,n);
-			return get(peek_it);
+			if(std::distance(it,end_) < n) return EOF_CHAR; // Out of bounds cant peek
+			return get(it + n);
 		}
 
 		// Searches forward for a complete match of characters. Starting from it, inclusive. Returns true if found, false otherwise.
@@ -388,7 +388,7 @@ namespace caoco {
 			//		switch_[#switch] | case_[#case] | default_[#default] | break_[#break] |
 			//		continue_[#continue] | ret_[#return] | into_[#into] | print_[#print]
 			if (find_forward(keyword_begin, u8"enter")) {
-				return make_result(Tk::eType::type_, begin, it);
+				return make_result(Tk::eType::enter_, begin, it);
 			}
 			else if (find_forward(keyword_begin, u8"start")) {
 				return make_result(Tk::eType::start_, begin, it);
@@ -585,12 +585,12 @@ namespace caoco {
 				}
 			}
 			else if (peek(it, 1) == '=') {
+				if (peek(it, 2) == '>') {
+					advance(it,3);
+					return make_result(Tk::eType::three_way_comparison, begin, it);
+				}
 				advance(it,2);
 				return make_result(Tk::eType::less_than_or_equal, begin, it);
-			}
-			else if (peek(it, 1) == '>') {
-				advance(it,2);
-				return make_result(Tk::eType::three_way_comparison, begin, it);
 			}
 			else {
 				advance(it);

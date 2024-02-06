@@ -13,7 +13,7 @@
 // Tokenizer Tests
 // dependencies: tokenizer.hpp
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
-auto token_type_to_string(caoco::Tk::eType type) {
+std::string token_type_to_string(caoco::Tk::eType type) {
 	/*
 			enum class eType : int {
 				// Abstract
@@ -231,8 +231,21 @@ auto token_type_to_string(caoco::Tk::eType type) {
 	}
 }
 
-auto token_to_string(const caoco::Tk& token) {
+std::string token_to_string(const caoco::Tk& token) {
 	return token_type_to_string(token.type()) + std::string(" : ") + caoco::to_std_string(token.literal());
+}
+
+// Workaround.
+// Google Test will not do check on caoco::string_t, so we need to define the << operator for char8_t
+std::ostream& operator<<(std::ostream& os, char8_t u8) {
+	os << u8;
+	return os;
+}
+
+// This is defined for printing direct u8 literals
+std::ostream& operator<<(std::ostream& os, const char8_t * u8_cstr) {
+	os << reinterpret_cast<const char*>(u8_cstr);
+	return os;
 }
 
 using tk_etype = caoco::Tk::eType;
@@ -243,542 +256,156 @@ struct expected_token {
 
 #define caoco_CaocoTokenizer_Tokens 1
 
+
+// Convert u8 string to a vector of char_8t
+auto u8str_to_u8vec(const char8_t* str) {
+	std::vector<caoco::char_t> vec;
+	for (int i = 0; str[i] != '\0'; i++) {
+		vec.push_back(str[i]);
+	}
+	return vec;
+}
+
+void test_single_token(const char8_t* input, tk_etype expected_type,caoco::string_t expected_literal) {
+	auto input_vec = u8str_to_u8vec(input);
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	EXPECT_EQ(result.size(), 1);
+	EXPECT_EQ(result.at(0).type(), expected_type);
+	EXPECT_EQ(result.at(0).literal(), expected_literal);
+	std::cout << "[Single token Test][" << input << "]" << token_to_string(result.at(0)) << std::endl;
+}
+
 #if caoco_CaocoTokenizer_Tokens
 TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 	// NOTE: the sanitized output will not contain comments/newlines/whitespace. As such there is a seperate test for those tokens.
-	auto source_file = caoco::load_source_file("ut0_CaocoTokenizer_Tokens.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-	
-	for(auto& token : result)
-		std::cout << "L:" << token.line() << ":" << token_to_string(token) << std::endl;
-	
-	// The tokens we expect to get from lexing the file.
-	/*
-		L:6:string_literal : 'kgfjhgjhgjkhgjk'
-		L:7:string_literal : 'oogabooga\'aaaaa'
-		L:8:number_literal : 1234
-		L:9:real_literal : 1234.5678
-		L:10:alnumus : thisisan_identifier
-		L:14:type_ : #enter
-		L:15:start_ : #start
-		L:16:type_ : #type
-		L:17:var_ : #var
-		L:18:class_ : #class
-		L:19:print_ : #print
-		L:20:func_ : #func
-		L:22:public_ : #public
-		L:23:const_ : #const
-		L:24:static_ : #static
-		L:25:ref_ : #ref
-		L:27:if_ : #if
-		L:28:else_ : #else
-		L:29:elif_ : #elif
-		L:30:while_ : #while
-		L:31:for_ : #for
-		L:32:switch_ : #switch
-		L:33:case_ : #case
-		L:34:default_ : #default
-		L:35:break_ : #break
-		L:36:continue_ : #continue
-		L:37:return_ : #return
-		L:38:into_ : #into
-		L:41:atype_ : &type
-		L:42:avalue_ : &value
-		L:43:aint_ : &int
-		L:43:open_frame : [
-		L:43:alnumus : RANGE
-		L:43:open_frame : [
-		L:43:subtraction : -
-		L:43:alnumus : inf
-		L:43:subtraction : -
-		L:43:alnumus : inf
-		L:43:close_frame : ]
-		L:43:close_frame : ]
-		L:44:auint_ : &uint
-		L:44:open_frame : [
-		L:44:alnumus : RANGE
-		L:44:open_frame : [
-		L:44:number_literal : 0
-		L:44:subtraction : -
-		L:44:alnumus : inf
-		L:44:close_frame : ]
-		L:44:close_frame : ]
-		L:45:areal_ : &real
-		L:45:open_frame : [
-		L:45:alnumus : RANGE
-		L:45:open_frame : [
-		L:45:subtraction : -
-		L:45:alnumus : inf
-		L:45:subtraction : -
-		L:45:alnumus : inf
-		L:45:close_frame : ]
-		L:45:close_frame : ]
-		L:46:aureal_ : &ureal
-		L:46:open_frame : [
-		L:46:alnumus : RANGE
-		L:46:open_frame : [
-		L:46:number_literal : 0
-		L:46:subtraction : -
-		L:46:alnumus : inf
-		L:46:close_frame : ]
-		L:46:close_frame : ]
-		L:47:aoctet_ : &octet
-		L:47:open_frame : [
-		L:47:alnumus : RANGE
-		L:47:open_frame : [
-		L:47:number_literal : 0
-		L:47:subtraction : -
-		L:47:number_literal : 255
-		L:47:close_frame : ]
-		L:47:close_frame : ]
-		L:48:abit_ : &bit
-		L:48:open_frame : [
-		L:48:alnumus : RANGE
-		L:48:open_frame : [
-		L:48:number_literal : 0
-		L:48:subtraction : -
-		L:48:number_literal : 1
-		L:48:close_frame : ]
-		L:48:close_frame : ]
-		L:49:aarray_ : &array
-		L:49:open_frame : [
-		L:49:atype_ : &type
-		L:49:comma : ,
-		L:49:auint_ : &uint
-		L:49:close_frame : ]
-		L:50:apointer_ : &pointer
-		L:50:open_frame : [
-		L:50:atype_ : &type
-		L:50:close_frame : ]
-		L:51:amemory_ : &memory
-		L:51:open_frame : [
-		L:51:atype_ : &type
-		L:51:comma : ,
-		L:51:auint_ : &uint
-		L:51:close_frame : ]
-		L:52:afunction_ : &function
-		L:55:alnumus : a
-		L:55:period : .
-		L:55:alnumus : b
-		L:56:alnumus : a
-		L:56:ellipsis : ...
-		L:56:alnumus : b
-		L:59:var_ : #var
-		L:59:alnumus : a
-		L:59:simple_assignment : =
-		L:59:alnumus : b
-		L:59:eos : ;
-		L:62:alnumus : a
-		L:62:simple_assignment : =
-		L:62:alnumus : b
-		L:63:alnumus : a
-		L:63:addition_assignment : +=
-		L:63:alnumus : b
-		L:64:alnumus : a
-		L:64:subtraction_assignment : -=
-		L:64:alnumus : b
-		L:65:alnumus : a
-		L:65:multiplication_assignment : *=
-		L:65:alnumus : b
-		L:66:alnumus : a
-		L:66:division_assignment : /=
-		L:66:alnumus : b
-		L:67:alnumus : a
-		L:67:remainder_assignment : %=
-		L:67:alnumus : b
-		L:68:alnumus : a
-		L:68:bitwise_and_assignment : &=
-		L:68:alnumus : b
-		L:69:alnumus : a
-		L:69:bitwise_or_assignment : |=
-		L:69:alnumus : b
-		L:70:alnumus : a
-		L:70:bitwise_xor_assignment : ^=
-		L:70:alnumus : b
-		L:71:alnumus : a
-		L:71:left_shift_assignment : <<=
-		L:71:alnumus : b
-		L:72:alnumus : a
-		L:72:right_shift_assignment : >>=
-		L:72:alnumus : b
-		L:73:increment : ++
-		L:73:alnumus : a
-		L:74:decrement : --
-		L:74:alnumus : a
-		L:75:alnumus : a
-		L:75:addition : +
-		L:75:alnumus : b
-		L:76:alnumus : a
-		L:76:subtraction : -
-		L:76:alnumus : b
-		L:77:alnumus : a
-		L:77:multiplication : *
-		L:77:alnumus : b
-		L:78:alnumus : a
-		L:78:division : /
-		L:78:alnumus : b
-		L:79:alnumus : a
-		L:79:remainder : %
-		L:79:alnumus : b
-		L:80:bitwise_NOT : ~
-		L:80:alnumus : a
-		L:81:alnumus : a
-		L:81:bitwise_AND : &
-		L:81:alnumus : b
-		L:82:alnumus : a
-		L:82:bitwise_OR : |
-		L:82:alnumus : b
-		L:83:alnumus : a
-		L:83:bitwise_XOR : ^
-		L:83:alnumus : b
-		L:84:alnumus : a
-		L:84:bitwise_left_shift : <<
-		L:84:alnumus : b
-		L:85:alnumus : a
-		L:85:bitwise_right_shift : >>
-		L:85:alnumus : b
-		L:86:negation : !
-		L:86:alnumus : a
-		L:87:alnumus : a
-		L:87:logical_AND : &&
-		L:87:alnumus : b
-		L:88:alnumus : a
-		L:88:logical_OR : ||
-		L:88:alnumus : b
-		L:89:alnumus : a
-		L:89:equal : ==
-		L:89:alnumus : b
-		L:90:alnumus : a
-		L:90:not_equal : !=
-		L:90:alnumus : b
-		L:91:alnumus : a
-		L:91:less_than : <
-		L:91:alnumus : b
-		L:92:alnumus : a
-		L:92:greater_than : >
-		L:92:alnumus : b
-		L:93:alnumus : a
-		L:93:less_than_or_equal : <=
-		L:93:alnumus : b
-		L:94:alnumus : a
-		L:94:greater_than_or_equal : >=
-		L:94:alnumus : b
-		L:95:alnumus : a
-		L:95:less_than_or_equal : <=
-		L:95:greater_than : >
-		L:95:alnumus : b
-		L:98:open_scope : (
-		L:98:alnumus : a
-		L:98:close_scope : )
-		L:99:open_frame : [
-		L:99:alnumus : b
-		L:99:close_frame : ]
-		L:100:open_list : {
-		L:100:alnumus : c
-		L:100:close_list : }
-		L:109:type_ : #enter
-		L:109:open_scope : (
-		L:109:close_scope : )
-		L:109:open_scope : (
-		L:109:close_scope : )
-		L:110:start_ : #start
-		L:110:open_scope : (
-		L:110:close_scope : )
-		L:110:open_scope : (
-		L:110:close_scope : )
-		L:113:type_ : #enter
-		L:113:open_scope : (
-		L:113:close_scope : )
-		L:113:open_scope : (
-		L:113:close_scope : )
-		L:114:start_ : #start
-		L:114:open_scope : (
-		L:114:close_scope : )
-		L:114:open_scope : (
-		L:116:print_ : #print
-		L:116:open_scope : (
-		L:116:string_literal : 'Hello, World!'
-		L:116:close_scope : )
-		L:117:close_scope : )
-		L:120:type_ : #enter
-		L:120:open_scope : (
-		L:120:close_scope : )
-		L:120:open_scope : (
-		L:122:print_ : #print
-		L:122:open_scope : (
-		L:122:string_literal : 'Hello, World!'
-		L:122:close_scope : )
-		L:123:close_scope : )
-		L:124:start_ : #start
-		L:124:open_scope : (
-		L:124:close_scope : )
-		L:124:open_scope : (
-		L:124:close_scope : )
-		L:125:eof :
-	*/
-	std::vector<expected_token> expected = {
-		expected_token(tk_etype::string_literal,"'kgfjhgjhgjkhgjk'"),
-		expected_token(tk_etype::string_literal,"'oogabooga\\\'aaaaa'"),
-		expected_token(tk_etype::number_literal,"1234"),
-		expected_token(tk_etype::real_literal,"1234.5678"),
-		expected_token(tk_etype::alnumus,"thisisan_identifier"),
-		expected_token(tk_etype::enter_,"#enter"),
-		expected_token(tk_etype::start_,"#start"),
-		expected_token(tk_etype::type_,"#type"),
-		expected_token(tk_etype::var_,"#var"),
-		expected_token(tk_etype::class_,"#class"),
-		expected_token(tk_etype::print_,"#print"),
-		expected_token(tk_etype::func_,"#func"),
-		expected_token(tk_etype::public_,"#public"),
-		expected_token(tk_etype::const_,"#const"),
-		expected_token(tk_etype::static_,"#static"),
-		expected_token(tk_etype::ref_,"#ref"),
-		expected_token(tk_etype::if_,"#if"),
-		expected_token(tk_etype::else_,"#else"),
-		expected_token(tk_etype::elif_,"#elif"),
-		expected_token(tk_etype::while_,"#while"),
-		expected_token(tk_etype::for_,"#for"),
-		expected_token(tk_etype::switch_,"#switch"),
-		expected_token(tk_etype::case_,"#case"),
-		expected_token(tk_etype::default_,"#default"),
-		expected_token(tk_etype::break_,"#break"),
-		expected_token(tk_etype::continue_,"#continue"),
-		expected_token(tk_etype::return_,"#return"),
-		expected_token(tk_etype::into_,"#into"),
-		expected_token(tk_etype::atype_,"&type"),
-		expected_token(tk_etype::avalue_,"&value"),
-		expected_token(tk_etype::aint_,"&int"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::auint_,"&uint"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::number_literal,"0"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::areal_,"&real"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::aureal_,"&ureal"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::number_literal,"0"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"inf"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::aoctet_,"&octet"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::number_literal,"0"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::number_literal,"255"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::abit_,"&bit"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"RANGE"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::number_literal,"0"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::number_literal,"1"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::aarray_,"&array"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::atype_,"&type"),
-		expected_token(tk_etype::comma,","),
-		expected_token(tk_etype::auint_,"&uint"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::apointer_,"&pointer"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::atype_,"&type"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::amemory_,"&memory"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::atype_,"&type"),
-		expected_token(tk_etype::comma,","),
-		expected_token(tk_etype::auint_,"&uint"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::afunction_,"&function"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::period,"."),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::ellipsis,"..."),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::var_,"#var"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::simple_assignment,"="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::eos,";"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::simple_assignment,"="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::addition_assignment,"+="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::subtraction_assignment,"-="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::multiplication_assignment,"*="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::division_assignment,"/="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::remainder_assignment,"%="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_and_assignment,"&="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_or_assignment,"|="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_xor_assignment,"^="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::left_shift_assignment,"<<="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::right_shift_assignment,">>="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::increment,"++"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::decrement,"--"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::addition,"+"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::subtraction,"-"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::multiplication,"*"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::division,"/"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::remainder,"%"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::bitwise_NOT,"~"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_AND,"&"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_OR,"|"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_XOR,"^"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_left_shift,"<<"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::bitwise_right_shift,">>"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::negation,"!"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::logical_AND,"&&"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::logical_OR,"||"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::equal,"=="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::not_equal,"!="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::less_than,"<"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::greater_than,">"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::less_than_or_equal,"<="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::greater_than_or_equal,">="),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::less_than_or_equal,"<="),
-		expected_token(tk_etype::greater_than,">"),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::alnumus,"a"),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_frame,"["),
-		expected_token(tk_etype::alnumus,"b"),
-		expected_token(tk_etype::close_frame,"]"),
-		expected_token(tk_etype::open_list,"{"),
-		expected_token(tk_etype::alnumus,"c"),
-		expected_token(tk_etype::close_list,"}"),
-		expected_token(tk_etype::enter_,"#enter"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::start_,"#start"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::enter_,"#enter"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::start_,"#start"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::print_,"#print"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::string_literal,"'Hello, World!'"),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::enter_,"#enter"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::start_,"#start"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::open_scope,"("),
-		expected_token(tk_etype::close_scope,")"),
-		expected_token(tk_etype::eof,"")
+
+	// Literals
+	// number
+	test_single_token(u8"1234\0", tk_etype::number_literal, u8"1234");
+	// real
+	test_single_token(u8"1234.5678\0", tk_etype::real_literal, u8"1234.5678");
+	// string 
+	test_single_token(u8"'hello world'\0", tk_etype::string_literal, u8"'hello world'");
+	// string with escape character '\''
+	test_single_token(u8"'hello \\' world'\0", tk_etype::string_literal, u8"'hello \\' world'");
+	// alnumus
+	test_single_token(u8"hello_world\0", tk_etype::alnumus, u8"hello_world");
+
+	// Directives
+	// Functional
+	// #enter,#start,#type,#var,#class,#print,#func
+	test_single_token(u8"#enter\0", tk_etype::enter_, u8"#enter"); // error wrong tk type
+	test_single_token(u8"#start\0", tk_etype::start_, u8"#start");
+	test_single_token(u8"#type\0", tk_etype::type_, u8"#type");
+	test_single_token(u8"#var\0", tk_etype::var_, u8"#var");
+	test_single_token(u8"#class\0", tk_etype::class_, u8"#class");
+	test_single_token(u8"#print\0", tk_etype::print_, u8"#print");
+	test_single_token(u8"#func\0", tk_etype::func_, u8"#func");
+
+	// Modifiers
+	// #public,#const,#static,#ref,
+	test_single_token(u8"#public\0", tk_etype::public_, u8"#public");
+	test_single_token(u8"#const\0", tk_etype::const_, u8"#const");
+	test_single_token(u8"#static\0", tk_etype::static_, u8"#static");
+	test_single_token(u8"#ref\0", tk_etype::ref_, u8"#ref");
+
+	// Control Flow
+	// #if,#else,#elif,#while,#for,#switch,#case,#default,#break,#continue,#return,#into
+	test_single_token(u8"#if\0", tk_etype::if_, u8"#if");
+	test_single_token(u8"#else\0", tk_etype::else_, u8"#else");
+	test_single_token(u8"#elif\0", tk_etype::elif_, u8"#elif");
+	test_single_token(u8"#while\0", tk_etype::while_, u8"#while");
+	test_single_token(u8"#for\0", tk_etype::for_, u8"#for");
+	test_single_token(u8"#switch\0", tk_etype::switch_, u8"#switch");
+	test_single_token(u8"#case\0", tk_etype::case_, u8"#case");
+	test_single_token(u8"#default\0", tk_etype::default_, u8"#default");
+	test_single_token(u8"#break\0", tk_etype::break_, u8"#break");
+	test_single_token(u8"#continue\0", tk_etype::continue_, u8"#continue");
+	test_single_token(u8"#return\0", tk_etype::return_, u8"#return");
+	test_single_token(u8"#into\0", tk_etype::into_, u8"#into");
+
+	// Assignment Operators
+	// =,+=,-=,*=,/=,%=,&=,|=,^=,<<=,>>=
+	test_single_token(u8"=\0", tk_etype::simple_assignment, u8"=");
+	test_single_token(u8"+=\0", tk_etype::addition_assignment, u8"+=");
+	test_single_token(u8"-=\0", tk_etype::subtraction_assignment, u8"-=");
+	test_single_token(u8"*=\0", tk_etype::multiplication_assignment, u8"*=");
+	test_single_token(u8"/=\0", tk_etype::division_assignment, u8"/=");
+	test_single_token(u8"%=\0", tk_etype::remainder_assignment, u8"%=");
+	test_single_token(u8"&=\0", tk_etype::bitwise_and_assignment, u8"&=");
+	test_single_token(u8"|=\0", tk_etype::bitwise_or_assignment, u8"|=");
+	test_single_token(u8"^=\0", tk_etype::bitwise_xor_assignment, u8"^=");
+	test_single_token(u8"<<=\0", tk_etype::left_shift_assignment, u8"<<=");
+	test_single_token(u8">>=\0", tk_etype::right_shift_assignment, u8">>=");
+
+	// Increment and Decrement Operators
+	// ++,--
+	test_single_token(u8"++\0", tk_etype::increment, u8"++");
+	test_single_token(u8"--\0", tk_etype::decrement, u8"--");
+
+	//// Arithmetic Operators
+	//// +,-,*,/,%,~,&,|,^,<<,>>
+	test_single_token(u8"+\0", tk_etype::addition, u8"+");
+	test_single_token(u8"-\0", tk_etype::subtraction, u8"-");
+	test_single_token(u8"*\0", tk_etype::multiplication, u8"*");
+	test_single_token(u8"/\0", tk_etype::division, u8"/");
+	test_single_token(u8"%\0", tk_etype::remainder, u8"%");
+	test_single_token(u8"~\0", tk_etype::bitwise_NOT, u8"~");
+	test_single_token(u8"&\0", tk_etype::bitwise_AND, u8"&");
+	test_single_token(u8"|\0", tk_etype::bitwise_OR, u8"|");
+	test_single_token(u8"^\0", tk_etype::bitwise_XOR, u8"^");
+	test_single_token(u8"<<\0", tk_etype::bitwise_left_shift, u8"<<");
+	test_single_token(u8">>\0", tk_etype::bitwise_right_shift, u8">>");
+
+	//// Logical Operators
+	//// !,&&,||
+	test_single_token(u8"!\0", tk_etype::negation, u8"!");
+	test_single_token(u8"&&\0", tk_etype::logical_AND, u8"&&");
+	test_single_token(u8"||\0", tk_etype::logical_OR, u8"||");
+
+	//// Comparison Operators
+	//// ==,!=,<,>,<=,>=,<=>
+	test_single_token(u8"==\0", tk_etype::equal, u8"==");
+	test_single_token(u8"!=\0", tk_etype::not_equal, u8"!=");
+	test_single_token(u8"<\0", tk_etype::less_than, u8"<");
+	test_single_token(u8">\0", tk_etype::greater_than, u8">");
+	test_single_token(u8"<=\0", tk_etype::less_than_or_equal, u8"<=");
+	test_single_token(u8">=\0", tk_etype::greater_than_or_equal, u8">=");
+	test_single_token(u8"<=>\0", tk_etype::three_way_comparison, u8"<=>"); 
+
+	//// Scopes
+	//// (,),{,},[,]
+	test_single_token(u8"(\0", tk_etype::open_scope, u8"(");
+	test_single_token(u8")\0", tk_etype::close_scope, u8")");
+	test_single_token(u8"{\0", tk_etype::open_list, u8"{");
+	test_single_token(u8"}\0", tk_etype::close_list, u8"}");
+	test_single_token(u8"[\0", tk_etype::open_frame, u8"[");
+	test_single_token(u8"]\0", tk_etype::close_frame, u8"]");
+
+	//// Special Tokens
+	//// ;,:,...
+	test_single_token(u8";\0", tk_etype::eos, u8";");
+	test_single_token(u8",\0", tk_etype::comma, u8",");
+	test_single_token(u8".\0", tk_etype::period, u8".");
+	test_single_token(u8"...\0", tk_etype::ellipsis, u8"...");
+
+	// Cand Special Objects
+	// &type, &identity, &value, &int, &uint, &real, &octet, &bit, &array, &pointer, &memory, &function
+	test_single_token(u8"&type\0", tk_etype::atype_, u8"&type");
+	test_single_token(u8"&identity\0", tk_etype::aidentity_, u8"&identity");
+	test_single_token(u8"&value\0", tk_etype::avalue_, u8"&value");
+	test_single_token(u8"&int\0", tk_etype::aint_, u8"&int");
+	test_single_token(u8"&uint\0", tk_etype::auint_, u8"&uint");
+	test_single_token(u8"&real\0", tk_etype::areal_, u8"&real");
+	test_single_token(u8"&ureal\0", tk_etype::aureal_, u8"&ureal");
+	test_single_token(u8"&octet\0", tk_etype::aoctet_, u8"&octet");
+	test_single_token(u8"&bit\0", tk_etype::abit_, u8"&bit");
+	test_single_token(u8"&array\0", tk_etype::aarray_, u8"&array");
+	test_single_token(u8"&pointer\0", tk_etype::apointer_, u8"&pointer");
+	test_single_token(u8"&memory\0", tk_etype::amemory_, u8"&memory");
+	test_single_token(u8"&function\0", tk_etype::afunction_, u8"&function");
+
 };
-
-
-	};
 #endif
 
 

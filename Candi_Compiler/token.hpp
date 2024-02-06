@@ -148,9 +148,10 @@ namespace caoco {
 		constexpr size_t line() const noexcept { return line_; }
 		constexpr size_t col() const noexcept { return col_; }
 
-		// WARNING: Trying to get the literal of a token that has no literal will result in a horrible SEH exception.
-		// WARNING: Attempting to check or dereference the end or begin of a token with no literal will result in an exception.
-		constexpr string_t literal() const { return string_t(beg_, end_); }
+		constexpr string_t literal() const {
+			// WARNING: Attempting to check or dereference the end or begin of a token with no literal will result in an exception.
+			return string_t(beg_, end_);
+		}
 
 
 		// <@brief> Token Type Check: True if the type of this token is equal to the passed token type.
