@@ -263,7 +263,6 @@ public:
 #define caoco_impl_env_eval_process(n) RTValue n::eval(const Node & node, rtenv& env)
 
 // All tokens in the AST hold caoco::string_t, whitch is a utf-8 encoded string
-// TODO: Move get_node_cstr into the Node class
 inline auto get_node_cstr(const Node & node) {
 	return to_std_string(node.to_string());
 }
@@ -302,10 +301,6 @@ caoco_def_env_eval_process(CExpressionEval);
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Processes Implementations
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
-/// !!!!!!!!!!!!! TODO: 
-//			- Implement bit literals in tokenizer,parser 0b,1b
-//			- Implement byte literals in tokenizer,parser 0B-255B also '_'B where _ is one of 255 chars
-//			- Implement #node directive in tokenizer,parser #none
 caoco_impl_eval_process(CNumberEval) {
 	return get_node_rtvalue(node, RTValue::NUMBER,
 		[](const std::string& literal) {

@@ -8,7 +8,6 @@
 //#include "transpiler.hpp"
 //#include "candi_main.hpp"
 
-//!!TODO: test for loading files, if file does not exist throw a clear exception
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Tokenizer Tests
