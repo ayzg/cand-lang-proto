@@ -393,7 +393,7 @@ namespace caoco {
 		assert(begin->type() == Tk::eType::aidentity_ && "[LOGIC ERROR][ParseCsoIdentity] begin is not aid_ token.");
 		return make_success({ Node::eType::aidentity_, begin, std::next(begin) });
 	}
-	// !FIXME! In the tokenizer, when a number literal is found beside an ellipsis it becomes a real literal because of the following '.'
+
 	caoco_PARSING_PROCESS_IMPL(ParseCsoInt) {
 		assert(begin->type() == tk_enum::aint_ && "[LOGIC ERROR][ParseCsoInt] begin is not aint_ token.");
 		TokenCursor it(begin, end);

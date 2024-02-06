@@ -191,7 +191,6 @@ namespace caoco {
 					std::stringstream char_error;
 					char_error << " Unrecognized character : '" << static_cast<char>(get(it)) << "'\n";
 					// Stop lexing and throw. 
-					// TODO: change so that entire tokenize may be constexpr. Simply stop lex. Return error code.
 					throw LexError(current_line, current_col, char_error.str());
 				}
 			}
@@ -228,7 +227,6 @@ namespace caoco {
 			end_ = end;
 		};
 		vector<Tk> operator()(){
-			// TODO: Perform more thorough input validation.
 			// Check for empty input
 			if (beg_ == end_) {
 				return vector<Tk>();
