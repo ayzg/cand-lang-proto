@@ -105,6 +105,7 @@ namespace caoco {
 			class_, // #class
 			func_, // #func
 			print_, // #print
+			none_literal_, // #none
 
 			// Modifier Tokens
 			public_, // #public
