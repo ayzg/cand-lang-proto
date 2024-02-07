@@ -288,7 +288,14 @@ namespace caoco {
 				advance(it);
 			}
 			advance(it);
-			return  make_result(Tk::eType::string_literal, begin, it);
+
+			// Check for octet literal
+			if (get(it) == 'c') {
+				advance(it);
+				return  make_result(Tk::eType::octet_literal, begin, it);
+			}
+			else
+				return make_result(Tk::eType::string_literal, begin, it);
 		}
 		else {
 			return  make_none_result(begin);
@@ -339,8 +346,30 @@ namespace caoco {
 	constexpr tokenizer::lex_result tokenizer::lex_number(char_vector::const_iterator it) {
 		auto begin = it;
 		if (char_traits::is_numeric(get(it))) {
+			//Special case for 1b and 0b
+			if(get(it) == '1' && peek(it,1) == 'b'){
+				advance(it,2);
+				return make_result(Tk::eType::bit_literal, begin, it);
+			}
+			else if(get(it) == '0' && peek(it,1) == 'b'){
+				advance(it,2);
+				return make_result(Tk::eType::bit_literal, begin, it);
+			}
+
 			while (char_traits::is_numeric(get(it))) {
 				advance(it);
+			}
+
+			// Special case for unsigned literal (overflow is handled by the parser)
+			if (get(it) == 'u') {
+				advance(it);
+				return make_result(Tk::eType::unsigned_literal, begin, it);
+			}
+
+			// Special case for octet literal(overflow is handled by the parser)
+			if (get(it) == 'c') {
+				advance(it);
+				return make_result(Tk::eType::octet_literal, begin, it);
 			}
 
 			// If number is followed by elipsis. Return the number.
