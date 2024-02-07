@@ -228,6 +228,9 @@ std::string token_type_to_string(caoco::Tk::eType type) {
 	case(caoco::Tk::eType::return_): return "return_";
 	case(caoco::Tk::eType::into_): return "into_";
 	case(caoco::Tk::eType::none_literal_): return "none_literal_";
+	case(caoco::Tk::eType::bit_literal): return "bit_literal";
+	case(caoco::Tk::eType::octet_literal): return "octet_literal";
+	case(caoco::Tk::eType::unsigned_literal): return "unsigned_literal";
 	default: return "This token type is not string-convertible. Please implement a string conversion for this token type in the token_type_to_string function in test.cpp.";
 	}
 }
@@ -252,7 +255,7 @@ std::ostream& operator<<(std::ostream& os, const char8_t * u8_cstr) {
 using tk_etype = caoco::Tk::eType;
 
 #define caoco_CaocoTokenizer_Tokens 1
-
+#define caoco_CaocoTokenizer_NumberAndReal 1
 
 // Convert u8 string to a vector of char_8t
 auto u8str_to_u8vec(const char8_t* str) {
@@ -287,6 +290,19 @@ TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 	test_single_token(u8"'hello \\' world'\0", tk_etype::string_literal, u8"'hello \\' world'");
 	// alnumus
 	test_single_token(u8"hello_world\0", tk_etype::alnumus, u8"hello_world");
+	// unsigned literal u
+	test_single_token(u8"1234u\0", tk_etype::unsigned_literal, u8"1234u");
+	// bit literal 0b 1b
+	test_single_token(u8"0b\0", tk_etype::bit_literal, u8"0b");
+	test_single_token(u8"1b\0", tk_etype::bit_literal, u8"1b");
+	// octet literal 0c 255c
+	test_single_token(u8"0c\0", tk_etype::octet_literal, u8"0c");
+	test_single_token(u8"255c\0", tk_etype::octet_literal, u8"255c");
+
+	// octet literal 'a'c
+	test_single_token(u8"'a'c\0", tk_etype::octet_literal, u8"'a'c");
+	// octet literal '\''c
+	test_single_token(u8"'\\''c\0", tk_etype::octet_literal, u8"'\\''c");
 
 	// Directives
 	// Functional
@@ -404,6 +420,22 @@ TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 	test_single_token(u8"&function\0", tk_etype::afunction_, u8"&function");
 
 };
+#endif
+
+#if caoco_CaocoTokenizer_NumberAndReal
+TEST(CaocoTokenizer_Test, CaocoTokenizer_NumberAndReal) {
+	// Specific test for a number followed by an ellipsis
+
+	auto input_vec = u8str_to_u8vec(u8"1234...\0");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+
+	EXPECT_EQ(result.size(), 2);
+	EXPECT_EQ(result.at(0).type(), tk_etype::number_literal);
+	EXPECT_EQ(result.at(0).literal(), caoco::string_t(u8"1234"));
+	EXPECT_EQ(result.at(1).type(), tk_etype::ellipsis);
+	EXPECT_EQ(result.at(1).literal(), caoco::string_t(u8"..."));
+
+}
 #endif
 
 
