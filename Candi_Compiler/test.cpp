@@ -197,7 +197,7 @@ std::string token_type_to_string(caoco::Tk::eType type) {
 	case(caoco::Tk::eType::aint_): return "aint_";
 	case(caoco::Tk::eType::auint_): return "auint_";
 	case(caoco::Tk::eType::areal_): return "areal_";
-	case(caoco::Tk::eType::aureal_): return "aureal_";
+	//case(caoco::Tk::eType::aureal_): return "aureal_";
 	case(caoco::Tk::eType::aoctet_): return "aoctet_";
 	case(caoco::Tk::eType::abit_): return "abit_";
 	case(caoco::Tk::eType::aarray_): return "aarray_";
@@ -395,7 +395,7 @@ TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 	test_single_token(u8"&int\0", tk_etype::aint_, u8"&int");
 	test_single_token(u8"&uint\0", tk_etype::auint_, u8"&uint");
 	test_single_token(u8"&real\0", tk_etype::areal_, u8"&real");
-	test_single_token(u8"&ureal\0", tk_etype::aureal_, u8"&ureal");
+	//test_single_token(u8"&ureal\0", tk_etype::aureal_, u8"&ureal");
 	test_single_token(u8"&octet\0", tk_etype::aoctet_, u8"&octet");
 	test_single_token(u8"&bit\0", tk_etype::abit_, u8"&bit");
 	test_single_token(u8"&array\0", tk_etype::aarray_, u8"&array");
