@@ -89,7 +89,7 @@ namespace caoco {
 			aint_, // &int[RANGE[-inf-inf]]
 			auint_, // &uint[RANGE[0...inf]]
 			areal_, // &real[RANGE[-inf...inf]]
-			aureal_, // &ureal[RANGE[0...inf]]
+			//aureal_, // &ureal[RANGE[0...inf]]
 			aoctet_, // &octet[RANGE[0...255]]
 			abit_, // &bit[RANGE[0...1]]
 			aarray_, // &array[T,Size] // T is a type

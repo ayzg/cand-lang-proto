@@ -343,6 +343,12 @@ namespace caoco {
 				advance(it);
 			}
 
+			// If number is followed by elipsis. Return the number.
+			if(find_forward(it,u8"...")){
+				return make_result(Tk::eType::number_literal, begin, it);
+			}
+
+			// Else process a floating literal.
 			if (get(it) == '.') {
 				advance(it);
 				while (char_traits::is_numeric(get(it))) {
@@ -721,9 +727,9 @@ namespace caoco {
 			else if (find_forward(keyword_begin, u8"real")) {
 				return make_result(Tk::eType::areal_, begin, it);
 			}
-			else if (find_forward(keyword_begin, u8"ureal")) {
-				return make_result(Tk::eType::aureal_, begin, it);
-			}
+			//else if (find_forward(keyword_begin, u8"ureal")) {
+			//	return make_result(Tk::eType::aureal_, begin, it);
+			//}
 			else if (find_forward(keyword_begin, u8"octet")) {
 				return make_result(Tk::eType::aoctet_, begin, it);
 			}

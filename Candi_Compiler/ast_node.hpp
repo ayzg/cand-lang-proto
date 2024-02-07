@@ -81,7 +81,7 @@ namespace caoco {
 			aint_, // &int[RANGE[-inf-inf]]
 			auint_, // &uint[RANGE[0...inf]]
 			areal_, // &real[RANGE[-inf...inf]]
-			aureal_, // &ureal[RANGE[0...inf]]
+			//aureal_, // &ureal[RANGE[0...inf]]
 			aoctet_, // &octet[RANGE[0...255]]
 			abit_, // &bit[RANGE[0...1]]
 			aarray_, // &array[T,Size] // T is a type
@@ -310,7 +310,7 @@ namespace caoco {
 				case eType::aint_: debug_string += "aint_"; break;
 				case eType::auint_: debug_string += "auint_"; break;
 				case eType::areal_: debug_string += "areal_"; break;
-				case eType::aureal_: debug_string += "aureal_"; break;
+				//case eType::aureal_: debug_string += "aureal_"; break;
 				case eType::aoctet_: debug_string += "aoctet_"; break;
 				case eType::abit_: debug_string += "abit_"; break;
 				case eType::aarray_: debug_string += "aarray_"; break;
@@ -414,7 +414,7 @@ namespace caoco {
 	{eType::aint_, {14000, eAssoc::right_, eOperation::unary_}},
 	{eType::auint_, {14000, eAssoc::right_, eOperation::unary_}},
 	{eType::areal_, {14000, eAssoc::right_, eOperation::unary_}},
-	{eType::aureal_, {14000, eAssoc::right_, eOperation::unary_}},
+	//{eType::aureal_, {14000, eAssoc::right_, eOperation::unary_}},
 	{eType::aoctet_, {14000, eAssoc::right_, eOperation::unary_}},
 	{eType::abit_, {14000, eAssoc::right_, eOperation::unary_}},
 	{eType::aarray_, {14000, eAssoc::right_, eOperation::unary_}},
