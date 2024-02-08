@@ -85,5 +85,8 @@
     <None Include="constant_evaluator_unit_test_0_operators.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
+    <None Include="constant_evaluator_unit_test_0_variable_declaration.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>
