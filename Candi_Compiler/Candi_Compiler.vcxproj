@@ -122,6 +122,7 @@
   <ItemGroup>
     <None Include="constant_evaluator_unit_test_0_literals.candi" />
     <None Include="constant_evaluator_unit_test_0_operators.candi" />
+    <None Include="constant_evaluator_unit_test_0_structs.candi" />
     <None Include="constant_evaluator_unit_test_0_variable_declaration.candi" />
     <None Include="lexer_test.candi" />
     <None Include="packages.config" />
