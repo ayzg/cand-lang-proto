@@ -1,13 +1,23 @@
 #include "ast_node.hpp"
 #include "parser.hpp"
+#include <functional>
 #include <variant>
 #include <list>
 #include <map>
+#include <memory>
 
 namespace caoco {
-
+class object_t;
+struct RTValue;
+class rtenv;
 struct none_t {
 	bool operator==(const none_t&) const {
+		return true;
+	}
+};
+
+struct undefined_t {
+	bool operator==(const undefined_t&) const {
 		return true;
 	}
 };
@@ -30,9 +40,10 @@ struct RTValue {
 		OCTET = 4,
 		NONE = 5,
 		UNSIGNED = 6,
+		OBJECT = 7
 	} type;
 
-	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned> value;
+	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>> value;
 
 RTValue() : type(NONE), value(none_t{}) {}
 
@@ -62,6 +73,8 @@ RTValue& operator=(const RTValue& other) {
 }
 
 };
+
+
 
 class rtenv {
 	using string_t = std::string;
@@ -140,10 +153,10 @@ class rtenv {
 		}
 	};
 
-	std::string name_;
+	std::string name_{};
 	rtenv* parent_{nullptr};
-	std::list<rtenv> children_;
-	variable_map_t variables_;
+	std::list<rtenv> children_{};
+	variable_map_t variables_{};
 
 
 	variable_map_iterator_t vari_end() {
@@ -181,6 +194,12 @@ class rtenv {
 	// Local Environment Operations
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
 	
+	// <method:add_subenv> Add a sub environment to the current environment
+	rtenv& add_subenv(const std::string& name) {
+		children_.emplace_back(name, *this);
+		return children_.back();
+	}
+
 	// <@method:create_variable> Create a variable in the current environment
 	local_variable_process_result create_variable(const std::string& name, const RTValue& value) {
 		// local vars will shadow parent vars
@@ -248,6 +267,63 @@ class rtenv {
 
 };
 
+// The C& class object type.
+class object_t {
+	std::string name_;
+	rtenv& scope_;
+
+	std::map<std::string, RTValue> members_;
+public:
+	object_t(const std::string& name,rtenv& scope) : name_(name), scope_(scope) {}
+
+	object_t(const object_t& other) : scope_(other.scope_) {
+		name_ = other.name_;
+		members_ = other.members_;
+		scope_ = other.scope_;
+	}
+
+	object_t(object_t&& other) : scope_(other.scope_) {
+		name_ = std::move(other.name_);
+		members_ = std::move(other.members_);
+		scope_ = std::move(other.scope_);
+	}
+
+	object_t& operator=(const object_t& other) {
+		name_ = other.name_;
+		members_ = other.members_;
+		scope_ = other.scope_;
+		return *this;
+	}
+
+	object_t& operator=(object_t&& other) {
+		name_ = std::move(other.name_);
+		members_ = std::move(other.members_);
+		scope_ = std::move(other.scope_);
+		return *this;
+	}
+
+	RTValue& get_member(std::string name) {
+		return scope_.get_variable(name).value();
+	};
+
+	//auto& add_member(const std::string& name, const RTValue& value) {
+	//	auto inserted = members_.insert({ name, value });
+	//	return inserted.first;
+	//}
+
+	const auto& name() const {
+		return name_;
+	}
+
+	auto& scope() {
+		return scope_;
+	}
+
+	auto& set_scope(rtenv& scope) {
+		scope_ = scope;
+		return scope;
+	}
+};
 
 struct EnvEvalProcess {
 	virtual RTValue eval(const Node & node, rtenv& env) = 0;
@@ -307,6 +383,8 @@ caoco_def_env_eval_process(CBinopEval); // Dispatches to binary ops
 
 
 caoco_def_env_eval_process(CVarDeclEval); // anon var decl <#var><alnumus><=><expression><;> (for now)
+caoco_def_env_eval_process(CClassDeclEval); // class decl <#class><alnumus><{><...><}>
+
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Processes Implementations
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -787,7 +865,6 @@ caoco_impl_env_eval_process(CBinopEval) {
 
 }
 
-
 caoco_impl_env_eval_process(CVarDeclEval) {
 	auto var_name = get_node_cstr(node.body().front());
 
@@ -803,8 +880,29 @@ caoco_impl_env_eval_process(CVarDeclEval) {
 
 	// Create the variable
 
-	auto created_var = env.create_variable(var_name, std::move(new_value));
+	auto created_var = env.create_variable(var_name, new_value);
 
 	return created_var.value(); // return ref to the created variable
 }
+
+caoco_impl_env_eval_process(CClassDeclEval) {
+	/* Format of incoming node:
+		<class_definition>
+			-> <alnumus> The name of the class
+			-> <pragmatic_block_> The body of the class
+				-> ...statements...
+	*/
+	auto class_name = get_node_cstr(node.body().front());
+	auto new_class = std::make_shared<object_t>(object_t(class_name, env.add_subenv(class_name)));
+	auto created_class = env.create_variable(class_name, RTValue(RTValue::OBJECT, new_class));
+
+	// Process the class body
+	for (auto& statement : node.body().back().body()) {
+		// only anonvardeclfor now
+		CVarDeclEval{}(statement, new_class->scope());
+	}
+
+	return created_class.value(); // return ref to the created class
+}
+
 }; // namespace caoco

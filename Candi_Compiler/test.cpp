@@ -812,6 +812,7 @@ TEST(CaocoParser_Test, CaocoParser_MinimumProgram) {
 #define caocotest_CaocoConstantEvaluator_Literals 1
 #define caocotest_CaocoConstantEvaluator_Operators 1
 #define caocotest_CaocoConstantEvaluator_VariableDeclaration 1
+#define caocotest_CaocoConstantEvaluator_Structs 1
 
 #if caocotest_CaocoConstantEvaluator_Literals
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
@@ -946,8 +947,33 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_VariableDeclaration) {
 	EXPECT_EQ(std::get<int>(eval_result.value), 1);
 	//std::cout << "Variable a = " << std::get<int>(runtime_env.resolve_variable("a").value().value) << std::endl;
 	EXPECT_EQ(std::get<int>(runtime_env.resolve_variable("a").value().value), 1);
-
 }
+#endif
+
+#if caocotest_CaocoConstantEvaluator_Structs
+TEST(CaocoConstantEvaluator_Test, caocotest_CaocoConstantEvaluator_Structs) {
+	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_structs.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
+
+	/* Basic class with variable members
+		#class Foo {
+			#var a = 1;
+			#var b = 2;
+		};
+	*/
+	//caoco::ParseDirectiveClass()
+	auto class_decl = caoco::ParseDirectiveClass()(result.cbegin(), result.cend());
+	EXPECT_TRUE(class_decl.valid());
+	print_ast(class_decl.node());
+	auto eval_result = caoco::CClassDeclEval()(class_decl.node(), runtime_env);
+
+	auto class_obj = std::get<std::shared_ptr<caoco::object_t>>(eval_result.value).get();
+	EXPECT_EQ(std::get<int>(class_obj->get_member("a").value), 1);
+	EXPECT_EQ(std::get<int>(class_obj->get_member("b").value), 2);
+	EXPECT_EQ(std::get<int>(class_obj->get_member("c").value), 3);
+}
+
 #endif
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
