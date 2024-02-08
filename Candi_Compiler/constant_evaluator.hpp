@@ -6,7 +6,20 @@
 
 namespace caoco {
 
-struct none_t {};
+struct none_t {
+	bool operator==(const none_t&) const {
+		return true;
+	}
+};
+
+// string to unsigned int
+unsigned stou(std::string const& str, size_t* idx = 0, int base = 10) {
+	unsigned long result = std::stoul(str, idx, base);
+	if (result > std::numeric_limits<unsigned>::max()) {
+		throw std::out_of_range("stou");
+	}
+	return result;
+}
 
 struct RTValue {
 	enum eType {
@@ -14,11 +27,12 @@ struct RTValue {
 		REAL = 1,
 		STRING = 2,
 		BIT = 3,
-		BYTE = 4,
-		NONE = 5
+		OCTET = 4,
+		NONE = 5,
+		UNSIGNED = 6,
 	} type;
 
-	std::variant<int, double, std::string, bool, char, none_t> value;
+	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned> value;
 
 RTValue() : type(NONE), value(none_t{}) {}
 
@@ -159,7 +173,10 @@ class rtenv {
 	rtenv_const_iterator subenv_begin() const {
 		return children_.begin();
 	}
-public:
+	public:
+	rtenv() = default;
+	rtenv(const std::string& name) : name_(name) {}
+	rtenv(const std::string& name, rtenv& parent) : name_(name), parent_(&parent) {}
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
 	// Local Environment Operations
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -232,15 +249,6 @@ public:
 };
 
 
-struct CEvalProcess {
-	virtual RTValue eval(const Node & node) = 0;
-	virtual ~CEvalProcess() = default;
-public:
-	RTValue operator()(const Node & node) {
-		return eval(node);
-	}
-};
-
 struct EnvEvalProcess {
 	virtual RTValue eval(const Node & node, rtenv& env) = 0;
 	virtual ~EnvEvalProcess() = default;
@@ -250,17 +258,11 @@ public:
 	};
 };
 
-#define caoco_def_eval_process(n) struct n : public CEvalProcess{\
-	RTValue eval(const Node & node) override; \
-};
-
-#define caoco_impl_eval_process(n) RTValue n::eval(const Node & node)
-
 #define caoco_def_env_eval_process(n) struct n : public EnvEvalProcess{\
-	RTValue eval(const Node & node, rtenv& env) override; \
+	RTValue eval(const caoco::Node & node, caoco::rtenv& env) override; \
 };
 
-#define caoco_impl_env_eval_process(n) RTValue n::eval(const Node & node, rtenv& env)
+#define caoco_impl_env_eval_process(n) RTValue n::eval(const caoco::Node & node, caoco::rtenv& env)
 
 // All tokens in the AST hold caoco::string_t, whitch is a utf-8 encoded string
 inline auto get_node_cstr(const Node & node) {
@@ -285,23 +287,28 @@ inline RTValue make_rtval_none() {
 }
 
 // Literal Evaluators
-caoco_def_eval_process(CNumberEval); // 1234
-caoco_def_eval_process(CRealEval); // 1234.1234
-caoco_def_eval_process(CStringEval); // 'Hello World'
-caoco_def_eval_process(CBitEval); // 1b or 0b
-caoco_def_eval_process(CByteEval); // 0B-255B
-caoco_def_eval_process(CNoneEval); // #none directive
-caoco_def_eval_process(CLiteralEval); // Dispatches to the above evaluators based on node type.
+caoco_def_env_eval_process(CNumberEval); // 1234
+caoco_def_env_eval_process(CRealEval); // 1234.1234
+caoco_def_env_eval_process(CStringEval); // 'Hello World'
+caoco_def_env_eval_process(CBitEval); // 1b or 0b
+caoco_def_env_eval_process(CUnsignedEval); // 1234u
+caoco_def_env_eval_process(COctetEval); // 0c-255c and ' 'c where ' ' is a character from the ascii table
+caoco_def_env_eval_process(CNoneEval); // #none directive
+caoco_def_env_eval_process(CLiteralEval); // Dispatches to the above evaluators based on node type.
 
 // Evironment-Sensitive Evaluators
-caoco_def_env_eval_process(CIdentifierEval);
-caoco_def_env_eval_process(COperationEval);
-caoco_def_env_eval_process(CExpressionEval);
+caoco_def_env_eval_process(CAddOpEval); // +
+caoco_def_env_eval_process(CSubOpEval); // -
+caoco_def_env_eval_process(CMultOpEval); // *
+caoco_def_env_eval_process(CDivOpEval); // /
+caoco_def_env_eval_process(CModOpEval); // %
+
+caoco_def_env_eval_process(CBinopEval); // Dispatches to binary ops
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Processes Implementations
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
-caoco_impl_eval_process(CNumberEval) {
+caoco_impl_env_eval_process(CNumberEval) {
 	return get_node_rtvalue(node, RTValue::NUMBER,
 		[](const std::string& literal) {
 			return std::stoi(literal);
@@ -309,7 +316,7 @@ caoco_impl_eval_process(CNumberEval) {
 	);
 }
 
-caoco_impl_eval_process(CRealEval) {
+caoco_impl_env_eval_process(CRealEval) {
 	return get_node_rtvalue(node, RTValue::REAL,
 		[](const std::string& literal) {
 			return std::stod(literal);
@@ -317,12 +324,64 @@ caoco_impl_eval_process(CRealEval) {
 	);
 }
 
-caoco_impl_eval_process(CStringEval) {
-	// node is already a string, extract it and return
-	return RTValue(RTValue::STRING, get_node_cstr(node));
-}
+caoco_impl_env_eval_process(CStringEval) {
+	// Get the cstr of the node
+	auto literal = get_node_cstr(node);
 
-caoco_impl_eval_process(CBitEval) {
+	// Remove the quotes
+	literal = literal.substr(1, literal.size() - 2);
+
+	// Check for escape characters.
+	// If there are escape characters, we need to replace them with their actual values.
+	bool no_escape = false;
+	size_t current_pos = 0;
+	while (!no_escape) {
+		auto escape_pos = literal.find('\\', current_pos);
+		if (escape_pos == std::string::npos) {
+			no_escape = true;
+		}
+		else {
+			// Replace the escape characters
+			switch (literal[escape_pos + 1]) {
+			case 'n':
+				literal.replace(escape_pos, 2, "\n");
+				current_pos = escape_pos + 1;
+				break;
+			case 't':
+				literal.replace(escape_pos, 2, "\t");
+				current_pos = escape_pos + 1;
+				break;
+			case 'r':
+				literal.replace(escape_pos, 2, "\r");
+				current_pos = escape_pos + 1;
+				break;
+			case '0':
+				literal.replace(escape_pos, 2, "\0");
+				current_pos = escape_pos + 1;
+				break;
+			case '\\':
+				literal.replace(escape_pos, 2, "\\");
+				current_pos = escape_pos + 1;
+				break;
+			case '\'':
+				literal.replace(escape_pos, 2, "'");
+				current_pos = escape_pos + 1;
+				break;
+			case '\"':
+				literal.replace(escape_pos, 2, "\"");
+				current_pos = escape_pos + 1;
+				break;
+			default:
+				throw std::runtime_error("CStringEval:Invalid escape character:" + literal);
+			}
+		}
+	
+	}
+	// node is already a string, extract it and return
+	return RTValue(RTValue::STRING, literal);
+}
+//
+caoco_impl_env_eval_process(CBitEval) {
 	return get_node_rtvalue(node, RTValue::BIT,
 		[](const std::string& literal) {
 			if (literal == "1b") {
@@ -338,47 +397,375 @@ caoco_impl_eval_process(CBitEval) {
 	);
 }
 
-caoco_impl_eval_process(CByteEval) {
-	return get_node_rtvalue(node, RTValue::BYTE,
+caoco_impl_env_eval_process(CUnsignedEval) {
+	return get_node_rtvalue(node, RTValue::UNSIGNED,
 		[](const std::string& literal) {
-		    // literal will be in the form [0-255]B
-			if (literal.size() < 2) {
-				throw std::runtime_error("byte literal invalid format" + literal);
+			if (literal.back() != 'u') {
+				throw std::runtime_error("CUnsignedEval:Unsigned literal not followed by 'u':" + literal);
 			}
-			if (literal.back() != 'B') {
-				throw std::runtime_error("byte literal not followed by 'B'" + literal);
-			}
-			auto byte_str = literal.substr(0, literal.size() - 1);
-			return static_cast<char>(std::stoi(byte_str));
+			auto unsigned_str = literal.substr(0, literal.size() - 1);
+			return stou(unsigned_str);
 		}
 	);
 }
 
-caoco_impl_eval_process(CNoneEval) {
+caoco_impl_env_eval_process(COctetEval) {
+	return get_node_rtvalue(node, RTValue::OCTET,
+		[](const std::string& literal) {
+			// literal will be in the form [0-255]c or '[character]'c
+			if (literal.back() != 'c') {
+				throw std::runtime_error("COctetEval:Octet literal not followed by 'c'" + literal);
+			}
+
+			//if the literal is a character
+			if (literal[0] == '\'') {
+				auto octet_str = literal.substr(1, literal.size() - 3); // remove the quotes and the c
+				// Check for escape characters.
+				auto escape_pos = octet_str.find('\\');
+				if (escape_pos != std::string::npos) {
+					// Replace the escape characters
+					switch (literal[escape_pos + 1]) {
+					case 'n':
+						octet_str.replace(escape_pos, 2, "\n");
+						break;
+					case 't':
+						octet_str.replace(escape_pos, 2, "\t");
+						break;
+					case 'r':
+						octet_str.replace(escape_pos, 2, "\r");
+						break;
+					case '0':
+						octet_str.replace(escape_pos, 2, "\0");
+						break;
+					case '\\':
+						octet_str.replace(escape_pos, 2, "\\");
+						break;
+					case '\'':
+						octet_str.replace(escape_pos, 2, "'");
+						break;
+					case '\"':
+						octet_str.replace(escape_pos, 2, "\"");
+						break;
+					default:
+						throw std::runtime_error("COctetEval:Invalid escape character:" + literal);
+					}
+				}
+
+				if (octet_str.size() != 1) {
+					throw std::runtime_error("COctetEval:Invalid character literal:" + literal);
+				}
+
+				return static_cast<unsigned char>(octet_str.at(0));
+			}
+			else { // Has to be a number
+				auto octet_str = literal.substr(0, literal.size() - 1);
+				return static_cast<unsigned char>(std::stoi(octet_str));
+			}
+		}
+	);
+}
+
+caoco_impl_env_eval_process(CNoneEval) {
 	return RTValue(RTValue::NONE, none_t{});
 };
 
-caoco_impl_env_eval_process(CIdentifierEval) {
-	auto id = get_node_cstr(node);
-	auto resolved_var = env.resolve_variable(id);
-	if (resolved_var.valid()) {
-		return resolved_var.value();
-	}
-	else {
-		throw std::runtime_error("CIdentifierEval:Variable not found:" + id);
-	}
-}
-
-caoco_impl_env_eval_process(COperationEval) {
-	switch (node.type()) {
-	case Node::eType::addition_:
-
+caoco_impl_env_eval_process(CLiteralEval) {
+	auto node_type = node.type();
+	switch (node_type) {
+	case Node::eType::number_literal_:
+		return CNumberEval{}(node, env);
+	case Node::eType::real_literal_:
+		return CRealEval{}(node, env);
+	case Node::eType::string_literal_:
+		return CStringEval{}(node, env);
+	case Node::eType::bit_literal_:
+		return CBitEval{}(node, env);
+	case Node::eType::unsigned_literal_:
+		return CUnsignedEval{}(node, env);
+	case Node::eType::octet_literal_:
+		return COctetEval{}(node, env);
+	case Node::eType::none_literal_:
+		return CNoneEval{}(node, env);
 	default:
-		return make_rtval_none();
+		throw std::runtime_error("CLiteralEval:Invalid node type:" + std::to_string(static_cast<int>(node_type)));
 	}
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
+caoco_impl_env_eval_process(CAddOpEval) {
+	auto left = node.body().front();
+	auto right = node.body().back();
+
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if (left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
 
 
 
+	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
+		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) + std::get<int>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
+		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) + std::get<double>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::STRING && right_val.type == RTValue::STRING) {
+		return RTValue{ RTValue::STRING, std::get<std::string>(left_val.value) + std::get<std::string>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::BIT && right_val.type == RTValue::BIT) {
+		return RTValue{ RTValue::BIT, std::get<bool>(left_val.value) + std::get<bool>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
+		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) + std::get<unsigned char>(right_val.value)) };
+	}
+	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
+		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) + std::get<unsigned>(right_val.value) };
+	}
+	else {
+		throw std::runtime_error("CAddOpEval:Invalid types for addition, implicit conversion is disabled.");
+	}
+}
+
+caoco_impl_env_eval_process(CSubOpEval) {
+	auto left = node.body().front();
+	auto right = node.body().back();
+
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if (left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
+		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) - std::get<int>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
+		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) - std::get<double>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
+		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) - std::get<unsigned char>(right_val.value)) };
+	}
+	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
+		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) - std::get<unsigned>(right_val.value) };
+	}
+	else {
+		throw std::runtime_error("CSubOpEval:Invalid types for subtraction, implicit conversion is disabled.");
+	}
+
+}
+
+caoco_impl_env_eval_process(CMultOpEval) {
+	auto left = node.body().front();
+	auto right = node.body().back();
+
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if (left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
+		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) * std::get<int>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
+		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) * std::get<double>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
+		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) * std::get<unsigned char>(right_val.value)) };
+	}
+	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
+		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) * std::get<unsigned>(right_val.value) };
+	}
+	else {
+		throw std::runtime_error("CMultOpEval:Invalid types for multiplication, implicit conversion is disabled.");
+	}
+}
+
+caoco_impl_env_eval_process(CDivOpEval) {
+	auto left = node.body().front();
+	auto right = node.body().back();
+
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if (left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
+		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) / std::get<int>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
+		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) / std::get<double>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
+		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) / std::get<unsigned char>(right_val.value)) };
+	}
+	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
+		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) / std::get<unsigned>(right_val.value) };
+	}
+	else {
+		throw std::runtime_error("CDivOpEval:Invalid types for division, implicit conversion is disabled.");
+	}
+}
+
+caoco_impl_env_eval_process(CModOpEval) {
+	auto left = node.body().front();
+	auto right = node.body().back();
+
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if (left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
+		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) % std::get<int>(right_val.value) };
+	}
+	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
+		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) % std::get<unsigned char>(right_val.value)) };
+	}
+	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
+		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) % std::get<unsigned>(right_val.value) };
+	}
+	else {
+		throw std::runtime_error("CModOpEval:Invalid types for modulo, implicit conversion is disabled.");
+	}
+}
+
+caoco_impl_env_eval_process(CBinopEval) {
+	// If lhs node is binop,process it.
+	auto left = node.body().front();
+	auto right = node.body().back();
+	RTValue left_val;
+	RTValue right_val;
+	// Left
+	if(left.operation() == Node::eOperation::binary_) {
+		left_val = CBinopEval{}(left, env);
+	}
+	else if (left.operation() == Node::eOperation::none_) {
+		left_val = CLiteralEval{}(left, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Right
+	if (right.operation() == Node::eOperation::binary_) {
+		right_val = CBinopEval{}(right, env);
+	}
+	else if (right.operation() == Node::eOperation::none_) {
+		right_val = CLiteralEval{}(right, env);
+	}
+	else {
+		throw "NOT IMPLEMENTED";
+	}
+
+	// Get the type of the operation
+	auto op = node.type();
+	switch (op) {
+	case Node::eType::addition_:
+		return CAddOpEval{}(node, env);
+	case Node::eType::subtraction_:
+		return CSubOpEval{}(node, env);
+	case Node::eType::multiplication_:
+	return CMultOpEval{}(node, env);
+	case Node::eType::division_:
+	return CDivOpEval{}(node, env);
+	case Node::eType::remainder_:
+	return CModOpEval{}(node, env);
+	default:
+		throw "NOT IMPLEMENTED";
+	}
+
+}
 }; // namespace caoco

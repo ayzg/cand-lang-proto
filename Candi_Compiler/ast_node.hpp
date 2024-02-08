@@ -20,12 +20,16 @@ namespace caoco {
 			none_ = -1,					// A none statement is a statement that is not a statement.
 			invalid_,				// An invalid statement is a statement that is not a valid statement.
 
-			// Token Analogs (scopes , semicolor, comma are evaluated in this parse step)
+			// Token Analogs (scopes , semicolon, comma are evaluated in this parse step)
 			string_literal_,
 			number_literal_,
 			real_literal_,
 			none_literal_,
 			alnumus_,
+
+			unsigned_literal_,
+			octet_literal_,
+			bit_literal_,
 
 			// . operator
 			period_,
