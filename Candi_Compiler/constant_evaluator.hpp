@@ -294,17 +294,19 @@ caoco_def_env_eval_process(CBitEval); // 1b or 0b
 caoco_def_env_eval_process(CUnsignedEval); // 1234u
 caoco_def_env_eval_process(COctetEval); // 0c-255c and ' 'c where ' ' is a character from the ascii table
 caoco_def_env_eval_process(CNoneEval); // #none directive
+caoco_def_env_eval_process(CVariableEval);
 caoco_def_env_eval_process(CLiteralEval); // Dispatches to the above evaluators based on node type.
 
-// Evironment-Sensitive Evaluators
+
 caoco_def_env_eval_process(CAddOpEval); // +
 caoco_def_env_eval_process(CSubOpEval); // -
 caoco_def_env_eval_process(CMultOpEval); // *
 caoco_def_env_eval_process(CDivOpEval); // /
 caoco_def_env_eval_process(CModOpEval); // %
-
 caoco_def_env_eval_process(CBinopEval); // Dispatches to binary ops
 
+
+caoco_def_env_eval_process(CVarDeclEval); // anon var decl <#var><alnumus><=><expression><;> (for now)
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Processes Implementations
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -469,6 +471,17 @@ caoco_impl_env_eval_process(CNoneEval) {
 	return RTValue(RTValue::NONE, none_t{});
 };
 
+caoco_impl_env_eval_process(CVariableEval) {
+	auto var_name = get_node_cstr(node);
+	auto resolved_var = env.resolve_variable(var_name);
+	if (resolved_var.valid()) {
+		return resolved_var.value();
+	}
+	else {
+		throw std::runtime_error("CVariableEval:Variable not found:" + var_name);
+	}
+}
+
 caoco_impl_env_eval_process(CLiteralEval) {
 	auto node_type = node.type();
 	switch (node_type) {
@@ -486,6 +499,8 @@ caoco_impl_env_eval_process(CLiteralEval) {
 		return COctetEval{}(node, env);
 	case Node::eType::none_literal_:
 		return CNoneEval{}(node, env);
+	case Node::eType::alnumus_:
+		return CVariableEval{}(node, env);
 	default:
 		throw std::runtime_error("CLiteralEval:Invalid node type:" + std::to_string(static_cast<int>(node_type)));
 	}
@@ -723,6 +738,9 @@ caoco_impl_env_eval_process(CModOpEval) {
 }
 
 caoco_impl_env_eval_process(CBinopEval) {
+	if(node.body().size()==0) { // If the node has no child, it is a literal
+		return CLiteralEval{}(node, env);
+	}
 	// If lhs node is binop,process it.
 	auto left = node.body().front();
 	auto right = node.body().back();
@@ -767,5 +785,26 @@ caoco_impl_env_eval_process(CBinopEval) {
 		throw "NOT IMPLEMENTED";
 	}
 
+}
+
+
+caoco_impl_env_eval_process(CVarDeclEval) {
+	auto var_name = get_node_cstr(node.body().front());
+
+	// Check if the variable has been declared
+	if(env.resolve_variable(var_name).valid()) {
+		throw std::runtime_error("CAssignOpEval:Variable already declared:" + var_name);
+	}
+
+	// Format of the node is <var name>,<expression> where expression is one of the assingment operators.(for now only simple assingment)
+	// lhs of the assingment operator is the variable name, thats why we use node.body().back().body().back() to get the rhs.
+	//auto what = node.body().back().body().back();
+	auto new_value = CBinopEval()(node.body().back().body().back(), env);
+
+	// Create the variable
+
+	auto created_var = env.create_variable(var_name, std::move(new_value));
+
+	return created_var.value(); // return ref to the created variable
 }
 }; // namespace caoco

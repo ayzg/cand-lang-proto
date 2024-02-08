@@ -811,6 +811,7 @@ TEST(CaocoParser_Test, CaocoParser_MinimumProgram) {
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 #define caocotest_CaocoConstantEvaluator_Literals 1
 #define caocotest_CaocoConstantEvaluator_Operators 1
+#define caocotest_CaocoConstantEvaluator_VariableDeclaration 1
 
 #if caocotest_CaocoConstantEvaluator_Literals
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
@@ -918,8 +919,35 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Operators) {
 	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
 	EXPECT_EQ(std::get<int>(eval_result.value), 2);
 
-}
+	// variable in expression
+	//1 + a;
+	runtime_env.create_variable("a", caoco::RTValue(caoco::RTValue::eType::NUMBER,42));
+	expr = caoco::ParseValueExpression()(expr.it(), result.cend());
+	eval_result = caoco::CBinopEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 43);
 
+
+}
+#endif
+
+#if caocotest_CaocoConstantEvaluator_VariableDeclaration
+TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_VariableDeclaration) {
+	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_variable_declaration.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
+
+	// #var a = 1;
+	auto var_decl = caoco::ParseDirectiveVar()(result.cbegin(), result.cend());
+	//print_ast(var_decl.node());
+	EXPECT_TRUE(var_decl.valid());
+	auto eval_result = caoco::CVarDeclEval()(var_decl.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 1);
+	//std::cout << "Variable a = " << std::get<int>(runtime_env.resolve_variable("a").value().value) << std::endl;
+	EXPECT_EQ(std::get<int>(runtime_env.resolve_variable("a").value().value), 1);
+
+}
 #endif
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
