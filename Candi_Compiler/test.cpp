@@ -7,6 +7,7 @@
 #include "parser.hpp"
 //#include "transpiler.hpp"
 //#include "candi_main.hpp"
+#include "constant_evaluator.hpp"
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -421,7 +422,6 @@ TEST(CaocoTokenizer_Test, CaocoTokenizer_Tokens) {
 
 };
 #endif
-
 #if caoco_CaocoTokenizer_NumberAndReal
 TEST(CaocoTokenizer_Test, CaocoTokenizer_NumberAndReal) {
 	// Specific test for a number followed by an ellipsis
@@ -809,7 +809,8 @@ TEST(CaocoParser_Test, CaocoParser_MinimumProgram) {
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Tests
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
-#define caocotest_CaocoConstantEvaluator_Literals 0
+#define caocotest_CaocoConstantEvaluator_Literals 1
+#define caocotest_CaocoConstantEvaluator_Operators 1
 
 #if caocotest_CaocoConstantEvaluator_Literals
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
@@ -821,45 +822,102 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
 	//              - Namespace would clash with C++ namespace, and scope is already used in the parser.
 	//              - Each environment has a parent environment, which is nullptr for the root environment(global scope).
 	//              - Each environment also has a list of sub-environments, which are the child scopes.
-	auto runtime_env = caoco::environment("",nullptr);
+	auto runtime_env = caoco::rtenv("global");
  
 
 	// Test the constant evaluator on literals
-	auto int_literal = caoco::ParseCsoInt()(result.cbegin(), result.cend());
-	EXPECT_TRUE(int_literal.valid());
+	auto int_literal = caoco::ParseNumberLiteral()(result.cbegin(), result.cend());
+	auto eval_result = caoco::CNumberEval()(int_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 42);
+
+	// real literal
+	auto real_literal = caoco::ParseRealLiteral()(int_literal.it(), result.cend());
+	eval_result = caoco::CRealEval()(real_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::REAL);
+	EXPECT_EQ(std::get<double>(eval_result.value), 42.42);
+
+	// string literal
+	auto string_literal = caoco::ParseStringLiteral()(real_literal.it(), result.cend());
+	eval_result = caoco::CStringEval()(string_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::STRING);
+	EXPECT_EQ(std::get<std::string>(eval_result.value), "Hello'World");
+
+	// bit literal
+	auto bit_literal = caoco::ParseBitLiteral()(string_literal.it(), result.cend());
+	eval_result = caoco::CBitEval()(bit_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::BIT);
+	EXPECT_EQ(std::get<bool>(eval_result.value), true);
+
+	// unsigned int literal
+	auto uint_literal = caoco::ParseUnsignedLiteral()(bit_literal.it(), result.cend());
+	eval_result = caoco::CUnsignedEval()(uint_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::UNSIGNED);
+	EXPECT_EQ(std::get<unsigned int>(eval_result.value), 42u);
+
+	// octet literal
+	auto octet_literal = caoco::ParseOctetLiteral()(uint_literal.it(), result.cend());
+	eval_result = caoco::COctetEval()(octet_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::OCTET);
+	EXPECT_EQ(std::get<unsigned char>(eval_result.value),(unsigned char)42 );
+
+	// octet  from char
+	auto octet_from_char =caoco::ParseOctetLiteral()(octet_literal.it(), result.cend());
+	eval_result = caoco::COctetEval()(octet_from_char.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::OCTET);
+	EXPECT_EQ(std::get<unsigned char>(eval_result.value), (unsigned char)'a');
+
+	// none
+	auto none_literal = caoco::ParseDirectiveNone()(octet_from_char.it(), result.cend());
+	eval_result = caoco::CNoneEval()(none_literal.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NONE);
+	EXPECT_EQ(std::get<caoco::none_t>(eval_result.value), caoco::none_t{});
 
 
-	auto uint_literal = caoco::ParseCsoUint()(int_literal.it(), result.cend());
-	EXPECT_TRUE(uint_literal.valid());
-	EXPECT_EQ(uint_literal.node().evaluate(), 42);
+}
 
-	auto real_literal = caoco::ParseCsoReal()(uint_literal.it(), result.cend());
-	EXPECT_TRUE(real_literal.valid());
-	EXPECT_EQ(real_literal.node().evaluate(), 42.42);
+#endif
 
-	auto octet_literal = caoco::ParseCsoOctet()(real_literal.it(), result.cend());
-	EXPECT_TRUE(octet_literal.valid());
-	EXPECT_EQ(octet_literal.node().evaluate(), 42);
+#if caocotest_CaocoConstantEvaluator_Operators
+TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Operators) {
+	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_operators.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
 
-	auto bit_literal = caoco::ParseCsoBit()(octet_literal.it(), result.cend());
-	EXPECT_TRUE(bit_literal.valid());
-	EXPECT_EQ(bit_literal.node().evaluate(), 1);
+	// operator <numlit><+><numlit> 1+1
+	auto expr = caoco::ParseValueExpression()(result.cbegin(), result.cend());
+	auto eval_result = caoco::CAddOpEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 2);
 
-	auto string_literal = caoco::ParseStringLiteral()(bit_literal.it(), result.cend());
-	EXPECT_TRUE(string_literal.valid());
-	EXPECT_EQ(caoco::to_std_string(string_literal.node().evaluate()), "Hello World");
+	// using CBinopEval
+	// operator <numlit><+><numlit> 1+1
+	expr = caoco::ParseValueExpression()(result.cbegin() ,result.cend());
+	eval_result = caoco::CBinopEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 2);
 
-	auto number_literal = caoco::ParseNumberLiteral()(string_literal.it(), result.cend());
-	EXPECT_TRUE(number_literal.valid());
-	EXPECT_EQ(number_literal.node().evaluate(), 42);
 
-	auto real_literal2 = caoco::ParseRealLiteral()(number_literal.it(), result.cend());
-	EXPECT_TRUE(real_literal2.valid());
-	EXPECT_EQ(real_literal2.node().evaluate(), 42.42);
+	// multiple operators <numlit><+><numlit><+><numlit> 1+1+1
+	expr = caoco::ParseValueExpression()(expr.it(), result.cend());
+	eval_result = caoco::CBinopEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 5);
 
-	auto alnumus_literal = caoco::ParseAlnumusLiteral()(real_literal2.it(), result.cend());
-	EXPECT_TRUE(alnumus_literal.valid());
-	EXPECT_EQ(caoco::to_std_string(alnumus_literal.node().evaluate()), "HelloWorld");
+
+	// operator -        1 + 1 - 1
+	expr = caoco::ParseValueExpression()(expr.it(), result.cend());
+	eval_result = caoco::CBinopEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 1);
+
+	// operators + - * / %
+	// 1 + 1 - 1 * 1 / 1 % 1 (== 2)
+	expr = caoco::ParseValueExpression()(expr.it(), result.cend());
+	eval_result = caoco::CBinopEval()(expr.node(), runtime_env);
+	EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+	EXPECT_EQ(std::get<int>(eval_result.value), 2);
+
 }
 
 #endif

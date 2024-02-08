@@ -120,6 +120,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="constant_evaluator_unit_test_0_literals.candi" />
+    <None Include="constant_evaluator_unit_test_0_operators.candi" />
     <None Include="lexer_test.candi" />
     <None Include="packages.config" />
     <None Include="parser_test.candi" />

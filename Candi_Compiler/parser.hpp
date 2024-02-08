@@ -366,6 +366,10 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseRealLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseAlnumusLiteral);
 
+	caoco_PARSING_PROCESS_DEF(ParseUnsignedLiteral);
+	caoco_PARSING_PROCESS_DEF(ParseOctetLiteral);
+	caoco_PARSING_PROCESS_DEF(ParseBitLiteral);
+
 	// candi special objects
 	caoco_PARSING_PROCESS_DEF(ParseCandiSpecialObject);
 	caoco_PARSING_PROCESS_DEF(ParseCsoType);
@@ -598,6 +602,20 @@ namespace caoco {
 		assert(begin->type() == Tk::eType::alnumus && "[LOGIC ERROR][ParseAlnumusLiteral] begin is not alnumus token.");
 		return make_success({ Node::eType::alnumus_, begin, std::next(begin) });
 	}
+
+	caoco_PARSING_PROCESS_IMPL(ParseUnsignedLiteral){
+		assert(begin->type() == tk_enum::unsigned_literal && "[LOGIC ERROR][ParseUnsignedLiteral] begin is not unsigned_literal token.");
+		return make_success({ Node::eType::unsigned_literal_, begin, std::next(begin) });
+	}
+	caoco_PARSING_PROCESS_IMPL(ParseOctetLiteral) {
+		assert(begin->type() == tk_enum::octet_literal && "[LOGIC ERROR][ParseOctetLiteral] begin is not octet_literal token.");
+		return make_success({ Node::eType::octet_literal_, begin, std::next(begin) });
+	}
+	caoco_PARSING_PROCESS_IMPL(ParseBitLiteral) {
+		assert(begin->type() == tk_enum::bit_literal && "[LOGIC ERROR][ParseBitLiteral] begin is not bit_literal token.");
+		return make_success({ Node::eType::bit_literal_, begin, std::next(begin) });
+	}
+
 	caoco_PARSING_PROCESS_IMPL(ParseLiteral) {
 		switch (begin->type())
 		{
@@ -615,6 +633,15 @@ namespace caoco {
 			break;
 		case Tk::eType::none_literal_:
 			return ParseDirectiveNone()(begin,end);
+			break;
+		case Tk::eType::unsigned_literal:
+			return ParseUnsignedLiteral()(begin, end);
+			break;
+		case Tk::eType::octet_literal:
+			return ParseOctetLiteral()(begin, end);
+			break;
+		case Tk::eType::bit_literal:
+			return ParseBitLiteral()(begin, end);
 			break;
 		default:
 			return make_error(begin, *begin, "ParseLiteral: Invalid literal.");
@@ -914,7 +941,7 @@ namespace caoco {
 
 		std::optional<Node> expr_node;
 		try {
-			expr_node = build_statement(expr_scope.scope_begin(), expr_scope.contained_end());
+			expr_node = build_statement(begin, expr_scope.contained_end());
 		}
 		catch (std::exception& e) {
 			std::cout << e.what() << std::endl;

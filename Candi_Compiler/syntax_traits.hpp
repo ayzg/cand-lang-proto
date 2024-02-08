@@ -44,6 +44,11 @@ namespace caoco {
 	{Tk::eType::alnumus,		{INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::alnumus_}},
 	{Tk::eType::number_literal, {INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::number_literal_}},
 	{Tk::eType::eof,			{INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::eof_}},
+	caoco_TK_TRAIT(real_literal,INT_MAX, left_, none_, real_literal_), // real literal
+	caoco_TK_TRAIT(string_literal,INT_MAX, left_, none_, string_literal_), // string literal
+	caoco_TK_TRAIT(octet_literal,INT_MAX, left_, none_, octet_literal_), // octet literal
+	caoco_TK_TRAIT(bit_literal,INT_MAX, left_, none_, bit_literal_), // bit literal
+	caoco_TK_TRAIT(unsigned_literal,INT_MAX, left_, none_, unsigned_literal_), // unsigned literal
 	caoco_TK_TRAIT(open_frame,INT_MAX, left_, unary_, open_frame_), // ( function call
 	caoco_TK_TRAIT(period,160000, left_, binary_, period_), // . operator
 	caoco_TK_TRAIT(decrement,140000, left_, unary_, decrement_), // --
@@ -52,6 +57,7 @@ namespace caoco {
 	caoco_TK_TRAIT(negation,140000, left_, unary_, negation_), // !
 	caoco_TK_TRAIT(division,130000, left_, binary_, division_), // /
 	caoco_TK_TRAIT(multiplication,130000, left_, binary_, multiplication_), // *
+	caoco_TK_TRAIT(remainder,130000, left_, binary_, remainder_), // %
 	caoco_TK_TRAIT(subtraction,120000, left_, binary_, subtraction_), // -
 	caoco_TK_TRAIT(addition,120000, left_, binary_, addition_), // +
 	caoco_TK_TRAIT(bitwise_left_shift,110000, left_, binary_, bitwise_left_shift_), // <<
@@ -88,6 +94,7 @@ namespace caoco {
 	{Node::eType::subtraction_, {1000, Associativity::left_, Operation::binary_}},
 	{Node::eType::multiplication_, {2000, Associativity::left_, Operation::binary_}},
 	{Node::eType::division_, {2000, Associativity::left_, Operation::binary_}},
+
 	{Node::eType::open_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
 	{Node::eType::close_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
 	{Node::eType::eof_, {INT_MAX, Associativity::left_, Operation::none_}}
