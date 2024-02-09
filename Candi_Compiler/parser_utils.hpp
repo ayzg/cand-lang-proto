@@ -107,10 +107,10 @@ namespace caoco {
 		// <@method:next> returns the current token on the cursor, if at end or before begin, returns eof token.
 		const tk& get() const {
 			if (it_ >= end_) {
-				return tk{ tk_enum::eof };
+				return tk{ tk_enum::eof_ };
 			}
 			else if (it_ < beg_) {
-				return tk{ tk_enum::eof };
+				return tk{ tk_enum::eof_ };
 			}
 			else
 				return *it_;
@@ -255,13 +255,13 @@ namespace caoco {
 
 		}
 		static parser_scope_result find_exact_paren(tk_vector_cit begin, tk_vector_cit end) {
-			return find_exact(tk_enum::open_scope, tk_enum::close_scope, begin, end);
+			return find_exact(tk_enum::open_scope_, tk_enum::close_scope_, begin, end);
 		}
 		static parser_scope_result find_exact_frame(tk_vector_cit begin, tk_vector_cit end) {
-			return find_exact(tk_enum::open_frame, tk_enum::close_frame, begin, end);
+			return find_exact(tk_enum::open_frame_, tk_enum::close_frame_, begin, end);
 		}
 		static parser_scope_result find_exact_list(tk_vector_cit begin, tk_vector_cit end) {
-			return find_exact(tk_enum::open_list, tk_enum::close_list, begin, end);
+			return find_exact(tk_enum::open_list_, tk_enum::close_list_, begin, end);
 		}
 	};
 
@@ -282,7 +282,7 @@ namespace caoco {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
 		auto list_scope_depth = 0;
-		//tk_enum currrent_scope_type = tk_enum::none;
+		//tk_enum currrent_scope_type = tk_enum::none_;
 		std::stack<tk_enum> scope_type_history;
 		auto last_open = begin;
 		auto last_closed = begin;
@@ -296,13 +296,13 @@ namespace caoco {
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto it = begin + 1; it < end; it++) {
 
-			if (it->type() == tk_enum::open_scope) {
+			if (it->type() == tk_enum::open_scope_) {
 				paren_scope_depth++;
-				scope_type_history.push(tk_enum::open_scope);
-				//currrent_scope_type = tk_enum::open_scope;
+				scope_type_history.push(tk_enum::open_scope_);
+				//currrent_scope_type = tk_enum::open_scope_;
 			}
-			else if (it->type() == tk_enum::close_scope) {
-				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_scope) {
+			else if (it->type() == tk_enum::close_scope_) {
+				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_scope_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;
@@ -314,13 +314,13 @@ namespace caoco {
 				scope_type_history.pop();
 				paren_scope_depth--;
 			}
-			else if (it->type() == tk_enum::open_frame) {
+			else if (it->type() == tk_enum::open_frame_) {
 				frame_scope_depth++;
-				//currrent_scope_type = tk_enum::open_frame;
-				scope_type_history.push(tk_enum::open_frame);
+				//currrent_scope_type = tk_enum::open_frame_;
+				scope_type_history.push(tk_enum::open_frame_);
 			}
-			else if (it->type() == tk_enum::close_frame) {
-				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_frame) {
+			else if (it->type() == tk_enum::close_frame_) {
+				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_frame_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;
@@ -332,13 +332,13 @@ namespace caoco {
 				scope_type_history.pop();
 				frame_scope_depth--;
 			}
-			else if (it->type() == tk_enum::open_list) {
+			else if (it->type() == tk_enum::open_list_) {
 				list_scope_depth++;
-				//currrent_scope_type = tk_enum::open_list;
-				scope_type_history.push(tk_enum::open_list);
+				//currrent_scope_type = tk_enum::open_list_;
+				scope_type_history.push(tk_enum::open_list_);
 			}
-			else if (it->type() == tk_enum::close_list) {
-				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_list) {
+			else if (it->type() == tk_enum::close_list_) {
+				if (scope_type_history.empty() || scope_type_history.top() != tk_enum::open_list_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;
@@ -383,7 +383,7 @@ namespace caoco {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
 		auto list_scope_depth = 0;
-		//tk_enum currrent_scope_type = tk_enum::none;
+		//tk_enum currrent_scope_type = tk_enum::none_;
 		std::stack<tk_enum> scope_type_history;
 		auto last_open = begin;
 		auto last_closed = begin;
@@ -397,13 +397,13 @@ namespace caoco {
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto it = begin + 1; it < end; it++) {
 
-			if (it->type() == tk_enum::open_scope) {
+			if (it->type() == tk_enum::open_scope_) {
 				paren_scope_depth++;
-				scope_type_history.push(tk_enum::open_scope);
-				//currrent_scope_type = tk_enum::open_scope;
+				scope_type_history.push(tk_enum::open_scope_);
+				//currrent_scope_type = tk_enum::open_scope_;
 			}
-			else if (it->type() == tk_enum::close_scope) {
-				if (scope_type_history.top() != tk_enum::open_scope) {
+			else if (it->type() == tk_enum::close_scope_) {
+				if (scope_type_history.top() != tk_enum::open_scope_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;
@@ -415,13 +415,13 @@ namespace caoco {
 				scope_type_history.pop();
 				paren_scope_depth--;
 			}
-			else if (it->type() == tk_enum::open_frame) {
+			else if (it->type() == tk_enum::open_frame_) {
 				frame_scope_depth++;
-				//currrent_scope_type = tk_enum::open_frame;
-				scope_type_history.push(tk_enum::open_frame);
+				//currrent_scope_type = tk_enum::open_frame_;
+				scope_type_history.push(tk_enum::open_frame_);
 			}
-			else if (it->type() == tk_enum::close_frame) {
-				if (scope_type_history.top() != tk_enum::open_frame) {
+			else if (it->type() == tk_enum::close_frame_) {
+				if (scope_type_history.top() != tk_enum::open_frame_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;
@@ -433,14 +433,14 @@ namespace caoco {
 				scope_type_history.pop();
 				frame_scope_depth--;
 			}
-			else if (it->type() == tk_enum::open_list) {
+			else if (it->type() == tk_enum::open_list_) {
 				list_scope_depth++;
-				//currrent_scope_type = tk_enum::open_list;
-				scope_type_history.push(tk_enum::open_list);
+				//currrent_scope_type = tk_enum::open_list_;
+				scope_type_history.push(tk_enum::open_list_);
 			}
-			else if (it->type() == tk_enum::close_list) {
+			else if (it->type() == tk_enum::close_list_) {
 
-				if (scope_type_history.top() != tk_enum::open_list) {
+				if (scope_type_history.top() != tk_enum::open_list_) {
 					// Has to be a close or error
 					if (it->type() == close) {
 						last_closed = it;

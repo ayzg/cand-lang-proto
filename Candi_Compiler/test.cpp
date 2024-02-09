@@ -25,28 +25,28 @@ TEST(CaocoTokenizer_Tokens, CaocoTokenizer_Test) {
 
 	// Literals
 	// number
-	test_single_token(u8"1234\0", caoco::tk_enum::number_literal, u8"1234");
+	test_single_token(u8"1234\0", caoco::tk_enum::number_literal_, u8"1234");
 	// real
-	test_single_token(u8"1234.5678\0", caoco::tk_enum::real_literal, u8"1234.5678");
+	test_single_token(u8"1234.5678\0", caoco::tk_enum::real_literal_, u8"1234.5678");
 	// string 
-	test_single_token(u8"'hello world'\0", caoco::tk_enum::string_literal, u8"'hello world'");
+	test_single_token(u8"'hello world'\0", caoco::tk_enum::string_literal_, u8"'hello world'");
 	// string with escape character '\''
-	test_single_token(u8"'hello \\' world'\0", caoco::tk_enum::string_literal, u8"'hello \\' world'");
+	test_single_token(u8"'hello \\' world'\0", caoco::tk_enum::string_literal_, u8"'hello \\' world'");
 	// alnumus
-	test_single_token(u8"hello_world\0", caoco::tk_enum::alnumus, u8"hello_world");
+	test_single_token(u8"hello_world\0", caoco::tk_enum::alnumus_, u8"hello_world");
 	// unsigned literal u
-	test_single_token(u8"1234u\0", caoco::tk_enum::unsigned_literal, u8"1234u");
+	test_single_token(u8"1234u\0", caoco::tk_enum::unsigned_literal_, u8"1234u");
 	// bit literal 0b 1b
-	test_single_token(u8"0b\0", caoco::tk_enum::bit_literal, u8"0b");
-	test_single_token(u8"1b\0", caoco::tk_enum::bit_literal, u8"1b");
+	test_single_token(u8"0b\0", caoco::tk_enum::bit_literal_, u8"0b");
+	test_single_token(u8"1b\0", caoco::tk_enum::bit_literal_, u8"1b");
 	// octet literal 0c 255c
-	test_single_token(u8"0c\0", caoco::tk_enum::octet_literal, u8"0c");
-	test_single_token(u8"255c\0", caoco::tk_enum::octet_literal, u8"255c");
+	test_single_token(u8"0c\0", caoco::tk_enum::octet_literal_, u8"0c");
+	test_single_token(u8"255c\0", caoco::tk_enum::octet_literal_, u8"255c");
 
 	// octet literal 'a'c
-	test_single_token(u8"'a'c\0", caoco::tk_enum::octet_literal, u8"'a'c");
+	test_single_token(u8"'a'c\0", caoco::tk_enum::octet_literal_, u8"'a'c");
 	// octet literal '\''c
-	test_single_token(u8"'\\''c\0", caoco::tk_enum::octet_literal, u8"'\\''c");
+	test_single_token(u8"'\\''c\0", caoco::tk_enum::octet_literal_, u8"'\\''c");
 
 	// Directives
 	// Functional
@@ -84,68 +84,68 @@ TEST(CaocoTokenizer_Tokens, CaocoTokenizer_Test) {
 
 	// Assignment Operators
 	// =,+=,-=,*=,/=,%=,&=,|=,^=,<<=,>>=
-	test_single_token(u8"=\0", caoco::tk_enum::simple_assignment, u8"=");
-	test_single_token(u8"+=\0", caoco::tk_enum::addition_assignment, u8"+=");
-	test_single_token(u8"-=\0", caoco::tk_enum::subtraction_assignment, u8"-=");
-	test_single_token(u8"*=\0", caoco::tk_enum::multiplication_assignment, u8"*=");
-	test_single_token(u8"/=\0", caoco::tk_enum::division_assignment, u8"/=");
-	test_single_token(u8"%=\0", caoco::tk_enum::remainder_assignment, u8"%=");
-	test_single_token(u8"&=\0", caoco::tk_enum::bitwise_and_assignment, u8"&=");
-	test_single_token(u8"|=\0", caoco::tk_enum::bitwise_or_assignment, u8"|=");
-	test_single_token(u8"^=\0", caoco::tk_enum::bitwise_xor_assignment, u8"^=");
-	test_single_token(u8"<<=\0", caoco::tk_enum::left_shift_assignment, u8"<<=");
-	test_single_token(u8">>=\0", caoco::tk_enum::right_shift_assignment, u8">>=");
+	test_single_token(u8"=\0", caoco::tk_enum::simple_assignment_, u8"=");
+	test_single_token(u8"+=\0", caoco::tk_enum::addition_assignment_, u8"+=");
+	test_single_token(u8"-=\0", caoco::tk_enum::subtraction_assignment_, u8"-=");
+	test_single_token(u8"*=\0", caoco::tk_enum::multiplication_assignment_, u8"*=");
+	test_single_token(u8"/=\0", caoco::tk_enum::division_assignment_, u8"/=");
+	test_single_token(u8"%=\0", caoco::tk_enum::remainder_assignment_, u8"%=");
+	test_single_token(u8"&=\0", caoco::tk_enum::bitwise_and_assignment_, u8"&=");
+	test_single_token(u8"|=\0", caoco::tk_enum::bitwise_or_assignment_, u8"|=");
+	test_single_token(u8"^=\0", caoco::tk_enum::bitwise_xor_assignment_, u8"^=");
+	test_single_token(u8"<<=\0", caoco::tk_enum::left_shift_assignment_, u8"<<=");
+	test_single_token(u8">>=\0", caoco::tk_enum::right_shift_assignment_, u8">>=");
 
 	// Increment and Decrement Operators
 	// ++,--
-	test_single_token(u8"++\0", caoco::tk_enum::increment, u8"++");
-	test_single_token(u8"--\0", caoco::tk_enum::decrement, u8"--");
+	test_single_token(u8"++\0", caoco::tk_enum::increment_, u8"++");
+	test_single_token(u8"--\0", caoco::tk_enum::decrement_, u8"--");
 
 	//// Arithmetic Operators
 	//// +,-,*,/,%,~,&,|,^,<<,>>
-	test_single_token(u8"+\0", caoco::tk_enum::addition, u8"+");
-	test_single_token(u8"-\0", caoco::tk_enum::subtraction, u8"-");
-	test_single_token(u8"*\0", caoco::tk_enum::multiplication, u8"*");
-	test_single_token(u8"/\0", caoco::tk_enum::division, u8"/");
-	test_single_token(u8"%\0", caoco::tk_enum::remainder, u8"%");
-	test_single_token(u8"~\0", caoco::tk_enum::bitwise_NOT, u8"~");
-	test_single_token(u8"&\0", caoco::tk_enum::bitwise_AND, u8"&");
-	test_single_token(u8"|\0", caoco::tk_enum::bitwise_OR, u8"|");
-	test_single_token(u8"^\0", caoco::tk_enum::bitwise_XOR, u8"^");
-	test_single_token(u8"<<\0", caoco::tk_enum::bitwise_left_shift, u8"<<");
-	test_single_token(u8">>\0", caoco::tk_enum::bitwise_right_shift, u8">>");
+	test_single_token(u8"+\0", caoco::tk_enum::addition_, u8"+");
+	test_single_token(u8"-\0", caoco::tk_enum::subtraction_, u8"-");
+	test_single_token(u8"*\0", caoco::tk_enum::multiplication_, u8"*");
+	test_single_token(u8"/\0", caoco::tk_enum::division_, u8"/");
+	test_single_token(u8"%\0", caoco::tk_enum::remainder_, u8"%");
+	test_single_token(u8"~\0", caoco::tk_enum::bitwise_NOT_, u8"~");
+	test_single_token(u8"&\0", caoco::tk_enum::bitwise_AND_, u8"&");
+	test_single_token(u8"|\0", caoco::tk_enum::bitwise_OR_, u8"|");
+	test_single_token(u8"^\0", caoco::tk_enum::bitwise_XOR_, u8"^");
+	test_single_token(u8"<<\0", caoco::tk_enum::bitwise_left_shift_, u8"<<");
+	test_single_token(u8">>\0", caoco::tk_enum::bitwise_right_shift_, u8">>");
 
 	//// Logical Operators
 	//// !,&&,||
-	test_single_token(u8"!\0", caoco::tk_enum::negation, u8"!");
-	test_single_token(u8"&&\0", caoco::tk_enum::logical_AND, u8"&&");
-	test_single_token(u8"||\0", caoco::tk_enum::logical_OR, u8"||");
+	test_single_token(u8"!\0", caoco::tk_enum::negation_, u8"!");
+	test_single_token(u8"&&\0", caoco::tk_enum::logical_AND_, u8"&&");
+	test_single_token(u8"||\0", caoco::tk_enum::logical_OR_, u8"||");
 
 	//// Comparison Operators
 	//// ==,!=,<,>,<=,>=,<=>
-	test_single_token(u8"==\0", caoco::tk_enum::equal, u8"==");
-	test_single_token(u8"!=\0", caoco::tk_enum::not_equal, u8"!=");
-	test_single_token(u8"<\0", caoco::tk_enum::less_than, u8"<");
-	test_single_token(u8">\0", caoco::tk_enum::greater_than, u8">");
-	test_single_token(u8"<=\0", caoco::tk_enum::less_than_or_equal, u8"<=");
-	test_single_token(u8">=\0", caoco::tk_enum::greater_than_or_equal, u8">=");
-	test_single_token(u8"<=>\0", caoco::tk_enum::three_way_comparison, u8"<=>"); 
+	test_single_token(u8"==\0", caoco::tk_enum::equal_, u8"==");
+	test_single_token(u8"!=\0", caoco::tk_enum::not_equal_, u8"!=");
+	test_single_token(u8"<\0", caoco::tk_enum::less_than_, u8"<");
+	test_single_token(u8">\0", caoco::tk_enum::greater_than_, u8">");
+	test_single_token(u8"<=\0", caoco::tk_enum::less_than_or_equal_, u8"<=");
+	test_single_token(u8">=\0", caoco::tk_enum::greater_than_or_equal_, u8">=");
+	test_single_token(u8"<=>\0", caoco::tk_enum::three_way_comparison_, u8"<=>"); 
 
 	//// Scopes
 	//// (,),{,},[,]
-	test_single_token(u8"(\0", caoco::tk_enum::open_scope, u8"(");
-	test_single_token(u8")\0", caoco::tk_enum::close_scope, u8")");
-	test_single_token(u8"{\0", caoco::tk_enum::open_list, u8"{");
-	test_single_token(u8"}\0", caoco::tk_enum::close_list, u8"}");
-	test_single_token(u8"[\0", caoco::tk_enum::open_frame, u8"[");
-	test_single_token(u8"]\0", caoco::tk_enum::close_frame, u8"]");
+	test_single_token(u8"(\0", caoco::tk_enum::open_scope_, u8"(");
+	test_single_token(u8")\0", caoco::tk_enum::close_scope_, u8")");
+	test_single_token(u8"{\0", caoco::tk_enum::open_list_, u8"{");
+	test_single_token(u8"}\0", caoco::tk_enum::close_list_, u8"}");
+	test_single_token(u8"[\0", caoco::tk_enum::open_frame_, u8"[");
+	test_single_token(u8"]\0", caoco::tk_enum::close_frame_, u8"]");
 
 	//// Special Tokens
 	//// ;,:,...
-	test_single_token(u8";\0", caoco::tk_enum::eos, u8";");
-	test_single_token(u8",\0", caoco::tk_enum::comma, u8",");
-	test_single_token(u8".\0", caoco::tk_enum::period, u8".");
-	test_single_token(u8"...\0", caoco::tk_enum::ellipsis, u8"...");
+	test_single_token(u8";\0", caoco::tk_enum::eos_, u8";");
+	test_single_token(u8",\0", caoco::tk_enum::comma_, u8",");
+	test_single_token(u8".\0", caoco::tk_enum::period_, u8".");
+	test_single_token(u8"...\0", caoco::tk_enum::ellipsis_, u8"...");
 
 	// Cand Special Objects
 	// &type, &identity, &value, &int, &uint, &real, &octet, &bit, &array, &pointer, &memory, &function
@@ -173,9 +173,9 @@ TEST(CaocoTokenizer_NumberAndReal, CaocoTokenizer_Test) {
 	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
 
 	EXPECT_EQ(result.size(), 2);
-	EXPECT_EQ(result.at(0).type(), caoco::tk_enum::number_literal);
+	EXPECT_EQ(result.at(0).type(), caoco::tk_enum::number_literal_);
 	EXPECT_EQ(result.at(0).literal(), caoco::sl_u8string(u8"1234"));
-	EXPECT_EQ(result.at(1).type(), caoco::tk_enum::ellipsis);
+	EXPECT_EQ(result.at(1).type(), caoco::tk_enum::ellipsis_);
 	EXPECT_EQ(result.at(1).literal(), caoco::sl_u8string(u8"..."));
 
 }
@@ -252,28 +252,28 @@ TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 
 	// Single value statement : 1;
 	std::cout << "Testing single value statement" << std::endl;
-	caoco::parser_scope_result empty_statement = caoco::find_statement(caoco::tk_enum::number_literal,caoco::tk_enum::eos,result.cbegin(), result.cend());
+	caoco::parser_scope_result empty_statement = caoco::find_statement(caoco::tk_enum::number_literal_,caoco::tk_enum::eos_,result.cbegin(), result.cend());
 	EXPECT_TRUE(empty_statement.valid);
 
 	// statement with multiple tokens: #var a = 1;
 	std::cout << "Testing statement with multiple tokens" << std::endl;
-	caoco::parser_scope_result multiple_token_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos, empty_statement.scope_end(), result.cend());
+	caoco::parser_scope_result multiple_token_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, empty_statement.scope_end(), result.cend());
 	EXPECT_TRUE(multiple_token_statement.valid);
 
 	// statement with multiple tokens and scopes: #var a = (1;2;3);
 	std::cout << "Testing statement with multiple tokens and scopes" << std::endl;
-	caoco::parser_scope_result multiple_token_scope_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos, multiple_token_statement.scope_end(), result.cend());
+	caoco::parser_scope_result multiple_token_scope_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, multiple_token_statement.scope_end(), result.cend());
 	EXPECT_TRUE(multiple_token_scope_statement.valid);
 
 	// statement with lists frames and scopes nested in diffrent ways containing end tokens. #var a = 1 + ([ 2 ;3 + {4;5;6}]);
 	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing end tokens." << std::endl;
-	caoco::parser_scope_result complex_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos, multiple_token_scope_statement.scope_end(), result.cend());
+	caoco::parser_scope_result complex_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, multiple_token_scope_statement.scope_end(), result.cend());
 	EXPECT_TRUE(complex_statement.valid);
 	//EXPECT_TRUE(complex_statement.scope_end() == result.cend() - 1);
 
 	// Test finding an "open" statement which allows for repeated open tokens. ex a = a + a + ([ a ;a + {a;a;a}]);
 	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing begin and end tokens." << std::endl;
-	caoco::parser_scope_result open_statement = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, complex_statement.scope_end(), result.cend());
+	caoco::parser_scope_result open_statement = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, complex_statement.scope_end(), result.cend());
 	EXPECT_TRUE(open_statement.valid);
 	EXPECT_TRUE(open_statement.scope_end() == result.cend() - 1);
 
@@ -284,7 +284,7 @@ TEST(CaocoParser_BasicNode_PrimaryExpression, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_primaryexpr.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
-	auto found_scope = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, result.cbegin(), result.cend());
+	auto found_scope = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, result.cbegin(), result.cend());
 	// Test parsing a primary expression using build statement method
 	std::cout << "Testing foo;" << std::endl;
 	auto px1 = caoco::build_statement(found_scope.scope_begin(), found_scope.contained_end());
@@ -294,35 +294,35 @@ TEST(CaocoParser_BasicNode_PrimaryExpression, CaocoParser_Test) {
 
 	// foo + 2
 	std::cout << "Testing foo + 2;" << std::endl;
-	auto found_scope2 = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, found_scope.scope_end(), result.cend());
+	auto found_scope2 = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, found_scope.scope_end(), result.cend());
 	auto px2 = caoco::build_statement(found_scope2.scope_begin(), found_scope2.contained_end());
 	EXPECT_TRUE(px2.has_value());
 	print_ast(px2.value());
 
 	// foo = 1 + 2;
 	std::cout << "Testing foo = 1 + 2;" << std::endl;
-	auto found_scope3 = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, found_scope2.scope_end(), result.cend());
+	auto found_scope3 = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, found_scope2.scope_end(), result.cend());
 	auto px3 = caoco::build_statement(found_scope3.scope_begin(), found_scope3.contained_end());
 	EXPECT_TRUE(px3.has_value());
 	print_ast(px3.value());
 
 	// Testing period(member access) operator
 	std::cout << "Testing foo.bar;" << std::endl;
-	auto found_scope4 = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, found_scope3.scope_end(), result.cend());
+	auto found_scope4 = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, found_scope3.scope_end(), result.cend());
 	auto px4 = caoco::build_statement(found_scope4.scope_begin(), found_scope4.contained_end());
 	EXPECT_TRUE(px4.has_value());
 	print_ast(px4.value());
 
 	// Testing function call operator ()
 	std::cout << "Testing foo.bar();" << std::endl;
-	auto found_scope5 = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, found_scope4.scope_end(), result.cend());
+	auto found_scope5 = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, found_scope4.scope_end(), result.cend());
 	auto px5 = caoco::build_statement(found_scope5.scope_begin(), found_scope5.contained_end());
 	EXPECT_TRUE(px5.has_value());
 	print_ast(px5.value());
 
 	// Statement with no following binary operator should be invalid and throw an exception.
 	std::cout << "Testing foo=; Result should throw." << std::endl;
-	auto found_scope6 = caoco::find_open_statement(caoco::tk_enum::alnumus, caoco::tk_enum::eos, found_scope5.scope_end(), result.cend());
+	auto found_scope6 = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, found_scope5.scope_end(), result.cend());
 	EXPECT_ANY_THROW(caoco::build_statement(found_scope6.scope_begin(), found_scope6.contained_end()));
 
 }
@@ -335,7 +335,7 @@ TEST(CaocoParser_BasicNode_SimpleStatements, CaocoParser_Test) {
 	// Type definition
 	// #type Int = &int;
 	std::cout << "Testing #type Int = &int;" << std::endl;
-	auto found_scope = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos, result.cbegin(), result.cend());
+	auto found_scope = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos_, result.cbegin(), result.cend());
 	auto px1 = caoco::ParseDirectiveType()(found_scope.scope_begin(), found_scope.scope_end());
 	EXPECT_TRUE(px1.valid());
 	print_ast(px1.node());
@@ -344,7 +344,7 @@ TEST(CaocoParser_BasicNode_SimpleStatements, CaocoParser_Test) {
 	// Type alias
 	// #type IntAlias = Int;
 	std::cout << "Testing #type IntAlias = Int;" << std::endl;
-	auto found_scope2 = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos, found_scope.scope_end(), result.cend());
+	auto found_scope2 = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos_, found_scope.scope_end(), result.cend());
 	auto px2 = caoco::ParseDirectiveType()(found_scope2.scope_begin(), found_scope2.scope_end());
 	EXPECT_TRUE(px2.valid());
 	print_ast(px2.node());
@@ -352,7 +352,7 @@ TEST(CaocoParser_BasicNode_SimpleStatements, CaocoParser_Test) {
 	// Type definition with contraints
 	// #type IntRange = &int[1 ...10];
 	std::cout << "Testing #type IntRange = &int[1 ...10];" << std::endl;
-	auto found_scope3 = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos, found_scope2.scope_end(), result.cend());
+	auto found_scope3 = caoco::find_open_statement(caoco::tk_enum::type_, caoco::tk_enum::eos_, found_scope2.scope_end(), result.cend());
 	auto px3 = caoco::ParseDirectiveType()(found_scope3.scope_begin(), found_scope3.scope_end());
 	EXPECT_TRUE(px3.valid());
 	print_ast(px3.node());

@@ -93,10 +93,10 @@ namespace caoco {
 		auto perform_lex = [&](auto lexer) SL_CX-> bool{
 			lex_result lex_result = (this->*lexer)(it);
 			const tk& result_token = lex_result.token();
-			if (lex_result.token().type() == tk_enum::none) { // No match, try next lexer
+			if (lex_result.token().type() == tk_enum::none_) { // No match, try next lexer
 				return false;
 			}
-			else if (lex_result.token().type() == tk_enum::invalid) {
+			else if (lex_result.token().type() == tk_enum::invalid_) {
 				throw lex_error(current_line,current_col,lex_result.error());
 			}
 			else { // Lexing was successful
@@ -149,10 +149,10 @@ namespace caoco {
 			tk_vector new_output;
 			for (auto i = output_tokens.cbegin(); i != output_tokens.cend(); ++i) {
 				const std::initializer_list<tk_enum> REDUNDANT_TOKEN_KINDS{
-					tk_enum::whitespace,
-					tk_enum::line_comment,
-					tk_enum::block_comment,
-					tk_enum::newline
+					tk_enum::whitespace_,
+					tk_enum::line_comment_,
+					tk_enum::block_comment_,
+					tk_enum::newline_
 				};
 
 				if (std::any_of(REDUNDANT_TOKEN_KINDS.begin(), REDUNDANT_TOKEN_KINDS.end(),
@@ -175,11 +175,11 @@ namespace caoco {
 	}
 
 	SL_CXIN tokenizer::lex_result tokenizer::make_none_result(sl_char8_vector_cit beg_it) {
-		return lex_result(tk(tk_enum::none, beg_it, beg_it), beg_it);
+		return lex_result(tk(tk_enum::none_, beg_it, beg_it), beg_it);
 	}
 
 	SL_CXIN tokenizer::lex_result tokenizer::make_invalid_result(sl_char8_vector_cit beg_it, const sl_string& error) {
-		return lex_result(tk(tk_enum::invalid, beg_it, beg_it), beg_it, error);
+		return lex_result(tk(tk_enum::invalid_, beg_it, beg_it), beg_it, error);
 	}
 	
 	SL_CX char8_t tokenizer::get(sl_char8_vector_cit it) {
@@ -217,7 +217,7 @@ namespace caoco {
 				while (!char_traits::is_newline(get(it)) && get(it) != '\0') {
 					advance(it);
 				}
-				return make_result(tk_enum::line_comment,begin,it);
+				return make_result(tk_enum::line_comment_,begin,it);
 			}
 			else if (peek(it, 1) == '/' && peek(it, 2) == '/') {	// Block comment three solidus '///' closed by '///'
 				advance(it, 3);
@@ -231,18 +231,18 @@ namespace caoco {
 					3. then go 1 past to the end.(1)
 					Total: 5
 				*/
-				return  make_result(tk_enum::block_comment, begin, it);
+				return  make_result(tk_enum::block_comment_, begin, it);
 			}
 			else {
 				advance(it);
 				// if the next character is a '=' then we have a division assignment operator
 				if (get(it) == '=') {
 					advance(it);
-					return  make_result(tk_enum::division_assignment, begin, it);
+					return  make_result(tk_enum::division_assignment_, begin, it);
 				}
 				// otherwise we have a division operator
 				else
-					return  make_result(tk_enum::division, begin, it);
+					return  make_result(tk_enum::division_, begin, it);
 			}
 		}
 		else {
@@ -262,10 +262,10 @@ namespace caoco {
 			// Check for octet literal
 			if (get(it) == 'c') {
 				advance(it);
-				return  make_result(tk_enum::octet_literal, begin, it);
+				return  make_result(tk_enum::octet_literal_, begin, it);
 			}
 			else
-				return make_result(tk_enum::string_literal, begin, it);
+				return make_result(tk_enum::string_literal_, begin, it);
 		}
 		else {
 			return  make_none_result(begin);
@@ -278,7 +278,7 @@ namespace caoco {
 			while (char_traits::is_newline(get(it))) {
 				advance(it);
 			}
-			return make_result(tk_enum::newline, begin, it);
+			return make_result(tk_enum::newline_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -291,7 +291,7 @@ namespace caoco {
 			while (char_traits::is_whitespace(get(it))) {
 				advance(it);
 			}
-			return make_result(tk_enum::whitespace, begin, it);
+			return make_result(tk_enum::whitespace_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -302,7 +302,7 @@ namespace caoco {
 		auto begin = it;
 		if (get(it) == '\0') {
 			advance(it);
-			return make_result(tk_enum::eof, begin, it);
+			return make_result(tk_enum::eof_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -315,11 +315,11 @@ namespace caoco {
 			//Special case for 1b and 0b
 			if(get(it) == '1' && peek(it,1) == 'b'){
 				advance(it,2);
-				return make_result(tk_enum::bit_literal, begin, it);
+				return make_result(tk_enum::bit_literal_, begin, it);
 			}
 			else if(get(it) == '0' && peek(it,1) == 'b'){
 				advance(it,2);
-				return make_result(tk_enum::bit_literal, begin, it);
+				return make_result(tk_enum::bit_literal_, begin, it);
 			}
 
 			while (char_traits::is_numeric(get(it))) {
@@ -329,18 +329,18 @@ namespace caoco {
 			// Special case for unsigned literal (overflow is handled by the parser)
 			if (get(it) == 'u') {
 				advance(it);
-				return make_result(tk_enum::unsigned_literal, begin, it);
+				return make_result(tk_enum::unsigned_literal_, begin, it);
 			}
 
 			// Special case for octet literal(overflow is handled by the parser)
 			if (get(it) == 'c') {
 				advance(it);
-				return make_result(tk_enum::octet_literal, begin, it);
+				return make_result(tk_enum::octet_literal_, begin, it);
 			}
 
 			// If number is followed by elipsis. Return the number.
 			if(find_forward(it,u8"...")){
-				return make_result(tk_enum::number_literal, begin, it);
+				return make_result(tk_enum::number_literal_, begin, it);
 			}
 
 			// Else process a floating literal.
@@ -349,10 +349,10 @@ namespace caoco {
 				while (char_traits::is_numeric(get(it))) {
 					advance(it);
 				}
-				return make_result(tk_enum::real_literal, begin, it);
+				return make_result(tk_enum::real_literal_, begin, it);
 			}
 
-			return make_result(tk_enum::number_literal, begin, it);
+			return make_result(tk_enum::number_literal_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -365,7 +365,7 @@ namespace caoco {
 			while (char_traits::is_alnumus(get(it))) {
 				advance(it);
 			}
-			return make_result(tk_enum::alnumus, begin, it);
+			return make_result(tk_enum::alnumus_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -475,166 +475,166 @@ namespace caoco {
 		if (get(it) == '=') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::equal, begin, it);
+				return make_result(tk_enum::equal_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::simple_assignment, begin, it);
+				return make_result(tk_enum::simple_assignment_, begin, it);
 			}
 		}
 		else if (get(it) == '+') {
 			if (peek(it, 1) == '+') {
 				advance(it,2);
-				return make_result(tk_enum::increment, begin, it);
+				return make_result(tk_enum::increment_, begin, it);
 			}
 			else if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::addition_assignment, begin, it);
+				return make_result(tk_enum::addition_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::addition, begin, it);
+				return make_result(tk_enum::addition_, begin, it);
 			}
 		}
 		else if (get(it) == '-') {
 			if (peek(it, 1) == '-') {
 				advance(it,2);
-				return make_result(tk_enum::decrement, begin, it);
+				return make_result(tk_enum::decrement_, begin, it);
 			}
 			else if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::subtraction_assignment, begin, it);
+				return make_result(tk_enum::subtraction_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::subtraction, begin, it);
+				return make_result(tk_enum::subtraction_, begin, it);
 			}
 		}
 		else if (get(it) == '*') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::multiplication_assignment, begin, it);
+				return make_result(tk_enum::multiplication_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::multiplication, begin, it);
+				return make_result(tk_enum::multiplication_, begin, it);
 			}
 		}
 		else if (get(it) == '/') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::division_assignment, begin, it);
+				return make_result(tk_enum::division_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::division, begin, it);
+				return make_result(tk_enum::division_, begin, it);
 			}
 		}
 		else if (get(it) == '%') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::remainder_assignment, begin, it);
+				return make_result(tk_enum::remainder_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::remainder, begin, it);
+				return make_result(tk_enum::remainder_, begin, it);
 			}
 		}
 		else if (get(it) == '&') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::bitwise_and_assignment, begin, it);
+				return make_result(tk_enum::bitwise_and_assignment_, begin, it);
 			}
 			else if (peek(it, 1) == '&') {
 				advance(it,2);
-				return make_result(tk_enum::logical_AND, begin, it);
+				return make_result(tk_enum::logical_AND_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::bitwise_AND, begin, it);
+				return make_result(tk_enum::bitwise_AND_, begin, it);
 			}
 		}
 		else if (get(it) == '|') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::bitwise_or_assignment, begin, it);
+				return make_result(tk_enum::bitwise_or_assignment_, begin, it);
 			}
 			else if (peek(it, 1) == '|') {
 				advance(it,2);
-				return make_result(tk_enum::logical_OR, begin, it);
+				return make_result(tk_enum::logical_OR_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::bitwise_OR, begin, it);
+				return make_result(tk_enum::bitwise_OR_, begin, it);
 			}
 		}
 		else if (get(it) == '^') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::bitwise_xor_assignment, begin, it);
+				return make_result(tk_enum::bitwise_xor_assignment_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::bitwise_XOR, begin, it);
+				return make_result(tk_enum::bitwise_XOR_, begin, it);
 			}
 		}
 		else if (get(it) == '<') {
 			if (peek(it, 1) == '<') {
 				if (peek(it, 2) == '=') {
 					advance(it,3);
-					return make_result(tk_enum::left_shift_assignment, begin, it);
+					return make_result(tk_enum::left_shift_assignment_, begin, it);
 				}
 				else {
 					advance(it,2);
-					return make_result(tk_enum::bitwise_left_shift, begin, it);
+					return make_result(tk_enum::bitwise_left_shift_, begin, it);
 				}
 			}
 			else if (peek(it, 1) == '=') {
 				if (peek(it, 2) == '>') {
 					advance(it,3);
-					return make_result(tk_enum::three_way_comparison, begin, it);
+					return make_result(tk_enum::three_way_comparison_, begin, it);
 				}
 				advance(it,2);
-				return make_result(tk_enum::less_than_or_equal, begin, it);
+				return make_result(tk_enum::less_than_or_equal_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::less_than, begin, it);
+				return make_result(tk_enum::less_than_, begin, it);
 			}
 		}
 		else if (get(it) == '>') {
 			if (peek(it, 1) == '>') {
 				if (peek(it, 2) == '=') {
 					advance(it,3);
-					return make_result(tk_enum::right_shift_assignment, begin, it);
+					return make_result(tk_enum::right_shift_assignment_, begin, it);
 				}
 				else {
 					advance(it,2);
-					return make_result(tk_enum::bitwise_right_shift, begin, it);
+					return make_result(tk_enum::bitwise_right_shift_, begin, it);
 				}
 			}
 			else if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::greater_than_or_equal, begin, it);
+				return make_result(tk_enum::greater_than_or_equal_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::greater_than, begin, it);
+				return make_result(tk_enum::greater_than_, begin, it);
 			}
 		}
 		else if (get(it) == '!') {
 			if (peek(it, 1) == '=') {
 				advance(it,2);
-				return make_result(tk_enum::not_equal, begin, it);
+				return make_result(tk_enum::not_equal_, begin, it);
 			}
 			else {
 				advance(it);
-				return make_result(tk_enum::negation, begin, it);
+				return make_result(tk_enum::negation_, begin, it);
 			}
 		}
 		else if (get(it) == '~') {
 			advance(it);
-			return make_result(tk_enum::bitwise_NOT, begin, it);
+			return make_result(tk_enum::bitwise_NOT_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -645,27 +645,27 @@ namespace caoco {
 		auto begin = it;
 		if (get(it) == '(') {
 			advance(it);
-			return make_result(tk_enum::open_scope, begin, it);
+			return make_result(tk_enum::open_scope_, begin, it);
 		}
 		else if (get(it) == ')') {
 			advance(it);
-			return make_result(tk_enum::close_scope, begin, it);
+			return make_result(tk_enum::close_scope_, begin, it);
 		}
 		else if (get(it) == '{') {
 			advance(it);
-			return make_result(tk_enum::open_list, begin, it);
+			return make_result(tk_enum::open_list_, begin, it);
 		}
 		else if (get(it) == '}') {
 			advance(it);
-			return make_result(tk_enum::close_list, begin, it);
+			return make_result(tk_enum::close_list_, begin, it);
 		}
 		else if (get(it) == '[') {
 			advance(it);
-			return make_result(tk_enum::open_frame, begin, it);
+			return make_result(tk_enum::open_frame_, begin, it);
 		}
 		else if (get(it) == ']') {
 			advance(it);
-			return make_result(tk_enum::close_frame, begin, it);
+			return make_result(tk_enum::close_frame_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -676,7 +676,7 @@ namespace caoco {
 		auto begin = it;
 		if (get(it) == ';') {
 			advance(it);
-			return make_result(tk_enum::eos,begin, it);
+			return make_result(tk_enum::eos_,begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -687,7 +687,7 @@ namespace caoco {
 		auto begin = it;
 		if (get(it) == ',') {
 			advance(it);
-			return make_result(tk_enum::comma,begin, it);
+			return make_result(tk_enum::comma_,begin, it);
 		}
 		else {
 			return make_none_result(begin);
@@ -756,11 +756,11 @@ namespace caoco {
 		auto begin = it;
 		if (find_forward(it, u8"...")) {
 			advance(it,3);
-			return make_result(tk_enum::ellipsis,begin, it);
+			return make_result(tk_enum::ellipsis_,begin, it);
 		}
 		else if (get(it) == '.') {
 			advance(it);
-			return make_result(tk_enum::period, begin, it);
+			return make_result(tk_enum::period_, begin, it);
 		}
 		else {
 			return make_none_result(begin);
