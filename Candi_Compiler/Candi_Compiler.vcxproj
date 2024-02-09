@@ -107,6 +107,7 @@
     <ClInclude Include="syntax_traits.hpp" />
     <ClInclude Include="token.hpp" />
     <ClInclude Include="tokenizer.hpp" />
+    <ClInclude Include="unit_test_util.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
@@ -118,25 +119,20 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="constant_evaluator_unit_test_0_free_functions.candi" />
-    <None Include="constant_evaluator_unit_test_0_literals.candi" />
-    <None Include="constant_evaluator_unit_test_0_operators.candi" />
-    <None Include="constant_evaluator_unit_test_0_structs.candi" />
-    <None Include="constant_evaluator_unit_test_0_variable_declaration.candi" />
-    <None Include="lexer_test.candi" />
+    <None Include="ut_ceval_free_functions.candi" />
+    <None Include="ut_ceval_literals.candi" />
+    <None Include="ut_ceval_operators.candi" />
+    <None Include="ut_ceval_structs.candi" />
+    <None Include="ut_ceval_vardecl.candi" />
     <None Include="packages.config" />
-    <None Include="parser_test.candi" />
-    <None Include="parser_unit_test_0_basic_node.candi" />
-    <None Include="parser_unit_test_0_basic_statement.candi" />
-    <None Include="parser_unit_test_0_classes.candi" />
-    <None Include="parser_unit_test_0_function.candi" />
-    <None Include="ut0_CaocoTokenizer_Tokens.candi" />
-    <None Include="parser_unit_test_0_minimum_program.candi" />
-    <None Include="parser_unit_test_0_primary_expr.candi" />
-    <None Include="parser_unit_test_0_scopes.candi" />
-    <None Include="parser_unit_test_0_statements.candi" />
-    <None Include="tokenizer.candi" />
-    <None Include="transpiler_test.candi" />
+    <None Include="ut_parser_singular_nodes.candi" />
+    <None Include="ut_parser_simplestatements.candi" />
+    <None Include="ut_parser_classes.candi" />
+    <None Include="ut_parser_function.candi" />
+    <None Include="ut_parser_minimum_program.candi" />
+    <None Include="ut_parser_primaryexpr.candi" />
+    <None Include="ut_parser_scopes.candi" />
+    <None Include="ut_parser_statementscope.candi" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

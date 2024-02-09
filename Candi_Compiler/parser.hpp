@@ -21,13 +21,6 @@
 
 namespace caoco {
 
-	using tk_vector = sl_vector<tk>;
-	using tk_vector_it = tk_vector::iterator;
-	using tk_vector_cit = tk_vector::const_iterator;
-
-	using node_enum = astnode_enum;
-	using astnode_enum = astnode_enum;
-
 	// <@class:parsing_result>
 	// <@brief> A struct containing the result of a parsing method.
 	// <@member:cursor> The end of the parsed statement.
@@ -49,7 +42,6 @@ namespace caoco {
 		constexpr bool valid() const noexcept { return valid_; }
 		constexpr sl_string error_message() const noexcept { return error_message_; }
 	};
-
 
 	// <@class:parsing_process> virtual base class for a parsing process functor.
 	class parsing_process {
@@ -86,8 +78,6 @@ namespace caoco {
 		virtual ~parsing_process() = default;
 	};
 
-
-	// Expression parsing methods:
 	sl_opt<astnode> build_statement(tk_vector_cit begin,
 		tk_vector_cit end, sl_opt<astnode> last_pass = sl::nullopt) {
 		tk_cursor it(begin,end);
@@ -115,7 +105,7 @@ namespace caoco {
 					}
 				}
 			}
-			else if (it.type() == tk_enum::open_scope) { // This expression starts with a scope.
+			else if (it.type() == tk_enum::open_scope_) { // This expression starts with a scope.
 				parser_scope_result scope = find_scope(*it, end);
 				if (!scope.valid) { // If the scope is invalid, throw an error.
 					throw std::runtime_error("Mismatched parenthesis.");
@@ -138,7 +128,7 @@ namespace caoco {
 				if (*it.next() == end) { // If there is no following operator. This is the last pass.
 					return it.to_statement();
 				}
-				else if (it.next().type_is(tk_enum::open_scope)) { // special case for function call
+				else if (it.next().type_is(tk_enum::open_scope_)) { // special case for function call
 					// Everything within the scope is the arguments of the function call.
 					// The function call is the lhs of the following operator.
 					parser_scope_result arg_scope = find_scope(*it.next(), end);
@@ -170,19 +160,19 @@ namespace caoco {
 			// This is a following pass, assume 'it' is a binary operator. 
 			// Assume last_pass is an unfinished binary operation of type binary operator.
 			// Do some input validation first to reduce code duplication.
-			if (*it.next() == end || it.next().type_is(tk_enum::eof)) { // If there is no following operand. Error.Binary Operator must be followed by operand.
+			if (*it.next() == end || it.next().type_is(tk_enum::eof_)) { // If there is no following operand. Error.Binary Operator must be followed by operand.
 				throw std::runtime_error("End of expression after binary operator. Operator must be followed by operand.");
 			}
 
 			// We will check for single operands, if it is not. Then we assume it must be a scope or a unary operator.Otherwise Error.
-			if (it.next().type() != tk_enum::number_literal
-				&& it.next().type() != tk_enum::alnumus) { // is not a single operand?
+			if (it.next().type() != tk_enum::number_literal_
+				&& it.next().type() != tk_enum::alnumus_) { // is not a single operand?
 				if (it.next().operation() == Operation::unary_) { // is a unary operator?
 					if (*it.next(2) == end) {
 						throw std::runtime_error("End of expression after unary operator. Operator must be followed by operand.");
 					}
 				}
-				else if (it.next().type() == tk_enum::open_scope) { // is a scope?
+				else if (it.next().type() == tk_enum::open_scope_) { // is a scope?
 					parser_scope_result scope = find_scope(*it.next(), end);
 					if (!scope.valid) {
 						throw std::runtime_error("Mismatched parenthesis.");
@@ -204,7 +194,7 @@ namespace caoco {
 			if (it.next().operation() == Operation::unary_) {
 				next_operator_it = *it.next(3);
 			}
-			else if (it.next().type() == tk_enum::open_scope) {
+			else if (it.next().type() == tk_enum::open_scope_) {
 				parser_scope_result scope = find_scope(*it.next(), end);
 				next_operator_it = scope.scope_end();
 			}
@@ -215,7 +205,7 @@ namespace caoco {
 			tk_cursor next_op_cursor = tk_cursor(next_operator_it, end);
 			astnode optional_function_call = astnode(astnode_enum::none_);
 			// Special case for function call
-			if (next_op_cursor.type_is(tk_enum::open_scope)) {
+			if (next_op_cursor.type_is(tk_enum::open_scope_)) {
 				// Operand followed by a scope is a function call.
 				// Everything within the scope is the arguments of the function call.
 				auto arg_scope = find_scope(*next_op_cursor, end);
@@ -240,7 +230,7 @@ namespace caoco {
 						last_pass.value().push_front(it.next().to_statement());
 						last_pass.value().front().push_back(it.next(2).to_statement());
 					}
-					else if (it.next().type() == tk_enum::open_scope) { // next operand is a scope.
+					else if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 						parser_scope_result scope = find_scope(*it, end);
 						last_pass.value().push_front(build_statement(scope.contained_begin(), scope.contained_end()).value());
 					}
@@ -259,7 +249,7 @@ namespace caoco {
 						last_pass.value().push_back(it.next().to_statement());
 						last_pass.value().back().push_back(it.next(2).to_statement());
 					}
-					else if (it.next().type() == tk_enum::open_scope) { // next operand is a scope.
+					else if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 						parser_scope_result scope = find_scope(*it.next(), end);
 						last_pass.value().push_back(build_statement(scope.contained_begin(), scope.contained_end()).value());
 					}
@@ -293,7 +283,7 @@ namespace caoco {
 					//		If the operator is right associative. The right and left hand side are swapped.
 					astnode lhs_expression = astnode(last_pass.value().type()); // lhs is the last pass.
 					if (it.associativity() == Associativity::right_) { // right Assoc
-						if (it.next().type() == tk_enum::open_scope) { // next operand is a scope.
+						if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 							parser_scope_result scope = find_scope(*it.next(), end); // find the scope.
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as lhs.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the rhs.
@@ -309,7 +299,7 @@ namespace caoco {
 						}
 					}
 					else { // left Assoc
-						if (it.next().type() == tk_enum::open_scope) { // next operand is a scope.
+						if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 							parser_scope_result scope = find_scope(*it.next(), end); // find the scope.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the lhs.
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as rhs.
@@ -341,9 +331,6 @@ namespace caoco {
 		}
 	}
 
-
-
-
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Parsing Functor Definitions
@@ -351,7 +338,6 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParsePragmaticBlock);
 	caoco_PARSING_PROCESS_DEF(ParseFunctionalBlock);
 	caoco_PARSING_PROCESS_DEF(ParseValueExpression);
-
 	// ambigous statements part of a pragmatic block.
 	caoco_PARSING_PROCESS_DEF(ParseIdentifierStatement);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveType);
@@ -359,9 +345,8 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveFunc);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveClass);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveNone);
-
 	// Functional block statements
-	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); // <#return> <expr> <eos>
+	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); 
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveIf);
 	// literals
 	caoco_PARSING_PROCESS_DEF(ParseLiteral);
@@ -369,11 +354,9 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseNumberLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseRealLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseAlnumusLiteral);
-
 	caoco_PARSING_PROCESS_DEF(ParseUnsignedLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseOctetLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseBitLiteral);
-
 	// candi special objects
 	caoco_PARSING_PROCESS_DEF(ParseCandiSpecialObject);
 	caoco_PARSING_PROCESS_DEF(ParseCsoType);
@@ -407,9 +390,9 @@ namespace caoco {
 		assert(begin->type() == tk_enum::aint_ && "[LOGIC ERROR][ParseCsoInt] begin is not aint_ token.");
 		tk_cursor it(begin, end);
 		using constrained_int_type_mask = std::tuple<
-			tk_mask<tk_enum::aint_>, tk_mask<tk_enum::open_frame>, tk_mask<tk_enum::subtraction, mask_policy::optional>,
-			tk_mask<tk_enum::number_literal>, tk_mask<tk_enum::ellipsis>, tk_mask<tk_enum::subtraction, mask_policy::optional>,
-			tk_mask<tk_enum::number_literal>, tk_mask<tk_enum::close_frame>>;
+			tk_mask<tk_enum::aint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
 		// If '&int' is followed by an open frame '[' - it is a constrained integer type.
 		// Format:
 		// <constrained_int_type> 
@@ -419,11 +402,11 @@ namespace caoco {
 		//	&int[-42...42]
 		if (scan_tokens_pack<constrained_int_type_mask>(begin, end)) {
 			astnode atype_node(astnode_enum::aint_);
-			if (it.next(2).type_is(tk_enum::subtraction)) {// If the first number is negative.
+			if (it.next(2).type_is(tk_enum::subtraction_)) {// If the first number is negative.
 				auto& unary_minus = atype_node.push_back(it.next(2).to_statement()); // Add the unary minus to the node.
 				unary_minus.push_back(it.next(3).to_statement()); // Add the number to the unary minus
 				// Skip the ellipsis.
-				if (it.next(5).type_is(tk_enum::subtraction)) { // If the second number is negative.
+				if (it.next(5).type_is(tk_enum::subtraction_)) { // If the second number is negative.
 									auto& unary_minus = atype_node.push_back(it.next(5).to_statement()); // Add the unary minus to the node.
 									unary_minus.push_back(it.next(6).to_statement()); // Add the number to the unary minus
 									// Skip the closed frame
@@ -438,7 +421,7 @@ namespace caoco {
 			else {
 				atype_node.push_back(it.next(2).to_statement()); // Add the number to the node.
 				// Skip the ellipsis.
-				if (it.next(4).type_is(tk_enum::subtraction)) { // If the second number is negative.
+				if (it.next(4).type_is(tk_enum::subtraction_)) { // If the second number is negative.
 					auto& unary_minus = atype_node.push_back(it.next(4).to_statement()); // Add the unary minus to the node.
 					unary_minus.push_back(it.next(5).to_statement()); // Add the number to the unary minus
 					// Skip the closed frame
@@ -452,15 +435,15 @@ namespace caoco {
 			}
 		}
 		else {
-			return make_success({ node_enum::aint_, begin, std::next(begin) });
+			return make_success({ astnode_enum::aint_, begin, std::next(begin) });
 		}
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoUint) {
 		assert(begin->type() == tk_enum::auint_ && "[LOGIC ERROR][ParseCsoUint] begin is not auint_ token.");
 		tk_cursor it(begin, end);
 		using constrained_uint_type_mask = std::tuple<
-			tk_mask<tk_enum::auint_>, tk_mask<tk_enum::open_frame>,	tk_mask<tk_enum::number_literal>, 
-			tk_mask<tk_enum::ellipsis>,tk_mask<tk_enum::number_literal>, tk_mask<tk_enum::close_frame>>;
+			tk_mask<tk_enum::auint_>, tk_mask<tk_enum::open_frame_>,	tk_mask<tk_enum::number_literal_>, 
+			tk_mask<tk_enum::ellipsis_>,tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
 		if (scan_tokens_pack<constrained_uint_type_mask>(begin, end)) {
 			astnode atype_node(astnode_enum::auint_);
 			atype_node.push_back(it.next(2).to_statement()); // Add the number to the node.
@@ -470,7 +453,7 @@ namespace caoco {
 			return make_success(atype_node, *it.next(6));
 		}
 		else {
-			return make_success(node_enum::auint_, *it.next());
+			return make_success(astnode_enum::auint_, *it.next());
 		}
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoReal) {
@@ -488,12 +471,12 @@ namespace caoco {
 	caoco_PARSING_PROCESS_IMPL(ParseCsoPointer) {
 		assert(begin->type() == tk_enum::apointer_ && "[LOGIC ERROR][ParseCsoInt] begin is not apointer_ token.");
 		tk_cursor it(begin, end);
-		if (find_forward(*it, { tk_enum::apointer_, tk_enum::open_frame ,tk_enum::alnumus,tk_enum::close_frame})) {
+		if (find_forward(*it, { tk_enum::apointer_, tk_enum::open_frame_ ,tk_enum::alnumus_,tk_enum::close_frame_})) {
 			astnode node(astnode_enum::apointer_);
 			node.push_back(it.next(2).to_statement());
 			return make_success(node, *it.next(4));
 		}
-		else if (find_forward(*it, { tk_enum::apointer_, tk_enum::open_frame })) { // if contraint is not an alnumus it must be a cso type.
+		else if (find_forward(*it, { tk_enum::apointer_, tk_enum::open_frame_ })) { // if contraint is not an alnumus it must be a cso type.
 			astnode node(astnode_enum::apointer_);
 			auto parse_result = ParseCandiSpecialObject()(*it.next(2), it.end());
 
@@ -513,12 +496,12 @@ namespace caoco {
 	caoco_PARSING_PROCESS_IMPL(ParseCsoArray) {
 		assert(begin->type() == tk_enum::aarray_ && "[LOGIC ERROR][ParseCsoArray] begin is not aarray_ token.");
 		tk_cursor it(begin, end);
-		if (find_forward(*it, { tk_enum::aarray_,tk_enum::open_frame,tk_enum::alnumus })) {
+		if (find_forward(*it, { tk_enum::aarray_,tk_enum::open_frame_,tk_enum::alnumus_ })) {
 			astnode node(astnode_enum::aarray_);
 			node.push_back(it.next(2).to_statement());
 
 			// Should be followed by a comma and a number literal.
-			if (find_forward(*it.next(3), { tk_enum::comma,tk_enum::number_literal })) {
+			if (find_forward(*it.next(3), { tk_enum::comma_,tk_enum::number_literal_ })) {
 				node.push_back(it.next(4).to_statement());
 				// Skip the close frame.
 				return make_success(node, *it.next(6));
@@ -527,7 +510,7 @@ namespace caoco {
 				throw std::runtime_error("ParseCsoArray: aarray_ must have a value constraint. Invalid array size.");
 			}
 		}
-		else if (find_forward(*it, { tk_enum::aarray_,tk_enum::open_frame })) {
+		else if (find_forward(*it, { tk_enum::aarray_,tk_enum::open_frame_ })) {
 			// if constraint is not an alnumus it must be a cso type.
 			astnode node(astnode_enum::aarray_);
 			auto parse_result = ParseCandiSpecialObject()(*it.next(2), it.end());
@@ -536,7 +519,7 @@ namespace caoco {
 				node.push_back(parse_result.node());
 			
 				// Should be followed by a comma and a number literal.
-				if (find_forward(parse_result.it(), {tk_enum::comma,tk_enum::number_literal})) {
+				if (find_forward(parse_result.it(), {tk_enum::comma_,tk_enum::number_literal_})) {
 					//skip comma
 					node.push_back(tk_cursor(parse_result.it()+1,end).to_statement());
 					// Skip the close frame.
@@ -591,60 +574,60 @@ namespace caoco {
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseStringLiteral) {
-		assert(begin->type() == tk_enum::string_literal && "[LOGIC ERROR][ParseStringLiteral] begin is not string_literal token.");
+		assert(begin->type() == tk_enum::string_literal_ && "[LOGIC ERROR][ParseStringLiteral] begin is not string_literal token.");
 		return make_success({ astnode_enum::string_literal_, begin, std::next(begin) });
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseNumberLiteral) {
-		assert(begin->type() == tk_enum::number_literal && "[LOGIC ERROR][ParseNumberLiteral] begin is not number_literal token.");
+		assert(begin->type() == tk_enum::number_literal_ && "[LOGIC ERROR][ParseNumberLiteral] begin is not number_literal token.");
 		return make_success({ astnode_enum::number_literal_, begin, std::next(begin) });
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseRealLiteral) {
-		assert(begin->type() == tk_enum::real_literal && "[LOGIC ERROR][ParseRealLiteral] begin is not real_literal token.");
+		assert(begin->type() == tk_enum::real_literal_ && "[LOGIC ERROR][ParseRealLiteral] begin is not real_literal token.");
 		return make_success({ astnode_enum::real_literal_, begin, std::next(begin) });
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseAlnumusLiteral) {
-		assert(begin->type() == tk_enum::alnumus && "[LOGIC ERROR][ParseAlnumusLiteral] begin is not alnumus token.");
+		assert(begin->type() == tk_enum::alnumus_ && "[LOGIC ERROR][ParseAlnumusLiteral] begin is not alnumus token.");
 		return make_success({ astnode_enum::alnumus_, begin, std::next(begin) });
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseUnsignedLiteral){
-		assert(begin->type() == tk_enum::unsigned_literal && "[LOGIC ERROR][ParseUnsignedLiteral] begin is not unsigned_literal token.");
+		assert(begin->type() == tk_enum::unsigned_literal_ && "[LOGIC ERROR][ParseUnsignedLiteral] begin is not unsigned_literal token.");
 		return make_success({ astnode_enum::unsigned_literal_, begin, std::next(begin) });
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseOctetLiteral) {
-		assert(begin->type() == tk_enum::octet_literal && "[LOGIC ERROR][ParseOctetLiteral] begin is not octet_literal token.");
+		assert(begin->type() == tk_enum::octet_literal_ && "[LOGIC ERROR][ParseOctetLiteral] begin is not octet_literal token.");
 		return make_success({ astnode_enum::octet_literal_, begin, std::next(begin) });
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseBitLiteral) {
-		assert(begin->type() == tk_enum::bit_literal && "[LOGIC ERROR][ParseBitLiteral] begin is not bit_literal token.");
+		assert(begin->type() == tk_enum::bit_literal_ && "[LOGIC ERROR][ParseBitLiteral] begin is not bit_literal token.");
 		return make_success({ astnode_enum::bit_literal_, begin, std::next(begin) });
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseLiteral) {
 		switch (begin->type())
 		{
-		case tk_enum::string_literal:
+		case tk_enum::string_literal_:
 			return ParseStringLiteral()(begin, end);
 			break;
-		case tk_enum::number_literal:
+		case tk_enum::number_literal_:
 			return ParseNumberLiteral()(begin, end);
 			break;
-		case tk_enum::real_literal:
+		case tk_enum::real_literal_:
 			return ParseRealLiteral()(begin, end);
 			break;
-		case tk_enum::alnumus:
+		case tk_enum::alnumus_:
 			return ParseAlnumusLiteral()(begin, end);
 			break;
 		case tk_enum::none_literal_:
 			return ParseDirectiveNone()(begin,end);
 			break;
-		case tk_enum::unsigned_literal:
+		case tk_enum::unsigned_literal_:
 			return ParseUnsignedLiteral()(begin, end);
 			break;
-		case tk_enum::octet_literal:
+		case tk_enum::octet_literal_:
 			return ParseOctetLiteral()(begin, end);
 			break;
-		case tk_enum::bit_literal:
+		case tk_enum::bit_literal_:
 			return ParseBitLiteral()(begin, end);
 			break;
 		default:
@@ -662,7 +645,7 @@ namespace caoco {
 
 		cursor.advance();
 
-		if (!cursor.type_is(tk_enum::alnumus)) {
+		if (!cursor.type_is(tk_enum::alnumus_)) {
 			return make_error(*cursor, **cursor, "ParseIdentifierStatement: Expected an alnumus.");
 		}
 
@@ -670,13 +653,13 @@ namespace caoco {
 		// 1. variable assingment: <alnumus> <assingment> <literal|alnumus> <eos>
 
 		// next should be an assignment token
-		if (cursor.next().type() != tk_enum::simple_assignment) {
+		if (cursor.next().type() != tk_enum::simple_assignment_) {
 			return make_error(*cursor.next(), **cursor.next(), "ParseIdentifierStatement: Expected a simple assignment token.");
 		}
 
 
 		// next is a type expression which is an alnumus or a cso type.
-		if (cursor.next(2).type_is(tk_enum::alnumus)) {
+		if (cursor.next(2).type_is(tk_enum::alnumus_)) {
 			// type expr is an alnumus
 			auto alnumus_literal = ParseAlnumusLiteral()(*cursor.next(2), end);
 			if (!alnumus_literal.valid()) {
@@ -684,7 +667,7 @@ namespace caoco {
 			}
 
 			// next should be an eos
-			if (cursor.next(3).type() != tk_enum::eos) {
+			if (cursor.next(3).type() != tk_enum::eos_) {
 				return make_error(*cursor.next(3), **cursor.next(3), "ParseIdentifierStatement: Expected an eos.");
 			}
 
@@ -704,7 +687,7 @@ namespace caoco {
 			}
 
 			// next should be an eos
-			if (cso.it()->type() != tk_enum::eos) {
+			if (cso.it()->type() != tk_enum::eos_) {
 				return make_error(*cursor.next(3), **cursor.next(3), "ParseIdentifierStatement: Expected an eos.");
 			}
 
@@ -726,12 +709,12 @@ namespace caoco {
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveVar) {
 		tk_cursor cursor(begin, end);
 
-		if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus,tk_enum::eos })) {	// Anon Var Decl
+		if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::eos_ })) {	// Anon Var Decl
 			astnode node{ astnode_enum::anon_variable_definition_, begin, *cursor.next(3) };
 			node.push_back({ astnode_enum::alnumus_,*cursor.next(), *cursor.next(2) });
 			return make_success(node, *cursor.next(3));// 1 past eos token
 		}
-		else if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus,tk_enum::simple_assignment })) // Anon Var Decl Assign
+		else if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::simple_assignment_ })) // Anon Var Decl Assign
 		{
 			// Build the assingment expression
 			auto expr = ParseValueExpression()(*cursor.next(), end);
@@ -747,21 +730,21 @@ namespace caoco {
 			node.push_back(expr.node());
 			return make_success(node, expr.it()); // 1 past eos token
 		}
-		else if (find_forward(begin, { tk_enum::var_,tk_enum::open_frame })) { // Constrained Variable Def
+		else if (find_forward(begin, { tk_enum::var_,tk_enum::open_frame_ })) { // Constrained Variable Def
 			// Find the scope of the frame.
-			parser_scope_result frame_scope = find_statement(tk_enum::open_frame, tk_enum::close_frame, *cursor.next(), cursor.end());
+			parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
 
 			// After the frame scope must be an alnumus.
-			if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus })) {
+			if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_ })) {
 
-				if ((frame_scope.scope_end() + 1)->type_is(tk_enum::eos)) {
+				if ((frame_scope.scope_end() + 1)->type_is(tk_enum::eos_)) {
 					// Create the node, omit the eos token.
 					astnode node{ astnode_enum::constrained_variable_definition_, *cursor, frame_scope.scope_end() + 1 };
 					node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
 					node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
 					return make_success(node, frame_scope.scope_end() + 2); // 1 past eos token
 				}
-				else if ((frame_scope.scope_end() + 1)->type_is(tk_enum::simple_assignment)) {
+				else if ((frame_scope.scope_end() + 1)->type_is(tk_enum::simple_assignment_)) {
 					// Build the assingment expression
 					auto expr = ParseValueExpression()(frame_scope.scope_end() + 2, end);
 					if (!expr.valid()) {
@@ -792,11 +775,11 @@ namespace caoco {
 		tk_cursor cursor(begin, end);
 
 		// Shorthand Void Arg Method Definition <#func> <alnumus> <functional_block>
-		if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus,tk_enum::open_list })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
-			parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list, tk_enum::close_list, *cursor.next(2), cursor.end());
+		if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_list_ })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
+			parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, *cursor.next(2), cursor.end());
 
 			// After list scope must be an eos.
-			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos)) {
+			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
 				// Create the node, omit the eos token.
 				astnode node{ astnode_enum::shorthand_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
 				node.push_back({ astnode_enum::alnumus_, *cursor.next(), *cursor.next(2) });
@@ -810,13 +793,13 @@ namespace caoco {
 			}
 		}
 		// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
-		else if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus,tk_enum::open_scope })) {
+		else if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_scope_ })) {
 			parser_scope_result method_arguments_scope = find_scope(*cursor.next(2), cursor.end());
 
-			if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list)) {
-				parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list, tk_enum::close_list, method_arguments_scope.scope_end(), cursor.end());
+			if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+				parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, method_arguments_scope.scope_end(), cursor.end());
 				// After list scope must be an eos.
-				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos)) {
+				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
 					// Create the node, omit the eos token.
 					astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
 					node.push_back({ astnode_enum::alnumus_, *cursor.next(), *cursor.next(2) });
@@ -835,15 +818,15 @@ namespace caoco {
 
 		}
 		// Shorthand Void Constrained Method Def or Constrained Method Def
-		else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame })) {
+		else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame_ })) {
 			// Find the scope of the frame.
-			parser_scope_result frame_scope = find_statement(tk_enum::open_frame, tk_enum::close_frame, *cursor.next(), cursor.end());
+			parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
 
 			// After the frame scope must be an alnumus and an open list -> Shorthand Void Constrained Function Def
-			if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus,tk_enum::open_list })) {
-				parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list, tk_enum::close_list, frame_scope.scope_end() + 1, cursor.end());
+			if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_list_ })) {
+				parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, frame_scope.scope_end() + 1, cursor.end());
 				// After list scope must be an eos.
-				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos)) {
+				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
 					// Create the node, omit the eos token.
 					astnode node{ astnode_enum::shorthand_constrained_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
 					node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
@@ -856,13 +839,13 @@ namespace caoco {
 				}
 			}
 			// Or an alnumus and an open scope -> Constrained Method Def
-			else if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus,tk_enum::open_scope })) {
+			else if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_scope_ })) {
 				parser_scope_result method_arguments_scope = find_scope(frame_scope.scope_end() + 1, cursor.end());
 
-				if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list)) {
-					parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list, tk_enum::close_list, method_arguments_scope.scope_end(), cursor.end());
+				if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+					parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, method_arguments_scope.scope_end(), cursor.end());
 					// After list scope must be an eos.
-					if (method_def_body_scope.scope_end()->type_is(tk_enum::eos)) {
+					if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
 						// Create the node, omit the eos token.
 						astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
 						node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
@@ -896,12 +879,12 @@ namespace caoco {
 		auto it = begin + 1;
 
 		// next should be an alnumus, the class name.
-		if (it->type() != tk_enum::alnumus) {
+		if (it->type() != tk_enum::alnumus_) {
 			return make_error(it, *it, "ParseDirectiveClass: Expected an alnumus.");
 		}
 
 		// next should be an open list scope.
-		if (std::next(it)->type() != tk_enum::open_list) {
+		if (std::next(it)->type() != tk_enum::open_list_) {
 			return make_error(std::next(it), *std::next(it), "ParseDirectiveClass: Expected an open list scope.");
 		}
 
@@ -913,7 +896,7 @@ namespace caoco {
 		}
 
 		// next should be an eos
-		if (class_scope.scope_end()->type() != tk_enum::eos) {
+		if (class_scope.scope_end()->type() != tk_enum::eos_) {
 			return make_error(class_definition.it(), *class_definition.it(), "ParseDirectiveClass: Expected an eos.");
 		}
 
@@ -927,10 +910,9 @@ namespace caoco {
 		return make_success({ astnode_enum::none_literal_, begin, std::next(begin) });
 	}
 
-
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveReturn) {
 		tk_cursor cursor(begin, end);
-		parser_scope_result statement_scope = find_statement(tk_enum::return_, tk_enum::eos, begin, end);
+		parser_scope_result statement_scope = find_statement(tk_enum::return_, tk_enum::eos_, begin, end);
 
 		if (!statement_scope.valid) {
 			return make_error(statement_scope.scope_end(), *statement_scope.scope_end(), "ParseDirectiveReturn: Invalid return statement.");
@@ -941,7 +923,7 @@ namespace caoco {
 		return make_success(node, statement_scope.scope_end());
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseValueExpression) {
-		auto expr_scope = caoco::find_open_statement(begin->type(), caoco::tk_enum::eos, begin, end);
+		auto expr_scope = caoco::find_open_statement(begin->type(), caoco::tk_enum::eos_, begin, end);
 
 		sl_opt<astnode> expr_node;
 		try {
@@ -958,7 +940,6 @@ namespace caoco {
 			return make_error(begin, *begin, "ParseValueExpression: Invalid statement.");
 	}
 
-
 	caoco_PARSING_PROCESS_IMPL(ParsePragmaticBlock) {
 		// Pragmatic blocks may contain statements starting with a directive or alnumus, ending in a semicolon.
 		// <pragmatic_block> ::= (<directive>|<alnumus>) <statement> <eos> ?
@@ -967,7 +948,7 @@ namespace caoco {
 		astnode node(astnode_enum::pragmatic_block_, begin, end);
 
 		// Find and parse all statements in the block.
-		while (it < end && it->type() != tk_enum::eof) {
+		while (it < end && it->type() != tk_enum::eof_) {
 			// Get the scope of the statement stating from the first token to the last matching semicolon.
 			parser_scope_result statement_scope;
 
@@ -1004,21 +985,21 @@ namespace caoco {
 				it = parse_result.it();
 			};
 
-			if (it->type_is(tk_enum::alnumus)) {
-				parse_open_statement(ParseIdentifierStatement(), tk_enum::alnumus, tk_enum::eos);
+			if (it->type_is(tk_enum::alnumus_)) {
+				parse_open_statement(ParseIdentifierStatement(), tk_enum::alnumus_, tk_enum::eos_);
 			}
 			else {
 				if (it->type() == tk_enum::type_) {
-					parse_statement(ParseDirectiveType(), tk_enum::type_, tk_enum::eos);
+					parse_statement(ParseDirectiveType(), tk_enum::type_, tk_enum::eos_);
 				}
 				else if (it->type() == tk_enum::var_) {
-					parse_statement(ParseDirectiveVar(), tk_enum::var_, tk_enum::eos);
+					parse_statement(ParseDirectiveVar(), tk_enum::var_, tk_enum::eos_);
 				}
 				else if (it->type() == tk_enum::class_) {
-					parse_statement(ParseDirectiveClass(), tk_enum::class_, tk_enum::eos);
+					parse_statement(ParseDirectiveClass(), tk_enum::class_, tk_enum::eos_);
 				}
 				else if (it->type() == tk_enum::func_) {
-					parse_statement(ParseDirectiveFunc(), tk_enum::func_, tk_enum::eos);
+					parse_statement(ParseDirectiveFunc(), tk_enum::func_, tk_enum::eos_);
 				}
 				else {
 					return make_error(it, *it, "ParsePragmaticBlock: Invalid statement.");
@@ -1033,7 +1014,7 @@ namespace caoco {
 		astnode node(astnode_enum::functional_block_, begin, end);
 
 		// Find and parse all statements in the block.
-		while (it < end && it->type() != tk_enum::eof) {
+		while (it < end && it->type() != tk_enum::eof_) {
 			// Get the scope of the statement stating from the first token to the last matching semicolon.
 			parser_scope_result statement_scope;
 
@@ -1070,15 +1051,15 @@ namespace caoco {
 				it = parse_result.it();
 			};
 
-			if (it->type_is(tk_enum::alnumus)) {
-				parse_open_statement(ParseIdentifierStatement(), tk_enum::alnumus, tk_enum::eos);
+			if (it->type_is(tk_enum::alnumus_)) {
+				parse_open_statement(ParseIdentifierStatement(), tk_enum::alnumus_, tk_enum::eos_);
 			}
 			else {
 				if (it->type() == tk_enum::return_) {
-					parse_statement(ParseDirectiveReturn(), tk_enum::return_, tk_enum::eos);
+					parse_statement(ParseDirectiveReturn(), tk_enum::return_, tk_enum::eos_);
 				}
 				else if (it->type() == tk_enum::var_) {
-					parse_statement(ParseDirectiveVar(), tk_enum::var_, tk_enum::eos);
+					parse_statement(ParseDirectiveVar(), tk_enum::var_, tk_enum::eos_);
 				}
 				else {
 					return make_error(it, *it, "ParsePragmaticBlock: Invalid statement.");
@@ -1093,7 +1074,7 @@ namespace caoco {
 	caoco_PARSING_PROCESS_IMPL(ParseIdentifierStatement) {
 		auto it = begin;
 		
-		if (it->type() != tk_enum::alnumus) {
+		if (it->type() != tk_enum::alnumus_) {
 			return make_error(it, *it, "ParseIdentifierStatement: Expected an alnumus.");
 		}
 
@@ -1101,18 +1082,18 @@ namespace caoco {
 		// 1. variable assingment: <alnumus> <assingment> <literal|alnumus> <eos>
 
 		// next should be an assignment token
-		if (std::next(it)->type() != tk_enum::simple_assignment) {
+		if (std::next(it)->type() != tk_enum::simple_assignment_) {
 			return make_error(std::next(it), *std::next(it), "ParseIdentifierStatement: Expected a simple assignment token.");
 		}
 
 		// next should be a alnumus
 		// NOTE: temporary-> this should be a value_expression
-		if (std::next(it, 2)->type() != tk_enum::number_literal) {
+		if (std::next(it, 2)->type() != tk_enum::number_literal_) {
 			return make_error(std::next(it, 2), *std::next(it, 2), "ParseIdentifierStatement: Expected an alnumus.");
 		}
 
 		// next should be an eos
-		if (std::next(it, 3)->type() != tk_enum::eos) {
+		if (std::next(it, 3)->type() != tk_enum::eos_) {
 			return make_error(std::next(it, 3), *std::next(it, 3), "ParseIdentifierStatement: Expected an eos.");
 		}
 

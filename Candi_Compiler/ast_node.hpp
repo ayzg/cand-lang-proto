@@ -3,10 +3,6 @@
 #include "char_traits.hpp"
 #include "token.hpp"
 namespace caoco {
-	using tk_vector = sl_vector<tk>;
-	using tk_vector_it = tk_vector::iterator;
-	using tk_vector_cit = tk_vector::const_iterator;
-
 	class astnode {
 	public:
 		enum class e_type : int {
@@ -110,14 +106,6 @@ namespace caoco {
 			}
 			return sl::to_str(statement_string);
 		}
-
-		//// Relational Properties ?? unused
-		//// Find the nearest ancestor of the specified type. searching up the tree. If no ancestor is found, returns nullopt.
-		//sl_opt<sl_ref<astnode>> find_ancestor(e_type type) {
-		//	if (parent_ == nullptr) return std::nullopt;
-		//	if (parent_->type() == type) return *parent_;
-		//	return parent_->find_ancestor(type);
-		//}
 
 	};
 	using astnode_enum = astnode::e_type;

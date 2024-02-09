@@ -1,3 +1,4 @@
+#pragma once
 #include "ast_node.hpp"
 #include "parser.hpp"
 #include <functional>
