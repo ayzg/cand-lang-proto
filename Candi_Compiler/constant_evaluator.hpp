@@ -25,7 +25,7 @@ struct undefined_t {
 };
 
 // string to unsigned int
-unsigned stou(std::string const& str, size_t* idx = 0, int base = 10) {
+unsigned stou(sl_string const& str, size_t* idx = 0, int base = 10) {
 	unsigned long result = std::stoul(str, idx, base);
 	if (result > std::numeric_limits<unsigned>::max()) {
 		throw std::out_of_range("stou");
@@ -46,7 +46,7 @@ struct RTValue {
 		FUNCTION = 8
 	} type;
 
-	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>,std::shared_ptr<function_t>> value;
+	std::variant<int, double, sl_string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>,std::shared_ptr<function_t>> value;
 
 RTValue() : type(NONE), value(none_t{}) {}
 
@@ -80,8 +80,8 @@ RTValue& operator=(const RTValue& other) {
 
 
 class rtenv {
-	using string_t = std::string;
-	using variable_map_t = std::map<std::string, RTValue>;
+	//using string_t = sl_string;
+	using variable_map_t = std::map<sl_string, RTValue>;
 	using variable_map_iterator_t = variable_map_t::iterator;
 	using variable_map_const_iterator_t = variable_map_t::const_iterator;
 
@@ -95,7 +95,7 @@ class rtenv {
 		variable_map_iterator_t it;
 		bool valid;
 
-		const string_t& name() {
+		const sl_string& name() {
 			return it->first;
 		}
 		RTValue& value() {
@@ -106,7 +106,7 @@ class rtenv {
 		variable_map_const_iterator_t it;
 		bool valid;
 
-		const string_t& name() const {
+		const sl_string& name() const {
 			return it->first;
 		}
 
@@ -123,7 +123,7 @@ class rtenv {
 			return local.it;
 		}
 
-		const string_t& name() {
+		const sl_string& name() {
 			return local.name();
 		}
 
@@ -143,7 +143,7 @@ class rtenv {
 			return local.it;
 		}
 
-		const string_t& name() const {
+		const sl_string& name() const {
 			return local.name();
 		}
 
@@ -156,7 +156,7 @@ class rtenv {
 		}
 	};
 
-	std::string name_{};
+	sl_string name_{};
 	rtenv* parent_{nullptr};
 	std::list<rtenv> children_{};
 	variable_map_t variables_{};
@@ -175,7 +175,7 @@ class rtenv {
 		return variables_.begin();
 	}
 	
-	variable_map_const_iterator_t find_variable(const std::string& name) const {
+	variable_map_const_iterator_t find_variable(const sl_string& name) const {
 		// Note this only finds a local variable, returns end() if not found.
 		return variables_.find(name);
 	}
@@ -191,20 +191,20 @@ class rtenv {
 	}
 	public:
 	rtenv() = default;
-	rtenv(const std::string& name) : name_(name) {}
-	rtenv(const std::string& name, rtenv& parent) : name_(name), parent_(&parent) {}
+	rtenv(const sl_string& name) : name_(name) {}
+	rtenv(const sl_string& name, rtenv& parent) : name_(name), parent_(&parent) {}
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
 	// Local Environment Operations
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
 	
 	// <method:add_subenv> Add a sub environment to the current environment
-	rtenv& add_subenv(const std::string& name) {
+	rtenv& add_subenv(const sl_string& name) {
 		children_.emplace_back(name, *this);
 		return children_.back();
 	}
 
 	// <@method:create_variable> Create a variable in the current environment
-	local_variable_process_result create_variable(const std::string& name, const RTValue& value) {
+	local_variable_process_result create_variable(const sl_string& name, const RTValue& value) {
 		// local vars will shadow parent vars
 		auto inserted = variables_.insert({ name, value });
 		return { inserted.first, inserted.second };
@@ -215,7 +215,7 @@ class rtenv {
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 	// <@method:resolve_variable> Find the variable in the current environment or in the parent environment(if exists)
-	env_const_variable_process_result resolve_variable(const std::string& name) const {
+	env_const_variable_process_result resolve_variable(const sl_string& name) const {
 		auto it = find_variable(name);
 		if (it != vari_cend()) {
 			return { { it,true },*this };
@@ -227,7 +227,7 @@ class rtenv {
 	}
 
 	// <@method:delete_variable> Delete a variable in the current or parent environment
-	bool delete_variable(const std::string & name) {
+	bool delete_variable(const sl_string & name) {
 		auto resolved_var = get_variable(name);
 		// The env which owns the var must delete it!!!
 		if (resolved_var.valid()) {
@@ -241,7 +241,7 @@ class rtenv {
 
 	// <@method:get_variable> Get the variable in the current environment or in the parent environment(if exists)
 	// Same as <@method:resolve_variable> but returns a modifyable iterator
-	env_variable_process_result get_variable(const std::string& name) {
+	env_variable_process_result get_variable(const sl_string& name) {
 		auto it = variables_.find(name);
 		if (it != variables_.end()) { // Found locally
 			return { { it,true },*this };
@@ -257,7 +257,7 @@ class rtenv {
 	}
 
 	// <@method:set_variable> Set the variable in the current environment or in the parent environment(if exists)
-	env_variable_process_result set_variable(const std::string& name, const RTValue& value) {
+	env_variable_process_result set_variable(const sl_string& name, const RTValue& value) {
 		auto resolved_var = get_variable(name);
 		if (resolved_var.valid()) {
 			resolved_var.value() = value;
@@ -272,12 +272,12 @@ class rtenv {
 
 // The C& class object type.
 class object_t {
-	std::string name_;
+	sl_string name_;
 	rtenv& scope_;
 
-	std::map<std::string, RTValue> members_;
+	std::map<sl_string, RTValue> members_;
 public:
-	object_t(const std::string& name,rtenv& scope) : name_(name), scope_(scope) {}
+	object_t(const sl_string& name,rtenv& scope) : name_(name), scope_(scope) {}
 
 	object_t(const object_t& other) : scope_(other.scope_) {
 		name_ = other.name_;
@@ -305,11 +305,11 @@ public:
 		return *this;
 	}
 
-	RTValue& get_member(std::string name) {
+	RTValue& get_member(sl_string name) {
 		return scope_.get_variable(name).value();
 	};
 
-	//auto& add_member(const std::string& name, const RTValue& value) {
+	//auto& add_member(const sl_string& name, const RTValue& value) {
 	//	auto inserted = members_.insert({ name, value });
 	//	return inserted.first;
 	//}
@@ -329,13 +329,14 @@ public:
 };
 
 class function_t {
-	std::string name_;
+	sl_string name_;
 	rtenv& scope_;
-	std::vector<std::string> args_;
+	sl_vector<sl_string> args_;
 	Node body_;
 
 public:
-	function_t(const std::string& name, rtenv& scope, const std::vector<std::string>& args, const Node& body) : name_(name), scope_(scope), args_(args), body_(body) {}
+	function_t(const sl_string& name, rtenv& scope, const sl_vector<sl_string>& args, const Node& body) 
+		: name_(name), scope_(scope), args_(args), body_(body) {}
 
 	function_t(const function_t& other) : scope_(other.scope_) {
 		name_ = other.name_;
@@ -403,20 +404,20 @@ public:
 
 #define caoco_impl_env_eval_process(n) RTValue n::eval(const caoco::Node & node, caoco::rtenv& env)
 
-// All tokens in the AST hold caoco::string_t, whitch is a utf-8 encoded string
+// All tokens in the AST hold caoco::sl_u8string, whitch is a utf-8 encoded string
 inline auto get_node_cstr(const Node & node) {
 	return sl::to_str(node.to_string());
 }
 
 // Util method for single node evaluators which use the same pattern.
-template<typename RetrieverT> requires std::invocable<RetrieverT, const std::string&>
+template<typename RetrieverT> requires std::invocable<RetrieverT, const sl_string&>
 inline RTValue get_node_rtvalue(const Node& node, RTValue::eType rtval_type,RetrieverT && retrival_policy) {
 	auto literal = get_node_cstr(node);
 	try {
 		return RTValue{ rtval_type, retrival_policy(literal) };
 	}
 	catch (std::exception e) {
-		std::string msg = e.what();
+		sl_string msg = e.what();
 		throw std::runtime_error("get_node_rtvalue:Invalid literal:" + literal + ":Error:" + msg);
 	}
 }
@@ -454,7 +455,7 @@ caoco_def_env_eval_process(CFunctionCallEval);
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 caoco_impl_env_eval_process(CNumberEval) {
 	return get_node_rtvalue(node, RTValue::NUMBER,
-		[](const std::string& literal) {
+		[](const sl_string& literal) {
 			return std::stoi(literal);
 		}
 	);
@@ -462,7 +463,7 @@ caoco_impl_env_eval_process(CNumberEval) {
 
 caoco_impl_env_eval_process(CRealEval) {
 	return get_node_rtvalue(node, RTValue::REAL,
-		[](const std::string& literal) {
+		[](const sl_string& literal) {
 			return std::stod(literal);
 		}
 	);
@@ -481,7 +482,7 @@ caoco_impl_env_eval_process(CStringEval) {
 	size_t current_pos = 0;
 	while (!no_escape) {
 		auto escape_pos = literal.find('\\', current_pos);
-		if (escape_pos == std::string::npos) {
+		if (escape_pos == sl_string::npos) {
 			no_escape = true;
 		}
 		else {
@@ -527,7 +528,7 @@ caoco_impl_env_eval_process(CStringEval) {
 //
 caoco_impl_env_eval_process(CBitEval) {
 	return get_node_rtvalue(node, RTValue::BIT,
-		[](const std::string& literal) {
+		[](const sl_string& literal) {
 			if (literal == "1b") {
 				return true;
 			}
@@ -543,7 +544,7 @@ caoco_impl_env_eval_process(CBitEval) {
 
 caoco_impl_env_eval_process(CUnsignedEval) {
 	return get_node_rtvalue(node, RTValue::UNSIGNED,
-		[](const std::string& literal) {
+		[](const sl_string& literal) {
 			if (literal.back() != 'u') {
 				throw std::runtime_error("CUnsignedEval:Unsigned literal not followed by 'u':" + literal);
 			}
@@ -555,7 +556,7 @@ caoco_impl_env_eval_process(CUnsignedEval) {
 
 caoco_impl_env_eval_process(COctetEval) {
 	return get_node_rtvalue(node, RTValue::OCTET,
-		[](const std::string& literal) {
+		[](const sl_string& literal) {
 			// literal will be in the form [0-255]c or '[character]'c
 			if (literal.back() != 'c') {
 				throw std::runtime_error("COctetEval:Octet literal not followed by 'c'" + literal);
@@ -566,7 +567,7 @@ caoco_impl_env_eval_process(COctetEval) {
 				auto octet_str = literal.substr(1, literal.size() - 3); // remove the quotes and the c
 				// Check for escape characters.
 				auto escape_pos = octet_str.find('\\');
-				if (escape_pos != std::string::npos) {
+				if (escape_pos != sl_string::npos) {
 					// Replace the escape characters
 					switch (literal[escape_pos + 1]) {
 					case 'n':
@@ -627,21 +628,21 @@ caoco_impl_env_eval_process(CVariableEval) {
 caoco_impl_env_eval_process(CLiteralEval) {
 	auto node_type = node.type();
 	switch (node_type) {
-	case Node::eType::number_literal_:
+	case astnode_enum::number_literal_:
 		return CNumberEval{}(node, env);
-	case Node::eType::real_literal_:
+	case astnode_enum::real_literal_:
 		return CRealEval{}(node, env);
-	case Node::eType::string_literal_:
+	case astnode_enum::string_literal_:
 		return CStringEval{}(node, env);
-	case Node::eType::bit_literal_:
+	case astnode_enum::bit_literal_:
 		return CBitEval{}(node, env);
-	case Node::eType::unsigned_literal_:
+	case astnode_enum::unsigned_literal_:
 		return CUnsignedEval{}(node, env);
-	case Node::eType::octet_literal_:
+	case astnode_enum::octet_literal_:
 		return COctetEval{}(node, env);
-	case Node::eType::none_literal_:
+	case astnode_enum::none_literal_:
 		return CNoneEval{}(node, env);
-	case Node::eType::alnumus_:
+	case astnode_enum::alnumus_:
 		return CVariableEval{}(node, env);
 	default:
 		throw std::runtime_error("CLiteralEval:Invalid node type:" + std::to_string(static_cast<int>(node_type)));
@@ -685,7 +686,7 @@ caoco_impl_env_eval_process(CAddOpEval) {
 		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) + std::get<double>(right_val.value) };
 	}
 	else if (left_val.type == RTValue::STRING && right_val.type == RTValue::STRING) {
-		return RTValue{ RTValue::STRING, std::get<std::string>(left_val.value) + std::get<std::string>(right_val.value) };
+		return RTValue{ RTValue::STRING, std::get<sl_string>(left_val.value) + std::get<sl_string>(right_val.value) };
 	}
 	else if (left_val.type == RTValue::BIT && right_val.type == RTValue::BIT) {
 		return RTValue{ RTValue::BIT, std::get<bool>(left_val.value) + std::get<bool>(right_val.value) };
@@ -913,15 +914,15 @@ caoco_impl_env_eval_process(CBinopEval) {
 	// Get the type of the operation
 	auto op = node.type();
 	switch (op) {
-	case Node::eType::addition_:
+	case astnode_enum::addition_:
 		return CAddOpEval{}(node, env);
-	case Node::eType::subtraction_:
+	case astnode_enum::subtraction_:
 		return CSubOpEval{}(node, env);
-	case Node::eType::multiplication_:
+	case astnode_enum::multiplication_:
 	return CMultOpEval{}(node, env);
-	case Node::eType::division_:
+	case astnode_enum::division_:
 	return CDivOpEval{}(node, env);
-	case Node::eType::remainder_:
+	case astnode_enum::remainder_:
 	return CModOpEval{}(node, env);
 	default:
 		throw "NOT IMPLEMENTED";
@@ -979,7 +980,7 @@ caoco_impl_env_eval_process(CFunctionDeclEval) {
 	*/
 	auto function_name = get_node_cstr(node.body().front());
 	auto arguments = [&node]() {
-		std::vector<std::string> args;
+		sl_vector<sl_string> args;
 		for (auto& arg : (*(node.body().begin()++)).body()) {
 			args.push_back(get_node_cstr(arg));
 		}

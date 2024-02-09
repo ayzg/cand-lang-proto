@@ -42,8 +42,6 @@ namespace caoco {
 			if_, else_, elif_, while_, for_, switch_, case_, default_, break_,
 			continue_, return_, into_
 		};
-
-		using eType = e_type; // Temporary alias
 	private:
 		e_type type_;
 		sl_char8_vector_cit beg_;
@@ -81,5 +79,4 @@ namespace caoco {
 	};
 
 	using tk_enum = tk::e_type;
-	using Tk = tk; // Temporary alias
 };

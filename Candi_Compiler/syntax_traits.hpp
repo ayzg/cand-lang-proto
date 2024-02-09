@@ -8,13 +8,10 @@
 #include "token.hpp"
 #include "tokenizer.hpp"
 #include "ast_node.hpp"
-#include <stack>
+//#include <stack>
 
 namespace caoco {
-	using tk_vector_t = std::vector<Tk>;
-	using tk_iterator_t = tk_vector_t::const_iterator;
-	using tk_enum = Tk::eType;
-	using node_enum = Node::eType;
+
 	enum class Associativity : bool {
 		left_ = true,
 		right_ = false
@@ -36,14 +33,14 @@ namespace caoco {
 		operation_ = 2
 	};
 
-	using TokenTraitsMapType = std::map<Tk::eType, std::tuple<int, Associativity, Operation, Node::eType>>;
-	using NodeTraitsMapType = std::map<Node::eType, std::tuple<int, Associativity, Operation>>;
+	using TokenTraitsMapType = sl_map<tk_enum, sl_tuple<int, Associativity, Operation, astnode_enum>>;
+	using NodeTraitsMapType = sl_map<astnode_enum, sl_tuple<int, Associativity, Operation>>;
 
-#define caoco_TK_TRAIT(TOKEN_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION, PRODUCED_STATEMENT) {Tk::eType::TOKEN_TYPE, {IMPORTANCE, Associativity::ASSOCIATIVITY, Operation::OPERATION, Node::eType::PRODUCED_STATEMENT}}
+#define caoco_TK_TRAIT(TOKEN_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION, PRODUCED_STATEMENT) {tk_enum::TOKEN_TYPE, {IMPORTANCE, Associativity::ASSOCIATIVITY, Operation::OPERATION, astnode_enum::PRODUCED_STATEMENT}}
 	static TokenTraitsMapType token_traits = {
-	{Tk::eType::alnumus,		{INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::alnumus_}},
-	{Tk::eType::number_literal, {INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::number_literal_}},
-	{Tk::eType::eof,			{INT_MAX,	Associativity::left_,	Operation::none_,		Node::eType::eof_}},
+	{tk_enum::alnumus,		{INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::alnumus_}},
+	{tk_enum::number_literal, {INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::number_literal_}},
+	{tk_enum::eof,			{INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::eof_}},
 	caoco_TK_TRAIT(real_literal,INT_MAX, left_, none_, real_literal_), // real literal
 	caoco_TK_TRAIT(string_literal,INT_MAX, left_, none_, string_literal_), // string literal
 	caoco_TK_TRAIT(octet_literal,INT_MAX, left_, none_, octet_literal_), // octet literal
@@ -88,16 +85,16 @@ namespace caoco {
 	caoco_TK_TRAIT(right_shift_assignment,20000, left_, binary_, right_shift_assignment_), // >>=
 	};
 	static NodeTraitsMapType node_traits = {
-	{Node::eType::alnumus_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{Node::eType::number_literal_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{Node::eType::addition_, {1000, Associativity::left_, Operation::binary_}},
-	{Node::eType::subtraction_, {1000, Associativity::left_, Operation::binary_}},
-	{Node::eType::multiplication_, {2000, Associativity::left_, Operation::binary_}},
-	{Node::eType::division_, {2000, Associativity::left_, Operation::binary_}},
+	{astnode_enum::alnumus_, {INT_MAX, Associativity::left_, Operation::none_}},
+	{astnode_enum::number_literal_, {INT_MAX, Associativity::left_, Operation::none_}},
+	{astnode_enum::addition_, {1000, Associativity::left_, Operation::binary_}},
+	{astnode_enum::subtraction_, {1000, Associativity::left_, Operation::binary_}},
+	{astnode_enum::multiplication_, {2000, Associativity::left_, Operation::binary_}},
+	{astnode_enum::division_, {2000, Associativity::left_, Operation::binary_}},
 
-	{Node::eType::open_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{Node::eType::close_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{Node::eType::eof_, {INT_MAX, Associativity::left_, Operation::none_}}
+	{astnode_enum::open_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
+	{astnode_enum::close_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
+	{astnode_enum::eof_, {INT_MAX, Associativity::left_, Operation::none_}}
 	};
 
 };// namespace caoco

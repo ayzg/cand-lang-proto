@@ -2,7 +2,6 @@
 #include "global_dependencies.hpp"
 namespace caoco {
 	namespace char_traits {
-		using char_t = char8_t;// temporary
 		using const_char_ilist = sl_ilist<const char8_t>;
 		using char_limits = sl_limits<char8_t>;
 

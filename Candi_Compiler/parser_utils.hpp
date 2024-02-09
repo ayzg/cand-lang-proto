@@ -14,10 +14,12 @@
 #include "syntax_traits.hpp"
 
 namespace caoco {
-	using tk_vector_t = std::vector<Tk>;
-	using tk_iterator_t = tk_vector_t::const_iterator;
-	using tk_enum = Tk::eType;
-	using node_enum = Node::eType;
+
+	//using tk_vector = sl_vector<tk>;
+	//using tk_vector_it = tk_vector::iterator;
+	//using tk_vector_cit = tk_vector::const_iterator;
+
+	using node_enum = astnode_enum;
 
 
 	// Scans for a combination of tokens starting from the beg iterator.
@@ -41,7 +43,7 @@ namespace caoco {
 	};
 
 	template<size_t I = 0, typename ...MaskT>
-	void constexpr scan_pack_impl(std::tuple<MaskT...> tup, tk_iterator_t it, tk_iterator_t end, bool& is_found) {
+	void constexpr scan_pack_impl(std::tuple<MaskT...> tup, tk_vector_cit it, tk_vector_cit end, bool& is_found) {
 		// If we have iterated through all elements
 		if
 			constexpr (I == sizeof...(MaskT))
@@ -82,30 +84,30 @@ namespace caoco {
 	}
 
 	template<typename... MaskTs>
-	constexpr bool scan_tokens(tk_iterator_t it, tk_iterator_t end) {
+	constexpr bool scan_tokens(tk_vector_cit it, tk_vector_cit end) {
 		bool is_found = false;
 		scan_pack_impl(std::tuple<MaskTs...>(), std::move(it), std::move(end), is_found);
 		return is_found;
 	}
 
 	template<typename MaskTupleT>
-	constexpr bool scan_tokens_pack(tk_iterator_t it, tk_iterator_t end) {
+	constexpr bool scan_tokens_pack(tk_vector_cit it, tk_vector_cit end) {
 		bool is_found = false;
 		scan_pack_impl(MaskTupleT(), std::move(it), std::move(end), is_found);
 		return is_found;
 	}
 
 
-	// <@class:TokenCursor> An iterator-like struct for tokens. Requires an end and begin iterator. 
-	struct TokenCursor {
-		tk_iterator_t it_;
-		tk_iterator_t beg_;
-		tk_iterator_t end_;
+	// <@class:tk_cursor> An iterator-like struct for tokens. Requires an end and begin iterator. 
+	struct tk_cursor {
+		tk_vector_cit it_;
+		tk_vector_cit beg_;
+		tk_vector_cit end_;
 
-		//tk_iterator_t source_beg_;
-		//tk_iterator_t source_end_;
+		//tk_vector_cit source_beg_;
+		//tk_vector_cit source_end_;
 
-		TokenCursor(tk_iterator_t begin, tk_iterator_t end) : it_(begin), beg_(begin), end_(end) {}
+		tk_cursor(tk_vector_cit begin, tk_vector_cit end) : it_(begin), beg_(begin), end_(end) {}
 
 		auto end() const { return end_; }
 		auto begin() const { return beg_; }
@@ -114,19 +116,19 @@ namespace caoco {
 		bool empty() const { return beg_ == end_; }
 
 		// <@method:next> returns the current token on the cursor, if at end or before begin, returns eof token.
-		const Tk& get() const {
+		const tk& get() const {
 			if (it_ >= end_) {
-				return Tk{ tk_enum::eof };
+				return tk{ tk_enum::eof };
 			}
 			else if (it_ < beg_) {
-				return Tk{ tk_enum::eof };
+				return tk{ tk_enum::eof };
 			}
 			else
 				return *it_;
 		}
 
 		// <@method:lit> returns the literal of the token at the cursor.
-		string_t lit() const { return get().literal(); }
+		sl_u8string lit() const { return get().literal(); }
 
 		// <@method:type> returns the kind of the token at the cursor.
 		tk_enum type() const { return get().type(); }
@@ -148,10 +150,10 @@ namespace caoco {
 		}
 
 
-		tk_iterator_t get_it() const { return it_; }
+		tk_vector_cit get_it() const { return it_; }
 
 		// <@method:advance> advances the cursor by n.
-		TokenCursor& advance(int n = 1) {
+		tk_cursor& advance(int n = 1) {
 			if (n != 0) {
 				if (it_ + n >= end_) {
 					it_ = end_;
@@ -167,12 +169,12 @@ namespace caoco {
 		}
 
 		// <@method:advance_to> advances the cursor to the new_cursor. Checks that cursor is within beg and end.
-		TokenCursor& advance_to(tk_iterator_t new_cursor) {
+		tk_cursor& advance_to(tk_vector_cit new_cursor) {
 			if (new_cursor < beg_) {
-				throw std::out_of_range("TokenCursor passed advance_to outside of begin.");
+				throw std::out_of_range("tk_cursor passed advance_to outside of begin.");
 			}
 			else if (new_cursor >= end_) {
-				throw std::out_of_range("TokenCursor passed advance_to outside of end.");
+				throw std::out_of_range("tk_cursor passed advance_to outside of end.");
 			}
 			else
 				it_ = new_cursor;
@@ -180,19 +182,19 @@ namespace caoco {
 		}
 
 		// <@method:next> returns cursor advanced by N. N may be negative.
-		TokenCursor next(int n = 1)const {
-			TokenCursor next_cursor = *this;
+		tk_cursor next(int n = 1)const {
+			tk_cursor next_cursor = *this;
 			next_cursor.advance(n);
 			return next_cursor;
 		}
 
 		// <@method:peek> returns the token at the cursor + n.
-		const Tk& peek(int n = 0)const {
+		const tk& peek(int n = 0)const {
 			return next(n).get();
 		}
 
 		// <@method:is_equal> Returns true if the token at the cursor + offset is equal to the kind and literal.
-		auto is_equal(tk_enum kind, string_t literal, int offset)const {
+		auto is_equal(tk_enum kind, sl_u8string literal, int offset)const {
 			return peek(offset).type() == kind && peek(offset).literal() == literal;
 		}
 
@@ -201,9 +203,9 @@ namespace caoco {
 
 		//// <@method:select> Given an iterator pair, sets the cursor to the begin and end of the pair. Checks that pair is within source. It_ is set to the closest valid position.
 		//// If assinged pair is not withinin source, throws runtime exception.
-		//TokenCursor& select(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
+		//tk_cursor& select(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
 		//	if (begin < source_beg_ || end > source_end_) {
-		//		throw std::out_of_range("TokenCursor passed selection outside of source begin or end.");
+		//		throw std::out_of_range("tk_cursor passed selection outside of source begin or end.");
 		//	}
 		//	else {
 		//		beg_ = begin;
@@ -220,21 +222,21 @@ namespace caoco {
 		//	return *this;
 		//}
 
-		//// Creates a new TokenCursor with the same source and cursor. But a different selection.
-		//TokenCursor make_selection(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
-		//	TokenCursor selection = *this;
+		//// Creates a new tk_cursor with the same source and cursor. But a different selection.
+		//tk_cursor make_selection(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
+		//	tk_cursor selection = *this;
 		//	selection.select(begin, end);
 		//	return selection;
 		//}
 	};
 
-	// <@class:ScopeResult>
+	// <@class:parser_scope_result>
 	// <@brief> A struct containing the result of a scope search. Use member methods to access the scope.
 	// <@member:valid> If the scope is valid, invalid scopes indicate a mismatched parenthesis.
-	struct ScopeResult {
+	struct parser_scope_result {
 		bool valid{ false };
-		tk_iterator_t begin_;
-		tk_iterator_t end_;
+		tk_vector_cit begin_;
+		tk_vector_cit end_;
 
 		// <@method:contained_end> Returns the end of the scope, not including the close token.
 		auto contained_end() const { return end_ - 1; }
@@ -248,11 +250,11 @@ namespace caoco {
 		auto scope_begin() const { return begin_; }
 
 
-		ScopeResult() = default;
-		ScopeResult(bool valid, tk_iterator_t begin, tk_iterator_t end)
+		parser_scope_result() = default;
+		parser_scope_result(bool valid, tk_vector_cit begin, tk_vector_cit end)
 			: valid(valid), begin_(begin), end_(end) {}
 
-		static ScopeResult find_exact(tk_enum open, tk_enum close, tk_iterator_t begin, tk_iterator_t end) {
+		static parser_scope_result find_exact(tk_enum open, tk_enum close, tk_vector_cit begin, tk_vector_cit end) {
 			auto scope_depth = 0;
 			auto last_open = begin;
 			auto last_closed = begin;
@@ -279,38 +281,38 @@ namespace caoco {
 
 			// NOTE: We are adding 1 to last closed because the end is 1 past the last token.
 			if (scope_depth != 0) {
-				return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token
+				return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token
 			}
 			else {
-				return ScopeResult{ true, begin, last_closed + 1 };
+				return parser_scope_result{ true, begin, last_closed + 1 };
 			}
 
 		}
-		static ScopeResult find_exact_paren(tk_iterator_t begin, tk_iterator_t end) {
+		static parser_scope_result find_exact_paren(tk_vector_cit begin, tk_vector_cit end) {
 			return find_exact(tk_enum::open_scope, tk_enum::close_scope, begin, end);
 		}
-		static ScopeResult find_exact_frame(tk_iterator_t begin, tk_iterator_t end) {
+		static parser_scope_result find_exact_frame(tk_vector_cit begin, tk_vector_cit end) {
 			return find_exact(tk_enum::open_frame, tk_enum::close_frame, begin, end);
 		}
-		static ScopeResult find_exact_list(tk_iterator_t begin, tk_iterator_t end) {
+		static parser_scope_result find_exact_list(tk_vector_cit begin, tk_vector_cit end) {
 			return find_exact(tk_enum::open_list, tk_enum::close_list, begin, end);
 		}
 	};
 
 	// Method for determining the start and end of a scope. 
 	// The exact scope is defined by the first open parenthesis and the last close parenthesis.
-	ScopeResult find_scope(tk_iterator_t begin, tk_iterator_t end) {
-		return ScopeResult::find_exact_paren(begin, end);
+	parser_scope_result find_scope(tk_vector_cit begin, tk_vector_cit end) {
+		return parser_scope_result::find_exact_paren(begin, end);
 	} // end find_scope
-	ScopeResult find_list(tk_iterator_t begin, tk_iterator_t end) {
-		return ScopeResult::find_exact_list(begin, end);
+	parser_scope_result find_list(tk_vector_cit begin, tk_vector_cit end) {
+		return parser_scope_result::find_exact_list(begin, end);
 	} // end find_scope
-	ScopeResult find_frame(tk_iterator_t cursor, tk_iterator_t end) {
-		return ScopeResult::find_exact_frame(cursor, end);
+	parser_scope_result find_frame(tk_vector_cit cursor, tk_vector_cit end) {
+		return parser_scope_result::find_exact_frame(cursor, end);
 	} // end find_scope
 
 
-	ScopeResult find_statement(tk_enum open, tk_enum close, tk_iterator_t begin, tk_iterator_t end) {
+	parser_scope_result find_statement(tk_enum open, tk_enum close, tk_vector_cit begin, tk_vector_cit end) {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
 		auto list_scope_depth = 0;
@@ -323,7 +325,7 @@ namespace caoco {
 			throw std::runtime_error("find_statement: begin iterator not on an open token.");
 		}
 		if (std::next(begin)->type() == close)
-			return ScopeResult{ true, begin, begin + 2 }; // Empty statement
+			return parser_scope_result{ true, begin, begin + 2 }; // Empty statement
 
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto it = begin + 1; it < end; it++) {
@@ -394,24 +396,24 @@ namespace caoco {
 		}
 
 		//if(last_closed == end)
-		//	return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token
+		//	return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token
 
 		// NOTE: We are adding 1 to last closed because the end is 1 past the last token.
 		if (paren_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token for parenthesis
+			return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token for parenthesis
 		}
 		else if (frame_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token for frame
+			return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token for frame
 		}
 		else if (list_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token for list
+			return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token for list
 		}
 		else {
-			return ScopeResult{ true, begin, last_closed + 1 };
+			return parser_scope_result{ true, begin, last_closed + 1 };
 		}
 
 	} // end find_scope
-	ScopeResult find_open_statement(tk_enum open, tk_enum close, tk_iterator_t begin, tk_iterator_t end) {
+	parser_scope_result find_open_statement(tk_enum open, tk_enum close, tk_vector_cit begin, tk_vector_cit end) {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
 		auto list_scope_depth = 0;
@@ -424,7 +426,7 @@ namespace caoco {
 			throw std::runtime_error("find_statement: begin iterator not on an open token.");
 		}
 		if (std::next(begin)->type() == close)
-			return ScopeResult{ true, begin, begin + 2 }; // Empty statement
+			return parser_scope_result{ true, begin, begin + 2 }; // Empty statement
 
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto it = begin + 1; it < end; it++) {
@@ -494,28 +496,28 @@ namespace caoco {
 		}
 
 		//if(last_closed == end)
-		//	return ScopeResult{ false, begin, last_closed + 1 }; // No matching close token
+		//	return parser_scope_result{ false, begin, last_closed + 1 }; // No matching close token
 
 		// NOTE: We are adding 1 to last closed because the end is 1 past the last token.
 		if (paren_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; 
+			return parser_scope_result{ false, begin, last_closed + 1 }; 
 		}
 		else if (frame_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; 
+			return parser_scope_result{ false, begin, last_closed + 1 }; 
 		}
 		else if (list_scope_depth != 0) {
-			return ScopeResult{ false, begin, last_closed + 1 }; 
+			return parser_scope_result{ false, begin, last_closed + 1 }; 
 		}
 		else {
-			return ScopeResult{ true, begin, last_closed + 1 };
+			return parser_scope_result{ true, begin, last_closed + 1 };
 		}
 
 	} // end find_scope
 
 		// <@method:find_forward> Returns the cursor if the next n tokens match the match vector.
-	bool find_forward(tk_iterator_t cursor, tk_vector_t match) {
+	bool find_forward(tk_vector_cit cursor, tk_vector match) {
 		auto end = std::next(cursor, match.size());
-		auto found = std::search(cursor, end, match.begin(), match.end(), [](const Tk& a, const Tk& b) {
+		auto found = std::search(cursor, end, match.begin(), match.end(), [](const tk& a, const tk& b) {
 			return a.type() == b.type();
 		});
 
@@ -525,7 +527,7 @@ namespace caoco {
 		return false;
 	}
 	// <@method:find_forward_exact> Returns true if the next n tokens match the match vector.
-	bool find_forward_exact(tk_iterator_t cursor, tk_vector_t match) {
+	bool find_forward_exact(tk_vector_cit cursor, tk_vector match) {
 		auto end = std::next(cursor, match.size());
 		if (std::equal(match.begin(), match.end(), cursor, end)) {
 			return true;
