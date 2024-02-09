@@ -84,20 +84,20 @@ namespace caoco {
 
 		if (!last_pass.has_value()) {
 			// Determine the following operator and first operand.
-			if (it.operation() == Operation::unary_) { // This expression starts with a unary operation.
+			if (it.operation() == e_operation::unary_) { // This expression starts with a unary operation.
 				astnode unary_operation = it.to_statement();
 				if (*it.next(2) == end) { // Unary operation is not followed by operand.
 					unary_operation.push_back(it.next().to_statement()); // lhs of unary op is the operand of the unary op.
 					return unary_operation; // Entire statement is this unary operation.
 				}
 				else { // Unary operation is followed by operand.
-					if (it.importance() < it.next(2).importance()) { // Unary operation is less important than next operation.
+					if (it.priority() < it.next(2).priority()) { // Unary operation is less important than next operation.
 						astnode next_operation = it.next(2).to_statement();	// next op is the next operation.
 						next_operation.push_back(it.next().to_statement());	// lhs of next op is the operand of the unary op.
 						unary_operation.push_back(build_statement(*it.next(2), end, std::make_optional(next_operation)).value()); // Rest of expr is operand of unary op.
 						return std::make_optional(unary_operation);	// Entire statement is a unary operation with rest of expr as the operand.
 					}
-					else if (it.importance() >= it.next(2).importance()) { // Unary operation is more or equally important than next operation.
+					else if (it.priority() >= it.next(2).priority()) { // Unary operation is more or equally important than next operation.
 						astnode next_pass = it.next(2).to_statement(); // next pass is the next operation.
 						unary_operation.push_back(it.next().to_statement()); // lhs of unary op is the operand of the unary op.
 						next_pass.push_back(unary_operation); // lhs of next pass is the unary op.
@@ -167,7 +167,7 @@ namespace caoco {
 			// We will check for single operands, if it is not. Then we assume it must be a scope or a unary operator.Otherwise Error.
 			if (it.next().type() != tk_enum::number_literal_
 				&& it.next().type() != tk_enum::alnumus_) { // is not a single operand?
-				if (it.next().operation() == Operation::unary_) { // is a unary operator?
+				if (it.next().operation() == e_operation::unary_) { // is a unary operator?
 					if (*it.next(2) == end) {
 						throw std::runtime_error("End of expression after unary operator. Operator must be followed by operand.");
 					}
@@ -191,7 +191,7 @@ namespace caoco {
 			//		. next operator is the one after the scope.
 			// Else the next operator is the token after the following operand.
 			tk_vector_cit next_operator_it;
-			if (it.next().operation() == Operation::unary_) {
+			if (it.next().operation() == e_operation::unary_) {
 				next_operator_it = *it.next(3);
 			}
 			else if (it.next().type() == tk_enum::open_scope_) {
@@ -225,8 +225,8 @@ namespace caoco {
 
 			// If we are at the end of the expression, this is the last pass. Complete the binary operation based on associativity and rhs operand.
 			if (next_operator_it == end) {
-				if (it.associativity() == Associativity::right_) { // right assoc push front next operand as lhs
-					if (it.next().operation() == Operation::unary_) { // next operand is a unary operation.
+				if (it.associativity() == e_assoc::right_) { // right assoc push front next operand as lhs
+					if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
 						last_pass.value().push_front(it.next().to_statement());
 						last_pass.value().front().push_back(it.next(2).to_statement());
 					}
@@ -245,7 +245,7 @@ namespace caoco {
 					return last_pass;
 				}
 				else { // left assoc push back next operand as rhs
-					if (it.next().operation() == Operation::unary_) { // next operand is a unary operation.
+					if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
 						last_pass.value().push_back(it.next().to_statement());
 						last_pass.value().back().push_back(it.next(2).to_statement());
 					}
@@ -266,9 +266,9 @@ namespace caoco {
 			}
 			else {
 				// Else we are inside a binary operation. Check if the following operator is more or less important.
-				if (it.importance() < next_op_cursor.importance()) { // More important?
+				if (it.priority() < next_op_cursor.priority()) { // More important?
 					// Split the expression in 2 parts.Solve the right side first.Set as right hand side of the left side.Finished.
-					if (it.associativity() == Associativity::right_) { // right assoc swap lhs and rhs
+					if (it.associativity() == e_assoc::right_) { // right assoc swap lhs and rhs
 						last_pass.value().push_front(build_statement(*it.next(), end, std::nullopt).value()); // lhs is the rest of the expression.
 						return last_pass; // End of expr.
 					}
@@ -277,18 +277,18 @@ namespace caoco {
 						return last_pass; // End of expr.
 					}
 				}
-				else if (it.importance() >= next_op_cursor.importance()) { // Less important ?
+				else if (it.priority() >= next_op_cursor.priority()) { // Less important ?
 					// .	This operator is a finished expression.Solve it.
 					//		Set as left hand side of next operator. Call self with next operator as the cursor.
 					//		If the operator is right associative. The right and left hand side are swapped.
 					astnode lhs_expression = astnode(last_pass.value().type()); // lhs is the last pass.
-					if (it.associativity() == Associativity::right_) { // right Assoc
+					if (it.associativity() == e_assoc::right_) { // right Assoc
 						if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 							parser_scope_result scope = find_scope(*it.next(), end); // find the scope.
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as lhs.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the rhs.
 						}
-						else if (it.next().operation() == Operation::unary_) { // next operand is a unary operation.
+						else if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
 							lhs_expression.push_back(it.next().to_statement()); // this unary op is the lhs.
 							lhs_expression.back().push_back(it.next(2).to_statement()); // add operand to unary op.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the rhs.
@@ -305,7 +305,7 @@ namespace caoco {
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as rhs.
 
 						}
-						else if (it.next().operation() == Operation::unary_) { // next operand is a unary operation.
+						else if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the lhs.
 							lhs_expression.push_back(it.next().to_statement()); // this unary op is the rhs.
 							lhs_expression.back().push_back(it.next(2).to_statement()); // add operand to unary op.

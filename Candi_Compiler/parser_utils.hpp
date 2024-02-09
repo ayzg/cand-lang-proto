@@ -129,17 +129,17 @@ namespace caoco {
 		// <@method:column> returns the column of the token at the cursor.
 		std::size_t column() const { return get().col(); }
 
-		int importance() { 
-			return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[get().type()]); 
+		int priority() { 
+			return std::get<static_cast<std::size_t>(e_tk_trait::priority_)>(token_traits[get().type()]); 
 		}
-		Associativity associativity() { 
-			return std::get< static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[get().type()]); 
+		e_assoc associativity() { 
+			return std::get< static_cast<std::size_t>(e_tk_trait::associativity_)>(token_traits[get().type()]); 
 		}
-		Operation operation() { 
-			return std::get< static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[get().type()]);
+		e_operation operation() { 
+			return std::get< static_cast<std::size_t>(e_tk_trait::operation_)>(token_traits[get().type()]);
 		}
 		astnode to_statement() {
-			return astnode{ std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
+			return astnode{ std::get< static_cast<std::size_t>(e_tk_trait::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
 		}
 
 
