@@ -332,10 +332,10 @@ class function_t {
 	sl_string name_;
 	rtenv& scope_;
 	sl_vector<sl_string> args_;
-	Node body_;
+	astnode body_;
 
 public:
-	function_t(const sl_string& name, rtenv& scope, const sl_vector<sl_string>& args, const Node& body) 
+	function_t(const sl_string& name, rtenv& scope, const sl_vector<sl_string>& args, const astnode& body) 
 		: name_(name), scope_(scope), args_(args), body_(body) {}
 
 	function_t(const function_t& other) : scope_(other.scope_) {
@@ -390,29 +390,29 @@ public:
 	}
 };
 struct EnvEvalProcess {
-	virtual RTValue eval(const Node & node, rtenv& env) = 0;
+	virtual RTValue eval(const astnode & node, rtenv& env) = 0;
 	virtual ~EnvEvalProcess() = default;
 public:
-	RTValue operator()(const Node& node, rtenv& env) {
+	RTValue operator()(const astnode& node, rtenv& env) {
 		return eval(node, env);
 	};
 };
 
 #define caoco_def_env_eval_process(n) struct n : public EnvEvalProcess{\
-	RTValue eval(const caoco::Node & node, caoco::rtenv& env) override; \
+	RTValue eval(const caoco::astnode & node, caoco::rtenv& env) override; \
 };
 
-#define caoco_impl_env_eval_process(n) RTValue n::eval(const caoco::Node & node, caoco::rtenv& env)
+#define caoco_impl_env_eval_process(n) RTValue n::eval(const caoco::astnode & node, caoco::rtenv& env)
 
-// All tokens in the AST hold caoco::sl_u8string, whitch is a utf-8 encoded string
-inline auto get_node_cstr(const Node & node) {
-	return sl::to_str(node.to_string());
-}
+//// All tokens in the AST hold caoco::sl_u8string, whitch is a utf-8 encoded string
+//inline auto get_node_cstr(const astnode & node) {
+//	return node.literal_str();
+//}
 
 // Util method for single node evaluators which use the same pattern.
 template<typename RetrieverT> requires std::invocable<RetrieverT, const sl_string&>
-inline RTValue get_node_rtvalue(const Node& node, RTValue::eType rtval_type,RetrieverT && retrival_policy) {
-	auto literal = get_node_cstr(node);
+inline RTValue get_node_rtvalue(const astnode& node, RTValue::eType rtval_type,RetrieverT && retrival_policy) {
+	auto literal = node.literal_str();
 	try {
 		return RTValue{ rtval_type, retrival_policy(literal) };
 	}
@@ -471,7 +471,7 @@ caoco_impl_env_eval_process(CRealEval) {
 
 caoco_impl_env_eval_process(CStringEval) {
 	// Get the cstr of the node
-	auto literal = get_node_cstr(node);
+	auto literal = node.literal_str();
 
 	// Remove the quotes
 	literal = literal.substr(1, literal.size() - 2);
@@ -615,7 +615,7 @@ caoco_impl_env_eval_process(CNoneEval) {
 };
 
 caoco_impl_env_eval_process(CVariableEval) {
-	auto var_name = get_node_cstr(node);
+	auto var_name = node.literal_str();
 	auto resolved_var = env.resolve_variable(var_name);
 	if (resolved_var.valid()) {
 		return resolved_var.value();
@@ -656,10 +656,10 @@ caoco_impl_env_eval_process(CAddOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (left.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -667,10 +667,10 @@ caoco_impl_env_eval_process(CAddOpEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -709,10 +709,10 @@ caoco_impl_env_eval_process(CSubOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (left.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -720,10 +720,10 @@ caoco_impl_env_eval_process(CSubOpEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -755,10 +755,10 @@ caoco_impl_env_eval_process(CMultOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (left.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -766,10 +766,10 @@ caoco_impl_env_eval_process(CMultOpEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -800,10 +800,10 @@ caoco_impl_env_eval_process(CDivOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (left.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -811,10 +811,10 @@ caoco_impl_env_eval_process(CDivOpEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -845,10 +845,10 @@ caoco_impl_env_eval_process(CModOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (left.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -856,10 +856,10 @@ caoco_impl_env_eval_process(CModOpEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -890,10 +890,10 @@ caoco_impl_env_eval_process(CBinopEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if(left.operation() == Node::eOperation::binary_) {
+	if(get_node_operation(left.type()) == Operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (left.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(left.type()) == Operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -901,10 +901,10 @@ caoco_impl_env_eval_process(CBinopEval) {
 	}
 
 	// Right
-	if (right.operation() == Node::eOperation::binary_) {
+	if (get_node_operation(right.type()) == Operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (right.operation() == Node::eOperation::none_) {
+	else if (get_node_operation(right.type()) == Operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -931,7 +931,7 @@ caoco_impl_env_eval_process(CBinopEval) {
 }
 
 caoco_impl_env_eval_process(CVarDeclEval) {
-	auto var_name = get_node_cstr(node.body().front());
+	auto var_name = node.body().front().literal_str();
 
 	// Check if the variable has been declared
 	if(env.resolve_variable(var_name).valid()) {
@@ -957,7 +957,7 @@ caoco_impl_env_eval_process(CClassDeclEval) {
 			-> <pragmatic_block_> The body of the class
 				-> ...statements...
 	*/
-	auto class_name = get_node_cstr(node.body().front());
+	auto class_name = node.body().front().literal_str();
 	auto new_class = std::make_shared<object_t>(object_t(class_name, env.add_subenv(class_name)));
 	auto created_class = env.create_variable(class_name, RTValue(RTValue::OBJECT, new_class));
 
@@ -978,11 +978,11 @@ caoco_impl_env_eval_process(CFunctionDeclEval) {
 			-> <functional_block_> The body of the function
 				-> ...statements...
 	*/
-	auto function_name = get_node_cstr(node.body().front());
+	auto function_name = node.body().front().literal_str();
 	auto arguments = [&node]() {
 		sl_vector<sl_string> args;
 		for (auto& arg : (*(node.body().begin()++)).body()) {
-			args.push_back(get_node_cstr(arg));
+			args.push_back(arg.literal_str());
 		}
 		return args;
 	}();
@@ -994,7 +994,7 @@ caoco_impl_env_eval_process(CFunctionDeclEval) {
 
 caoco_impl_env_eval_process(CFunctionCallEval) {
 	// front will be the function name, back will be the arguments
-	auto function_name = get_node_cstr(node.body().front());
+	auto function_name = node.body().front().literal_str();
 
 	// Get the function from the env
 	auto resolved_function = env.resolve_variable(function_name);

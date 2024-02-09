@@ -37,6 +37,7 @@ namespace caoco {
 	using NodeTraitsMapType = sl_map<astnode_enum, sl_tuple<int, Associativity, Operation>>;
 
 #define caoco_TK_TRAIT(TOKEN_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION, PRODUCED_STATEMENT) {tk_enum::TOKEN_TYPE, {IMPORTANCE, Associativity::ASSOCIATIVITY, Operation::OPERATION, astnode_enum::PRODUCED_STATEMENT}}
+	
 	static TokenTraitsMapType token_traits = {
 	{tk_enum::alnumus,		{INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::alnumus_}},
 	{tk_enum::number_literal, {INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::number_literal_}},
@@ -96,5 +97,29 @@ namespace caoco {
 	{astnode_enum::close_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
 	{astnode_enum::eof_, {INT_MAX, Associativity::left_, Operation::none_}}
 	};
+
+	Operation get_node_operation(astnode_enum node_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::operation_)>(node_traits[node_type]);
+	}
+
+	Associativity get_node_associativity(astnode_enum node_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::associativity_)>(node_traits[node_type]);
+	}
+
+	int get_node_importance(astnode_enum node_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(node_traits[node_type]);
+	}
+
+	Operation get_token_operation(tk_enum token_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[token_type]);
+	}
+
+	Associativity get_token_associativity(tk_enum token_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[token_type]);
+	}
+
+	int get_token_importance(tk_enum token_type) {
+		return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[token_type]);
+	}
 
 };// namespace caoco

@@ -143,10 +143,10 @@ namespace caoco {
 		int importance() { return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[get().type()]); }
 		Associativity associativity() { return std::get< static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[get().type()]); }
 		Operation operation() { return std::get< static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[get().type()]); }
-		Node to_statement() {
+		astnode to_statement() {
 			auto aa = get().type();
 			auto a = std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]);
-			return Node{ std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
+			return astnode{ std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
 		}
 
 
