@@ -97,18 +97,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="any_type_ptr.hpp" />
     <ClInclude Include="ast_node.hpp" />
-    <ClInclude Include="candi_main.hpp" />
     <ClInclude Include="char_traits.hpp" />
     <ClInclude Include="constant_evaluator.hpp" />
+    <ClInclude Include="global_dependencies.hpp" />
     <ClInclude Include="parser.hpp" />
     <ClInclude Include="parser_utils.hpp" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="syntax_traits.hpp" />
     <ClInclude Include="token.hpp" />
     <ClInclude Include="tokenizer.hpp" />
-    <ClInclude Include="transpiler.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
@@ -120,6 +118,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="constant_evaluator_unit_test_0_free_functions.candi" />
     <None Include="constant_evaluator_unit_test_0_literals.candi" />
     <None Include="constant_evaluator_unit_test_0_operators.candi" />
     <None Include="constant_evaluator_unit_test_0_structs.candi" />

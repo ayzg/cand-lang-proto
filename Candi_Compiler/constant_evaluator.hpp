@@ -8,8 +8,10 @@
 
 namespace caoco {
 class object_t;
+class function_t;
 struct RTValue;
 class rtenv;
+struct CBinopEval;
 struct none_t {
 	bool operator==(const none_t&) const {
 		return true;
@@ -40,10 +42,11 @@ struct RTValue {
 		OCTET = 4,
 		NONE = 5,
 		UNSIGNED = 6,
-		OBJECT = 7
+		OBJECT = 7,
+		FUNCTION = 8
 	} type;
 
-	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>> value;
+	std::variant<int, double, std::string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>,std::shared_ptr<function_t>> value;
 
 RTValue() : type(NONE), value(none_t{}) {}
 
@@ -325,6 +328,66 @@ public:
 	}
 };
 
+class function_t {
+	std::string name_;
+	rtenv& scope_;
+	std::vector<std::string> args_;
+	Node body_;
+
+public:
+	function_t(const std::string& name, rtenv& scope, const std::vector<std::string>& args, const Node& body) : name_(name), scope_(scope), args_(args), body_(body) {}
+
+	function_t(const function_t& other) : scope_(other.scope_) {
+		name_ = other.name_;
+		args_ = other.args_;
+		body_ = other.body_;
+		scope_ = other.scope_;
+	}
+
+	function_t(function_t&& other) : scope_(other.scope_) {
+		name_ = std::move(other.name_);
+		args_ = std::move(other.args_);
+		body_ = std::move(other.body_);
+		scope_ = std::move(other.scope_);
+	}
+
+	function_t& operator=(const function_t& other) {
+		name_ = other.name_;
+		args_ = other.args_;
+		body_ = other.body_;
+		scope_ = other.scope_;
+		return *this;
+	}
+
+	function_t& operator=(function_t&& other) {
+		name_ = std::move(other.name_);
+		args_ = std::move(other.args_);
+		body_ = std::move(other.body_);
+		scope_ = std::move(other.scope_);
+		return *this;
+	}
+
+	const auto& name() const {
+		return name_;
+	}
+
+	auto& scope() {
+		return scope_;
+	}
+
+	auto& set_scope(rtenv& scope) {
+		scope_ = scope;
+		return scope;
+	}
+
+	const auto& args() const {
+		return args_;
+	}
+
+	const auto& body() const {
+		return body_;
+	}
+};
 struct EnvEvalProcess {
 	virtual RTValue eval(const Node & node, rtenv& env) = 0;
 	virtual ~EnvEvalProcess() = default;
@@ -342,7 +405,7 @@ public:
 
 // All tokens in the AST hold caoco::string_t, whitch is a utf-8 encoded string
 inline auto get_node_cstr(const Node & node) {
-	return to_std_string(node.to_string());
+	return sl::to_str(node.to_string());
 }
 
 // Util method for single node evaluators which use the same pattern.
@@ -384,7 +447,8 @@ caoco_def_env_eval_process(CBinopEval); // Dispatches to binary ops
 
 caoco_def_env_eval_process(CVarDeclEval); // anon var decl <#var><alnumus><=><expression><;> (for now)
 caoco_def_env_eval_process(CClassDeclEval); // class decl <#class><alnumus><{><...><}>
-
+caoco_def_env_eval_process(CFunctionDeclEval); // function decl <#function><alnumus><{><...><}>
+caoco_def_env_eval_process(CFunctionCallEval);
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Constant Evaluator Processes Implementations
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -903,6 +967,55 @@ caoco_impl_env_eval_process(CClassDeclEval) {
 	}
 
 	return created_class.value(); // return ref to the created class
+}
+
+caoco_impl_env_eval_process(CFunctionDeclEval) {
+	/* Format of incoming node:
+		<function_definition>
+			-> <alnumus> The name of the function
+			-> <arguments?> The arguments of the function
+			-> <functional_block_> The body of the function
+				-> ...statements...
+	*/
+	auto function_name = get_node_cstr(node.body().front());
+	auto arguments = [&node]() {
+		std::vector<std::string> args;
+		for (auto& arg : (*(node.body().begin()++)).body()) {
+			args.push_back(get_node_cstr(arg));
+		}
+		return args;
+	}();
+	auto new_function = std::make_shared<function_t>(function_t(function_name, env.add_subenv(function_name), arguments, node.body().back()));
+	auto created_function = env.create_variable(function_name, RTValue(RTValue::FUNCTION, new_function));
+
+	return created_function.value(); // return ref to the created function
+};
+
+caoco_impl_env_eval_process(CFunctionCallEval) {
+	// front will be the function name, back will be the arguments
+	auto function_name = get_node_cstr(node.body().front());
+
+	// Get the function from the env
+	auto resolved_function = env.resolve_variable(function_name);
+
+	// Check if the function exists
+	if(!resolved_function.valid()) {
+		throw std::runtime_error("CFunctionCallEval:Function not found:" + function_name);
+	}
+
+	// Bind the arguments to the function
+	auto& function = std::get<std::shared_ptr<function_t>>(resolved_function.value().value);
+	function->scope().create_variable(function->args().front(),CBinopEval()(node.body().back(), env));
+
+	// Evaluate the function body(for now only 1 return statement)
+	auto result = CBinopEval()(function->body().body().front().body().back(), function->scope());
+
+	// destroy the variables created in the function scope
+	for (auto& arg : function->args()) {
+		function->scope().delete_variable(arg);
+	}
+
+	return result;
 }
 
 }; // namespace caoco

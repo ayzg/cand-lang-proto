@@ -50,7 +50,7 @@ namespace caoco {
 		}
 	protected:
 		ParsingResult make_error(tk_vector_t::const_iterator cursor, Tk offending_token, std::string error_message) {
-			error_stream_ << "\n" << error_message << " Offending token: " << to_std_string(offending_token.literal())
+			error_stream_ << "\n" << error_message << " Offending token: " << sl::to_str(offending_token.literal())
 				<< "| Line: " << offending_token.line() << "| Col: " << offending_token.col() << "\n";
 			return ParsingResult{ Node(Node::eType::invalid_),cursor, false, error_stream_.str() };
 		}
@@ -802,7 +802,7 @@ namespace caoco {
 			else {
 				return make_error(method_def_body_scope.scope_end(), *method_def_body_scope.scope_end(),
 					"[ParseDirectiveFunc]: Invalid func statement format. Expected an eos token ';' after functional block in function definition. Function name:"
-					+ to_std_string(cursor.next().lit()));
+					+ sl::to_str(cursor.next().lit()));
 			}
 		}
 		// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
@@ -817,7 +817,7 @@ namespace caoco {
 					Node node{ Node::eType::method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
 					node.push_back({ Node::eType::alnumus_, *cursor.next(), *cursor.next(2) });
 					node.push_back({ Node::eType::arguments_, method_arguments_scope.contained_begin(), method_arguments_scope.contained_end() });
-					node.push_back({ Node::eType::functional_block_, method_def_body_scope.contained_begin(), method_def_body_scope.contained_end() });
+					node.push_back(ParseFunctionalBlock()(method_def_body_scope.contained_begin(), method_def_body_scope.contained_end()).node());
 					return make_success(node, method_def_body_scope.scope_end() + 1); // 1 past eos token
 				}
 				else {
