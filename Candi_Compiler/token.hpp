@@ -79,4 +79,7 @@ namespace caoco {
 	};
 
 	using tk_enum = tk::e_type;
+	using tk_vector = sl_vector<tk>;
+	using tk_vector_it = tk_vector::iterator;
+	using tk_vector_cit = tk_vector::const_iterator;
 };

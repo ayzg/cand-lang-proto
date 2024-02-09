@@ -15,16 +15,6 @@
 
 namespace caoco {
 
-	//using tk_vector = sl_vector<tk>;
-	//using tk_vector_it = tk_vector::iterator;
-	//using tk_vector_cit = tk_vector::const_iterator;
-
-	using node_enum = astnode_enum;
-
-
-	// Scans for a combination of tokens starting from the beg iterator.
-	// Tokens may be specified to be optional or mandatory.
-	// In case of optional tokens, if the token is not found, the following required token will be searched for from that point.
 	enum class mask_policy {
 		mandatory,
 		optional
@@ -90,6 +80,10 @@ namespace caoco {
 		return is_found;
 	}
 
+	// Scans for a combination of tokens starting from the beg iterator.
+	// Tokens may be specified to be optional or mandatory.
+	// In case of optional tokens, if the token is not found, 
+	// the following required token will be searched for from that point.
 	template<typename MaskTupleT>
 	constexpr bool scan_tokens_pack(tk_vector_cit it, tk_vector_cit end) {
 		bool is_found = false;
@@ -104,15 +98,10 @@ namespace caoco {
 		tk_vector_cit beg_;
 		tk_vector_cit end_;
 
-		//tk_vector_cit source_beg_;
-		//tk_vector_cit source_end_;
-
 		tk_cursor(tk_vector_cit begin, tk_vector_cit end) : it_(begin), beg_(begin), end_(end) {}
 
 		auto end() const { return end_; }
 		auto begin() const { return beg_; }
-		//auto source_end() const { return source_end_; }
-		//auto source_begin() const { return source_beg_; }
 		bool empty() const { return beg_ == end_; }
 
 		// <@method:next> returns the current token on the cursor, if at end or before begin, returns eof token.
@@ -140,12 +129,16 @@ namespace caoco {
 		// <@method:column> returns the column of the token at the cursor.
 		std::size_t column() const { return get().col(); }
 
-		int importance() { return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[get().type()]); }
-		Associativity associativity() { return std::get< static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[get().type()]); }
-		Operation operation() { return std::get< static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[get().type()]); }
+		int importance() { 
+			return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[get().type()]); 
+		}
+		Associativity associativity() { 
+			return std::get< static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[get().type()]); 
+		}
+		Operation operation() { 
+			return std::get< static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[get().type()]);
+		}
 		astnode to_statement() {
-			auto aa = get().type();
-			auto a = std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]);
 			return astnode{ std::get< static_cast<std::size_t>(TokenTraitIndex::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
 		}
 
@@ -201,33 +194,6 @@ namespace caoco {
 
 		const auto& operator*() const { return it_; }
 
-		//// <@method:select> Given an iterator pair, sets the cursor to the begin and end of the pair. Checks that pair is within source. It_ is set to the closest valid position.
-		//// If assinged pair is not withinin source, throws runtime exception.
-		//tk_cursor& select(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
-		//	if (begin < source_beg_ || end > source_end_) {
-		//		throw std::out_of_range("tk_cursor passed selection outside of source begin or end.");
-		//	}
-		//	else {
-		//		beg_ = begin;
-		//		end_ = end;
-
-		//		// If cursors is currently after end or before begin then it is moved to the end or begin
-		//		if (it_ < beg_) {
-		//			it_ = beg_;
-		//		}
-		//		else if (it_ >= end_) {
-		//			it_ = end_;
-		//		}
-		//	}
-		//	return *this;
-		//}
-
-		//// Creates a new tk_cursor with the same source and cursor. But a different selection.
-		//tk_cursor make_selection(Tokenizer::token_view_iterator begin, Tokenizer::token_view_iterator end) {
-		//	tk_cursor selection = *this;
-		//	selection.select(begin, end);
-		//	return selection;
-		//}
 	};
 
 	// <@class:parser_scope_result>

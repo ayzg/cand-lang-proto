@@ -21,13 +21,6 @@
 
 namespace caoco {
 
-	using tk_vector = sl_vector<tk>;
-	using tk_vector_it = tk_vector::iterator;
-	using tk_vector_cit = tk_vector::const_iterator;
-
-	using node_enum = astnode_enum;
-	using astnode_enum = astnode_enum;
-
 	// <@class:parsing_result>
 	// <@brief> A struct containing the result of a parsing method.
 	// <@member:cursor> The end of the parsed statement.
@@ -49,7 +42,6 @@ namespace caoco {
 		constexpr bool valid() const noexcept { return valid_; }
 		constexpr sl_string error_message() const noexcept { return error_message_; }
 	};
-
 
 	// <@class:parsing_process> virtual base class for a parsing process functor.
 	class parsing_process {
@@ -86,8 +78,6 @@ namespace caoco {
 		virtual ~parsing_process() = default;
 	};
 
-
-	// Expression parsing methods:
 	sl_opt<astnode> build_statement(tk_vector_cit begin,
 		tk_vector_cit end, sl_opt<astnode> last_pass = sl::nullopt) {
 		tk_cursor it(begin,end);
@@ -341,9 +331,6 @@ namespace caoco {
 		}
 	}
 
-
-
-
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 // Parsing Functor Definitions
@@ -351,7 +338,6 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParsePragmaticBlock);
 	caoco_PARSING_PROCESS_DEF(ParseFunctionalBlock);
 	caoco_PARSING_PROCESS_DEF(ParseValueExpression);
-
 	// ambigous statements part of a pragmatic block.
 	caoco_PARSING_PROCESS_DEF(ParseIdentifierStatement);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveType);
@@ -359,9 +345,8 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveFunc);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveClass);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveNone);
-
 	// Functional block statements
-	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); // <#return> <expr> <eos>
+	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); 
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveIf);
 	// literals
 	caoco_PARSING_PROCESS_DEF(ParseLiteral);
@@ -369,11 +354,9 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseNumberLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseRealLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseAlnumusLiteral);
-
 	caoco_PARSING_PROCESS_DEF(ParseUnsignedLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseOctetLiteral);
 	caoco_PARSING_PROCESS_DEF(ParseBitLiteral);
-
 	// candi special objects
 	caoco_PARSING_PROCESS_DEF(ParseCandiSpecialObject);
 	caoco_PARSING_PROCESS_DEF(ParseCsoType);
@@ -452,7 +435,7 @@ namespace caoco {
 			}
 		}
 		else {
-			return make_success({ node_enum::aint_, begin, std::next(begin) });
+			return make_success({ astnode_enum::aint_, begin, std::next(begin) });
 		}
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoUint) {
@@ -470,7 +453,7 @@ namespace caoco {
 			return make_success(atype_node, *it.next(6));
 		}
 		else {
-			return make_success(node_enum::auint_, *it.next());
+			return make_success(astnode_enum::auint_, *it.next());
 		}
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoReal) {
@@ -927,7 +910,6 @@ namespace caoco {
 		return make_success({ astnode_enum::none_literal_, begin, std::next(begin) });
 	}
 
-
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveReturn) {
 		tk_cursor cursor(begin, end);
 		parser_scope_result statement_scope = find_statement(tk_enum::return_, tk_enum::eos, begin, end);
@@ -957,7 +939,6 @@ namespace caoco {
 		else
 			return make_error(begin, *begin, "ParseValueExpression: Invalid statement.");
 	}
-
 
 	caoco_PARSING_PROCESS_IMPL(ParsePragmaticBlock) {
 		// Pragmatic blocks may contain statements starting with a directive or alnumus, ending in a semicolon.

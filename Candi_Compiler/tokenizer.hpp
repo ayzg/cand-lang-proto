@@ -4,10 +4,6 @@
 #include "token.hpp"
 
 namespace caoco {
-	using tk_vector = sl_vector<tk>;
-	using tk_vector_it = tk_vector::iterator;
-	using tk_vector_cit = tk_vector::const_iterator;
-
 	class tokenizer {
 		// Constants
 		SL_CXS char8_t EOF_CHAR = '\0';

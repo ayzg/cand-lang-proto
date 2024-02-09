@@ -15,6 +15,7 @@
     <ClInclude Include="tokenizer.hpp" />
     <ClInclude Include="constant_evaluator.hpp" />
     <ClInclude Include="global_dependencies.hpp" />
+    <ClInclude Include="unit_test_util.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">
@@ -22,59 +23,44 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="transpiler_test.candi">
+    <None Include="ut_parser_singular_nodes.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="parser_test.candi">
+    <None Include="ut_parser_scopes.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="lexer_test.candi">
+    <None Include="ut_parser_statementscope.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="parser_unit_test_0_basic_node.candi">
+    <None Include="ut_parser_primaryexpr.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="parser_unit_test_0_scopes.candi">
+    <None Include="ut_parser_simplestatements.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="parser_unit_test_0_statements.candi">
+    <None Include="ut_parser_function.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="parser_unit_test_0_primary_expr.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="parser_unit_test_0_basic_statement.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="parser_unit_test_0_function.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="parser_unit_test_0_classes.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="tokenizer.candi">
+    <None Include="ut_parser_classes.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="parser_unit_test_0_minimum_program.candi">
+    <None Include="ut_parser_minimum_program.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="ut0_CaocoTokenizer_Tokens.candi">
+    <None Include="ut_ceval_literals.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="constant_evaluator_unit_test_0_literals.candi">
+    <None Include="ut_ceval_operators.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="constant_evaluator_unit_test_0_operators.candi">
+    <None Include="ut_ceval_vardecl.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="constant_evaluator_unit_test_0_variable_declaration.candi">
+    <None Include="ut_ceval_structs.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
-    <None Include="constant_evaluator_unit_test_0_structs.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="constant_evaluator_unit_test_0_free_functions.candi">
+    <None Include="ut_ceval_free_functions.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
   </ItemGroup>
