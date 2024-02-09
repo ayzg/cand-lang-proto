@@ -77,6 +77,7 @@ While using these names for your own purposes right now might not cause a proble
 #include <unordered_map> // std::unordered_map
 #include <list> // std::list
 #include <initializer_list> // std::initializer_list
+#include <tuple>
 
 // Utils
 #include <cstdlib> // numeric string conversions
@@ -84,10 +85,17 @@ While using these names for your own purposes right now might not cause a proble
 #include <functional> // std::reference_wrapper
 #include <limits> // std::numeric_limits
 #include <iterator> // reverse_iterator
+#include <optional>
 
 // Algorithms
 #include <algorithm> // std::move, std::forward, std::get, std::ref, std::cref, std::any_of
 
+// Type
+#include <typeinfo>
+#include <typeindex>
+
+// Error handling
+#include <stdexcept>
 
 //#include <sstream> // For error reporting
 #include <iostream>
@@ -136,6 +144,10 @@ namespace caoco {
 	template<class T>
 	using sl_reverse_iterator = std::reverse_iterator<T>;
 
+	template<class T>
+	using sl_opt = std::optional<T>;
+	using sl_nullopt = std::nullopt_t;
+
 	/// <@section:Containers>
 	template<typename T, std::size_t N>
 	using sl_array = std::array<T, N>;
@@ -155,6 +167,12 @@ namespace caoco {
 	template<class T>
 	using sl_ilist = std::initializer_list<T>;
 
+	template<class... Types>
+	using sl_tuple = std::tuple<Types...>;
+
+	// Type
+	using sl_type_info = std::type_info;
+	using sl_type_index = std::type_index;
 
 	// Specific typedefs which will be used often.
 	using sl_u8string = std::basic_string<char8_t>;
@@ -164,6 +182,7 @@ namespace caoco {
 
 	// standard library functions
 	namespace sl {
+		constexpr sl_nullopt nullopt = std::nullopt;
 		/// <@section:> utils
 		using std::move;
 		using std::forward;
