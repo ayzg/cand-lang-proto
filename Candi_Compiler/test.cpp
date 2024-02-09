@@ -5,8 +5,6 @@
 #include "tokenizer.hpp"
 #include "ast_node.hpp"
 #include "parser.hpp"
-//#include "transpiler.hpp"
-//#include "candi_main.hpp"
 #include "constant_evaluator.hpp"
 
 
@@ -237,7 +235,7 @@ std::string token_type_to_string(caoco::Tk::eType type) {
 }
 
 std::string token_to_string(const caoco::Tk& token) {
-	return token_type_to_string(token.type()) + std::string(" : ") + caoco::to_std_string(token.literal());
+	return token_type_to_string(token.type()) + std::string(" : ") + caoco::sl::to_str(token.literal());
 }
 
 // Workaround.
@@ -478,7 +476,7 @@ caoco::tk_iterator_t test_parsing_functor(std::string test_name, ParsingFunctorT
 
 #if caocotest_CaocoParser_BasicNode_SingularNodes
 TEST(CaocoParser_Test, CaocoParser_BasicNode_SingularNodes) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_basic_node.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_basic_node.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	auto atype_end = test_parsing_functor("&type:", caoco::ParseCsoType(), result.cbegin(), result.cend());
@@ -508,7 +506,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_SingularNodes) {
 #endif
 #if caocotest_CaocoParser_BasicNode_BasicScopes	
 TEST(CaocoParser_Test, CaocoParser_BasicNode_BasicScopes) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_scopes.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_scopes.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	// empty scope
@@ -542,7 +540,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_BasicScopes) {
 #endif
 #if caocotest_CaocoParser_BasicNode_StatementScope 
 TEST(CaocoParser_Test, CaocoParser_BasicNode_StatementScope) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_statements.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_statements.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	// Single value statement : 1;
@@ -576,7 +574,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_StatementScope) {
 #endif
 #if caocotest_CaocoParser_BasicNode_PrimaryExpression
 TEST(CaocoParser_Test, CaocoParser_BasicNode_PrimaryExpression) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_primary_expr.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_primary_expr.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	auto found_scope = caoco::find_open_statement(caoco::Tk::eType::alnumus, caoco::Tk::eType::eos, result.cbegin(), result.cend());
@@ -624,7 +622,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_PrimaryExpression) {
 #endif
 #if caocotest_CaocoParser_BasicNode_SimpleStatements
 TEST(CaocoParser_Test, CaocoParser_BasicNode_SimpleStatements) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_basic_statement.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_basic_statement.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	// Type definition
@@ -700,7 +698,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_SimpleStatements) {
 #endif
 #if caocotest_CaocoParser_BasicNode_Functions
 TEST(CaocoParser_Test, CaocoParser_BasicNode_Functions) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_function.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_function.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	// Shorthand Void Arg Method <#func> <alnumus> <functional_block>
@@ -783,7 +781,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_Functions) {
 #endif
 #if caocotest_CaocoParser_BasicNode_Classes
 TEST(CaocoParser_Test, CaocoParser_BasicNode_Classes) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_classes.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_classes.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	auto empty_class_def_end = test_parsing_functor("Empty Class Definition", caoco::ParseDirectiveClass(), result.cbegin(), result.cend());
@@ -793,7 +791,7 @@ TEST(CaocoParser_Test, CaocoParser_BasicNode_Classes) {
 #endif
 #if caocotest_CaocoParser_MinimumProgram 
 TEST(CaocoParser_Test, CaocoParser_MinimumProgram) {
-	auto source_file = caoco::load_source_file("parser_unit_test_0_minimum_program.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("parser_unit_test_0_minimum_program.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 	auto parse_result = caoco::ParsePragmaticBlock()(result.cbegin(), result.cend());
 	EXPECT_TRUE(parse_result.valid());
@@ -813,10 +811,11 @@ TEST(CaocoParser_Test, CaocoParser_MinimumProgram) {
 #define caocotest_CaocoConstantEvaluator_Operators 1
 #define caocotest_CaocoConstantEvaluator_VariableDeclaration 1
 #define caocotest_CaocoConstantEvaluator_Structs 1
+#define caocotest_CaocoConstantEvaluator_FreeFunctions 1
 
 #if caocotest_CaocoConstantEvaluator_Literals
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
-	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_literals.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("constant_evaluator_unit_test_0_literals.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 
 	// Create the runtime namespace/scope/environment.
@@ -882,7 +881,7 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Literals) {
 
 #if caocotest_CaocoConstantEvaluator_Operators
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Operators) {
-	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_operators.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("constant_evaluator_unit_test_0_operators.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 	auto runtime_env = caoco::rtenv("global");
 
@@ -934,7 +933,7 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_Operators) {
 
 #if caocotest_CaocoConstantEvaluator_VariableDeclaration
 TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_VariableDeclaration) {
-	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_variable_declaration.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("constant_evaluator_unit_test_0_variable_declaration.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 	auto runtime_env = caoco::rtenv("global");
 
@@ -952,7 +951,7 @@ TEST(CaocoConstantEvaluator_Test, CaocoConstantEvaluator_VariableDeclaration) {
 
 #if caocotest_CaocoConstantEvaluator_Structs
 TEST(CaocoConstantEvaluator_Test, caocotest_CaocoConstantEvaluator_Structs) {
-	auto source_file = caoco::load_source_file("constant_evaluator_unit_test_0_structs.candi");
+	auto source_file = caoco::sl::load_file_to_char8_vector("constant_evaluator_unit_test_0_structs.candi");
 	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 	auto runtime_env = caoco::rtenv("global");
 
@@ -973,7 +972,44 @@ TEST(CaocoConstantEvaluator_Test, caocotest_CaocoConstantEvaluator_Structs) {
 	EXPECT_EQ(std::get<int>(class_obj->get_member("b").value), 2);
 	EXPECT_EQ(std::get<int>(class_obj->get_member("c").value), 3);
 }
-
 #endif
+
+#if caocotest_CaocoConstantEvaluator_FreeFunctions
+TEST(CaocoConstantEvaluator_Test2, caocotest_CaocoConstantEvaluator_FreeFunctions) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("constant_evaluator_unit_test_0_free_functions.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
+
+	/* 
+		#func add(x) {
+			#return x + 40;
+		};
+		add(2);
+	*/
+	auto func_decl = caoco::ParseDirectiveFunc()(result.cbegin(), result.cend());
+	EXPECT_TRUE(func_decl.valid());
+	print_ast(func_decl.node());
+	auto eval_result = caoco::CFunctionDeclEval()(func_decl.node(), runtime_env);
+
+	// Check if function was declared in global scope.
+	auto func_obj_from_env = runtime_env.resolve_variable("add");
+
+	// check type of function object
+	EXPECT_EQ(func_obj_from_env.value().type, caoco::RTValue::eType::FUNCTION);
+
+
+	//// Call the function.
+	//auto func_call = caoco::ParseValueExpression()(func_decl.it(), result.cend());
+	//EXPECT_TRUE(func_call.valid());
+	//print_ast(func_call.node());
+	//auto eval_result2 = caoco::CFunctionCallEval()(func_call.node(), runtime_env);
+
+	//// Check the result of the function call.
+	//EXPECT_EQ(eval_result2.type, caoco::RTValue::eType::NUMBER);
+	//EXPECT_EQ(std::get<int>(eval_result2.value), 42);
+
+}
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//

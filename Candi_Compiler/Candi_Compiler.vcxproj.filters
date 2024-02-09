@@ -6,15 +6,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="transpiler.hpp">
-      <Filter>transpilation</Filter>
-    </ClInclude>
-    <ClInclude Include="any_type_ptr.hpp">
-      <Filter>candi_language_cpp</Filter>
-    </ClInclude>
-    <ClInclude Include="candi_main.hpp">
-      <Filter>candi_main</Filter>
-    </ClInclude>
     <ClInclude Include="syntax_traits.hpp" />
     <ClInclude Include="parser_utils.hpp" />
     <ClInclude Include="ast_node.hpp" />
@@ -23,17 +14,9 @@
     <ClInclude Include="token.hpp" />
     <ClInclude Include="tokenizer.hpp" />
     <ClInclude Include="constant_evaluator.hpp" />
+    <ClInclude Include="global_dependencies.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="transpilation">
-      <UniqueIdentifier>{ce608db0-5127-4cd2-84e1-6769d11b48cd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="candi_language_cpp">
-      <UniqueIdentifier>{b71d143a-99af-4830-800e-84f48b005244}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="candi_main">
-      <UniqueIdentifier>{8543f2b3-aaf7-4a06-9af8-490d3ed0a255}</UniqueIdentifier>
-    </Filter>
     <Filter Include="candi_test_scripts">
       <UniqueIdentifier>{d3bded1e-9076-412c-b976-59c00b713152}</UniqueIdentifier>
     </Filter>
@@ -89,6 +72,9 @@
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="constant_evaluator_unit_test_0_structs.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="constant_evaluator_unit_test_0_free_functions.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
   </ItemGroup>

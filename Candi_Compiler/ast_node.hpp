@@ -369,7 +369,7 @@ namespace caoco {
 			}
 
 			debug_string += "] ";
-			debug_string += caoco::to_std_string(to_string());
+			debug_string += caoco::sl::to_str(to_string());
 			debug_string += "| ";
 			return debug_string;
 		}
