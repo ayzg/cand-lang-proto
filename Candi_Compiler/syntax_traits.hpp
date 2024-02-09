@@ -1,125 +1,172 @@
 #pragma once
-#include <vector>
-#include <stdexcept>
-#include <typeinfo>
-#include <typeindex>
-#include <map>
-#include "char_traits.hpp"
 #include "token.hpp"
-#include "tokenizer.hpp"
 #include "ast_node.hpp"
-//#include <stack>
+
+// !Warning: do not use this macro outside of syntax_traits.hpp
+#define CAOCO_TK_TRAIT(TOKEN_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION, PRODUCED_STATEMENT) \
+ {tk_enum::TOKEN_TYPE, {IMPORTANCE, e_assoc::ASSOCIATIVITY, e_operation::OPERATION, astnode_enum::PRODUCED_STATEMENT}}
+
+// !Warning: do not use this macro outside of syntax_traits.hpp
+#define CAOCO_AST_TRAIT(NODE_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION) \
+{astnode_enum::NODE_TYPE, {IMPORTANCE, e_assoc::ASSOCIATIVITY, e_operation::OPERATION}}
 
 namespace caoco {
-
-	enum class Associativity : bool {
+	enum class e_assoc : bool {
 		left_ = true,
 		right_ = false
 	};
-	enum class Operation : int {
+	enum class e_operation : int {
 		binary_ = 0,
 		unary_ = 1,
 		none_ = 2
 	};
-	enum class TokenTraitIndex : std::size_t {
-		importance_ = 0,
+	enum class e_tk_trait : sl_size {
+		priority_ = 0,
 		associativity_ = 1,
 		operation_ = 2,
 		produced_statement_ = 3
 	};
-	enum class StatementTraitIndex : std::size_t {
-		importance_ = 0,
+	enum class e_astnode_trait : sl_size {
+		priority_ = 0,
 		associativity_ = 1,
 		operation_ = 2
 	};
 
-	using TokenTraitsMapType = sl_map<tk_enum, sl_tuple<int, Associativity, Operation, astnode_enum>>;
-	using NodeTraitsMapType = sl_map<astnode_enum, sl_tuple<int, Associativity, Operation>>;
+	namespace priority {
+		constexpr auto max = INT_MAX;
+		constexpr auto functional = 150000;
+		constexpr auto unary = 140000;
+		constexpr auto factor = 130000;
+		constexpr auto term = 120000;
+		constexpr auto bitshift = 110000;
+		constexpr auto three_way_equality = 100000;
+		constexpr auto comparison = 90000;
+		constexpr auto equality = 80000;
+		constexpr auto bitwise = 70000;
+		constexpr auto logical = 60000;
+		constexpr auto assignment = 20000;
+	}
 
-#define caoco_TK_TRAIT(TOKEN_TYPE, IMPORTANCE, ASSOCIATIVITY, OPERATION, PRODUCED_STATEMENT) {tk_enum::TOKEN_TYPE, {IMPORTANCE, Associativity::ASSOCIATIVITY, Operation::OPERATION, astnode_enum::PRODUCED_STATEMENT}}
-	
-	static TokenTraitsMapType token_traits = {
-	{tk_enum::alnumus_,		{INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::alnumus_}},
-	{tk_enum::number_literal_, {INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::number_literal_}},
-	{tk_enum::eof_,			{INT_MAX,	Associativity::left_,	Operation::none_,		astnode_enum::eof_}},
-	caoco_TK_TRAIT(real_literal_,INT_MAX, left_, none_, real_literal_), // real literal
-	caoco_TK_TRAIT(string_literal_,INT_MAX, left_, none_, string_literal_), // string literal
-	caoco_TK_TRAIT(octet_literal_,INT_MAX, left_, none_, octet_literal_), // octet literal
-	caoco_TK_TRAIT(bit_literal_,INT_MAX, left_, none_, bit_literal_), // bit literal
-	caoco_TK_TRAIT(unsigned_literal_,INT_MAX, left_, none_, unsigned_literal_), // unsigned literal
-	caoco_TK_TRAIT(open_frame_,INT_MAX, left_, unary_, open_frame_), // ( function call
-	caoco_TK_TRAIT(period_,160000, left_, binary_, period_), // . operator
-	caoco_TK_TRAIT(decrement_,140000, left_, unary_, decrement_), // --
-	caoco_TK_TRAIT(increment_,140000, left_, unary_, increment_), // ++
-	caoco_TK_TRAIT(bitwise_NOT_,140000, left_, unary_, bitwise_NOT_), // ~
-	caoco_TK_TRAIT(negation_,140000, left_, unary_, negation_), // !
-	caoco_TK_TRAIT(division_,130000, left_, binary_, division_), // /
-	caoco_TK_TRAIT(multiplication_,130000, left_, binary_, multiplication_), // *
-	caoco_TK_TRAIT(remainder_,130000, left_, binary_, remainder_), // %
-	caoco_TK_TRAIT(subtraction_,120000, left_, binary_, subtraction_), // -
-	caoco_TK_TRAIT(addition_,120000, left_, binary_, addition_), // +
-	caoco_TK_TRAIT(bitwise_left_shift_,110000, left_, binary_, bitwise_left_shift_), // <<
-	caoco_TK_TRAIT(bitwise_right_shift_,110000, left_, binary_, bitwise_right_shift_), // >>
-	caoco_TK_TRAIT(three_way_comparison_,100000, left_, binary_, three_way_comparison_), // <=>
-	caoco_TK_TRAIT(greater_than_,90000, left_, binary_, greater_than_), // >
-	caoco_TK_TRAIT(less_than_,90000, left_, binary_, less_than_), // <
-	caoco_TK_TRAIT(greater_than_or_equal_,90000, left_, binary_, greater_than_or_equal_), // >=
-	caoco_TK_TRAIT(less_than_or_equal_,90000, left_, binary_, less_than_or_equal_), // <=
-	caoco_TK_TRAIT(equal_,80000, left_, binary_, equal_), // ==
-	caoco_TK_TRAIT(not_equal_,80000, left_, binary_, not_equal_), // !=
-	caoco_TK_TRAIT(bitwise_AND_,70000, left_, binary_, bitwise_AND_), // &
-	caoco_TK_TRAIT(bitwise_XOR_,60000, left_, binary_, bitwise_XOR_), // ^
-	caoco_TK_TRAIT(bitwise_OR_,50000, left_, binary_, bitwise_OR_), // |
-	caoco_TK_TRAIT(logical_AND_,40000, left_, binary_, logical_AND_), // &&
-	caoco_TK_TRAIT(logical_OR_,30000, left_, binary_, logical_OR_), // ||
+	using tk_traits_map = sl_map<tk_enum, sl_tuple<int, e_assoc, e_operation, astnode_enum>>;
+	using astnode_traits_map = sl_map<astnode_enum, sl_tuple<int, e_assoc, e_operation>>;
+
+	static tk_traits_map token_traits = {
+	CAOCO_TK_TRAIT(alnumus_,priority::max, left_, none_, alnumus_), // alnumus
+	CAOCO_TK_TRAIT(number_literal_,priority::max, left_, none_, number_literal_), // number literal
+	CAOCO_TK_TRAIT(eof_,priority::max, left_, none_, eof_), // eof
+	CAOCO_TK_TRAIT(real_literal_,priority::max, left_, none_, real_literal_), // real literal
+	CAOCO_TK_TRAIT(string_literal_,priority::max, left_, none_, string_literal_), // string literal
+	CAOCO_TK_TRAIT(octet_literal_,priority::max, left_, none_, octet_literal_), // octet literal
+	CAOCO_TK_TRAIT(bit_literal_,priority::max, left_, none_, bit_literal_), // bit literal
+	CAOCO_TK_TRAIT(unsigned_literal_,priority::max, left_, none_, unsigned_literal_), // unsigned literal
+	CAOCO_TK_TRAIT(open_frame_,priority::max, left_, unary_, open_frame_), // ( function call
+	CAOCO_TK_TRAIT(period_,priority::functional, left_, binary_, period_), // . operator
+	CAOCO_TK_TRAIT(decrement_,priority::unary, left_, unary_, decrement_), // --
+	CAOCO_TK_TRAIT(increment_,priority::unary, left_, unary_, increment_), // ++
+	CAOCO_TK_TRAIT(bitwise_NOT_,priority::unary, left_, unary_, bitwise_NOT_), // ~
+	CAOCO_TK_TRAIT(negation_,priority::unary, left_, unary_, negation_), // !
+	CAOCO_TK_TRAIT(division_,priority::factor, left_, binary_, division_), // /
+	CAOCO_TK_TRAIT(multiplication_,priority::factor, left_, binary_, multiplication_), // *
+	CAOCO_TK_TRAIT(remainder_,priority::factor, left_, binary_, remainder_), // %
+	CAOCO_TK_TRAIT(subtraction_,priority::term, left_, binary_, subtraction_), // -
+	CAOCO_TK_TRAIT(addition_,priority::term, left_, binary_, addition_), // +
+	CAOCO_TK_TRAIT(bitwise_left_shift_,priority::bitshift, left_, binary_, bitwise_left_shift_), // <<
+	CAOCO_TK_TRAIT(bitwise_right_shift_,priority::bitshift, left_, binary_, bitwise_right_shift_), // >>
+	CAOCO_TK_TRAIT(three_way_comparison_,priority::three_way_equality, left_, binary_, three_way_comparison_), // <=>
+	CAOCO_TK_TRAIT(greater_than_,priority::comparison, left_, binary_, greater_than_), // >
+	CAOCO_TK_TRAIT(less_than_,priority::comparison, left_, binary_, less_than_), // <
+	CAOCO_TK_TRAIT(greater_than_or_equal_,priority::comparison, left_, binary_, greater_than_or_equal_), // >=
+	CAOCO_TK_TRAIT(less_than_or_equal_,priority::comparison, left_, binary_, less_than_or_equal_), // <=
+	CAOCO_TK_TRAIT(equal_,priority::equality, left_, binary_, equal_), // ==
+	CAOCO_TK_TRAIT(not_equal_,priority::equality, left_, binary_, not_equal_), // !=
+	CAOCO_TK_TRAIT(bitwise_AND_,priority::bitwise, left_, binary_, bitwise_AND_), // &
+	CAOCO_TK_TRAIT(bitwise_XOR_,priority::bitwise-1, left_, binary_, bitwise_XOR_), // ^
+	CAOCO_TK_TRAIT(bitwise_OR_,priority::bitwise-2, left_, binary_, bitwise_OR_), // |
+	CAOCO_TK_TRAIT(logical_AND_,priority::logical, left_, binary_, logical_AND_), // &&
+	CAOCO_TK_TRAIT(logical_OR_,priority::logical-1, left_, binary_, logical_OR_), // ||
 	// Assingment operators
-	caoco_TK_TRAIT(simple_assignment_,20000, left_, binary_, simple_assignment_), // =
-	caoco_TK_TRAIT(addition_assignment_,20000, left_, binary_, addition_assignment_), // +=
-	caoco_TK_TRAIT(subtraction_assignment_,20000, left_, binary_, subtraction_assignment_), // -=
-	caoco_TK_TRAIT(multiplication_assignment_,20000, left_, binary_, multiplication_assignment_), // *=
-	caoco_TK_TRAIT(division_assignment_,20000, left_, binary_, division_assignment_), // /=
-	caoco_TK_TRAIT(remainder_assignment_,20000, left_, binary_, remainder_assignment_), // %=
-	caoco_TK_TRAIT(bitwise_and_assignment_,20000, left_, binary_, bitwise_and_assignment_), // &=
-	caoco_TK_TRAIT(bitwise_or_assignment_,20000, left_, binary_, bitwise_or_assignment_), // |=	
-	caoco_TK_TRAIT(bitwise_xor_assignment_,20000, left_, binary_, bitwise_xor_assignment_), // ^=
-	caoco_TK_TRAIT(left_shift_assignment_,20000, left_, binary_, left_shift_assignment_), // <<=
-	caoco_TK_TRAIT(right_shift_assignment_,20000, left_, binary_, right_shift_assignment_), // >>=
+	CAOCO_TK_TRAIT(simple_assignment_,priority::assignment, left_, binary_, simple_assignment_), // =
+	CAOCO_TK_TRAIT(addition_assignment_,priority::assignment, left_, binary_, addition_assignment_), // +=
+	CAOCO_TK_TRAIT(subtraction_assignment_,priority::assignment, left_, binary_, subtraction_assignment_), // -=
+	CAOCO_TK_TRAIT(multiplication_assignment_,priority::assignment, left_, binary_, multiplication_assignment_), // *=
+	CAOCO_TK_TRAIT(division_assignment_,priority::assignment, left_, binary_, division_assignment_), // /=
+	CAOCO_TK_TRAIT(remainder_assignment_,priority::assignment, left_, binary_, remainder_assignment_), // %=
+	CAOCO_TK_TRAIT(bitwise_and_assignment_,priority::assignment, left_, binary_, bitwise_and_assignment_), // &=
+	CAOCO_TK_TRAIT(bitwise_or_assignment_,priority::assignment, left_, binary_, bitwise_or_assignment_), // |=	
+	CAOCO_TK_TRAIT(bitwise_xor_assignment_,priority::assignment, left_, binary_, bitwise_xor_assignment_), // ^=
+	CAOCO_TK_TRAIT(left_shift_assignment_,priority::assignment, left_, binary_, left_shift_assignment_), // <<=
+	CAOCO_TK_TRAIT(right_shift_assignment_,priority::assignment, left_, binary_, right_shift_assignment_), // >>=
 	};
-	static NodeTraitsMapType node_traits = {
-	{astnode_enum::alnumus_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{astnode_enum::number_literal_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{astnode_enum::addition_, {1000, Associativity::left_, Operation::binary_}},
-	{astnode_enum::subtraction_, {1000, Associativity::left_, Operation::binary_}},
-	{astnode_enum::multiplication_, {2000, Associativity::left_, Operation::binary_}},
-	{astnode_enum::division_, {2000, Associativity::left_, Operation::binary_}},
-
-	{astnode_enum::open_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{astnode_enum::close_scope_, {INT_MAX, Associativity::left_, Operation::none_}},
-	{astnode_enum::eof_, {INT_MAX, Associativity::left_, Operation::none_}}
+	static astnode_traits_map node_traits = {
+	CAOCO_AST_TRAIT(alnumus_,priority::max, left_, none_), // alnumus
+	CAOCO_AST_TRAIT(number_literal_,priority::max, left_, none_), // number literal
+	CAOCO_AST_TRAIT(eof_,priority::max, left_, none_), // eof
+	CAOCO_AST_TRAIT(real_literal_,priority::max, left_, none_), // real literal
+	CAOCO_AST_TRAIT(string_literal_,priority::max, left_, none_), // string literal
+	CAOCO_AST_TRAIT(octet_literal_,priority::max, left_, none_), // octet literal
+	CAOCO_AST_TRAIT(bit_literal_,priority::max, left_, none_), // bit literal
+	CAOCO_AST_TRAIT(unsigned_literal_,priority::max, left_, none_), // unsigned literal
+	CAOCO_AST_TRAIT(open_frame_,priority::max, left_, unary_), // ( function call
+	CAOCO_AST_TRAIT(period_,priority::functional, left_, binary_), // . operator
+	CAOCO_AST_TRAIT(decrement_,priority::unary, left_, unary_), // --
+	CAOCO_AST_TRAIT(increment_,priority::unary, left_, unary_), // ++
+	CAOCO_AST_TRAIT(bitwise_NOT_,priority::unary, left_, unary_), // ~
+	CAOCO_AST_TRAIT(negation_,priority::unary, left_, unary_), // !
+	CAOCO_AST_TRAIT(division_,priority::factor, left_, binary_), // /
+	CAOCO_AST_TRAIT(multiplication_,priority::factor, left_, binary_), // *
+	CAOCO_AST_TRAIT(remainder_,priority::factor, left_, binary_), // %
+	CAOCO_AST_TRAIT(subtraction_,priority::term, left_, binary_), // -
+	CAOCO_AST_TRAIT(addition_,priority::term, left_, binary_), // +
+	CAOCO_AST_TRAIT(bitwise_left_shift_,priority::bitshift, left_, binary_), // <<
+	CAOCO_AST_TRAIT(bitwise_right_shift_,priority::bitshift, left_, binary_), // >>
+	CAOCO_AST_TRAIT(three_way_comparison_,priority::three_way_equality, left_, binary_), // <=>
+	CAOCO_AST_TRAIT(greater_than_,priority::comparison, left_, binary_), // >
+	CAOCO_AST_TRAIT(less_than_,priority::comparison, left_, binary_), // <
+	CAOCO_AST_TRAIT(greater_than_or_equal_,priority::comparison, left_, binary_), // >=
+	CAOCO_AST_TRAIT(less_than_or_equal_,priority::comparison, left_, binary_), // <=
+	CAOCO_AST_TRAIT(equal_,priority::equality, left_, binary_), // ==
+	CAOCO_AST_TRAIT(not_equal_,priority::equality, left_, binary_), // !=
+	CAOCO_AST_TRAIT(bitwise_AND_,priority::bitwise, left_, binary_), // &
+	CAOCO_AST_TRAIT(bitwise_XOR_,priority::bitwise - 1, left_, binary_), // ^
+	CAOCO_AST_TRAIT(bitwise_OR_,priority::bitwise - 2, left_, binary_), // |
+	CAOCO_AST_TRAIT(logical_AND_,priority::logical, left_, binary_), // &&
+	CAOCO_AST_TRAIT(logical_OR_,priority::logical - 1, left_, binary_), // ||
+	// Assingment operators
+	CAOCO_AST_TRAIT(simple_assignment_,priority::assignment, left_, binary_), // =
+	CAOCO_AST_TRAIT(addition_assignment_,priority::assignment, left_, binary_), // +=
+	CAOCO_AST_TRAIT(subtraction_assignment_,priority::assignment, left_, binary_), // -=
+	CAOCO_AST_TRAIT(multiplication_assignment_,priority::assignment, left_, binary_), // *=
+	CAOCO_AST_TRAIT(division_assignment_,priority::assignment, left_, binary_), // /=
+	CAOCO_AST_TRAIT(remainder_assignment_,priority::assignment, left_, binary_), // %=
+	CAOCO_AST_TRAIT(bitwise_and_assignment_,priority::assignment, left_, binary_), // &=
+	CAOCO_AST_TRAIT(bitwise_or_assignment_,priority::assignment, left_, binary_), // |=	
+	CAOCO_AST_TRAIT(bitwise_xor_assignment_,priority::assignment, left_, binary_), // ^=
+	CAOCO_AST_TRAIT(left_shift_assignment_,priority::assignment, left_, binary_), // <<=
+	CAOCO_AST_TRAIT(right_shift_assignment_,priority::assignment, left_, binary_), // >>=
 	};
 
-	Operation get_node_operation(astnode_enum node_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::operation_)>(node_traits[node_type]);
+	e_operation get_node_operation(astnode_enum node_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::operation_)>(node_traits[node_type]);
 	}
 
-	Associativity get_node_associativity(astnode_enum node_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::associativity_)>(node_traits[node_type]);
+	e_assoc get_node_associativity(astnode_enum node_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::associativity_)>(node_traits[node_type]);
 	}
 
-	int get_node_importance(astnode_enum node_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(node_traits[node_type]);
+	int get_node_priority(astnode_enum node_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::priority_)>(node_traits[node_type]);
 	}
 
-	Operation get_token_operation(tk_enum token_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::operation_)>(token_traits[token_type]);
+	e_operation get_token_operation(tk_enum token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::operation_)>(token_traits[token_type]);
 	}
 
-	Associativity get_token_associativity(tk_enum token_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::associativity_)>(token_traits[token_type]);
+	e_assoc get_token_associativity(tk_enum token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::associativity_)>(token_traits[token_type]);
 	}
 
-	int get_token_importance(tk_enum token_type) {
-		return std::get<static_cast<std::size_t>(TokenTraitIndex::importance_)>(token_traits[token_type]);
+	int get_token_priority(tk_enum token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::priority_)>(token_traits[token_type]);
 	}
 
 };// namespace caoco
