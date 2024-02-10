@@ -59,9 +59,7 @@ namespace caoco {
 		parsing_result make_success(astnode node,tk_vector_cit end) {
 			return make_result(node,end, true);
 		}
-		parsing_result make_success(astnode node) {
-			return make_result(node, node.token_end(), true);
-		}
+
 		parsing_result make_pass(tk_vector_cit it) {
 			return make_result(astnode(astnode_enum::none_),it, false);
 		}
@@ -382,15 +380,15 @@ namespace caoco {
 // Parsing Functor Implementations
 	caoco_PARSING_PROCESS_IMPL(ParseCsoType) {
 		assert(begin->type() == tk_enum::atype_ && "[PROGRAMMER LOGIC ERROR][ParseCsoType] begin is not atype_ token.");
-		return make_success({ astnode_enum::atype_, begin, std::next(begin) });
+		return make_success({ astnode_enum::atype_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoValue) {
 		assert(begin->type() == tk_enum::avalue_ && "[LOGIC ERROR][ParseCsoValue] begin is not avalue_ token.");
-		return make_success({ astnode_enum::avalue_, begin, std::next(begin) });
+		return make_success({ astnode_enum::avalue_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoIdentity) {
 		assert(begin->type() == tk_enum::aidentity_ && "[LOGIC ERROR][ParseCsoIdentity] begin is not aid_ token.");
-		return make_success({ astnode_enum::aidentity_, begin, std::next(begin) });
+		return make_success({ astnode_enum::aidentity_, begin, std::next(begin) }, std::next(begin));
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseCsoInt) {
@@ -442,7 +440,7 @@ namespace caoco {
 			}
 		}
 		else {
-			return make_success({ astnode_enum::aint_, begin, std::next(begin) });
+			return make_success({ astnode_enum::aint_, begin, std::next(begin) }, std::next(begin));
 		}
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoUint) {
@@ -465,15 +463,15 @@ namespace caoco {
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoReal) {
 		assert(begin->type() == tk_enum::areal_ && "[LOGIC ERROR][ParseCsoReal] begin is not areal_ token.");
-		return make_success({ astnode_enum::areal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::areal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoOctet) {
 		assert(begin->type() == tk_enum::aoctet_ && "[LOGIC ERROR][ParseCsoOctet] begin is not aoctet_ token.");
-		return make_success({ astnode_enum::aoctet_, begin, std::next(begin) });
+		return make_success({ astnode_enum::aoctet_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoBit) {
 		assert(begin->type() == tk_enum::abit_ && "[LOGIC ERROR][ParseCsoBit] begin is not abit_ token.");
-		return make_success({ astnode_enum::abit_, begin, std::next(begin) });
+		return make_success({ astnode_enum::abit_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseCsoPointer) {
 		assert(begin->type() == tk_enum::apointer_ && "[LOGIC ERROR][ParseCsoInt] begin is not apointer_ token.");
@@ -582,32 +580,32 @@ namespace caoco {
 
 	caoco_PARSING_PROCESS_IMPL(ParseStringLiteral) {
 		assert(begin->type() == tk_enum::string_literal_ && "[LOGIC ERROR][ParseStringLiteral] begin is not string_literal token.");
-		return make_success({ astnode_enum::string_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::string_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseNumberLiteral) {
 		assert(begin->type() == tk_enum::number_literal_ && "[LOGIC ERROR][ParseNumberLiteral] begin is not number_literal token.");
-		return make_success({ astnode_enum::number_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::number_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseRealLiteral) {
 		assert(begin->type() == tk_enum::real_literal_ && "[LOGIC ERROR][ParseRealLiteral] begin is not real_literal token.");
-		return make_success({ astnode_enum::real_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::real_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseAlnumusLiteral) {
 		assert(begin->type() == tk_enum::alnumus_ && "[LOGIC ERROR][ParseAlnumusLiteral] begin is not alnumus token.");
-		return make_success({ astnode_enum::alnumus_, begin, std::next(begin) });
+		return make_success({ astnode_enum::alnumus_, begin, std::next(begin) }, std::next(begin));
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseUnsignedLiteral){
 		assert(begin->type() == tk_enum::unsigned_literal_ && "[LOGIC ERROR][ParseUnsignedLiteral] begin is not unsigned_literal token.");
-		return make_success({ astnode_enum::unsigned_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::unsigned_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseOctetLiteral) {
 		assert(begin->type() == tk_enum::octet_literal_ && "[LOGIC ERROR][ParseOctetLiteral] begin is not octet_literal token.");
-		return make_success({ astnode_enum::octet_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::octet_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseBitLiteral) {
 		assert(begin->type() == tk_enum::bit_literal_ && "[LOGIC ERROR][ParseBitLiteral] begin is not bit_literal token.");
-		return make_success({ astnode_enum::bit_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::bit_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseLiteral) {
@@ -914,7 +912,7 @@ namespace caoco {
 	}
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveNone) {
 		assert(begin->type() == tk_enum::none_literal_ && "[LOGIC ERROR][ParseCsoValue] begin is not avalue_ token.");
-		return make_success({ astnode_enum::none_literal_, begin, std::next(begin) });
+		return make_success({ astnode_enum::none_literal_, begin, std::next(begin) }, std::next(begin));
 	}
 
 	caoco_PARSING_PROCESS_IMPL(ParseDirectiveReturn) {

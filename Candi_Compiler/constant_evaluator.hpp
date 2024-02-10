@@ -386,7 +386,7 @@ public:
 		return args_;
 	}
 
-	const auto& body() const {
+	const auto& children() const {
 		return body_;
 	}
 };
@@ -651,8 +651,8 @@ caoco_impl_env_eval_process(CLiteralEval) {
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
 caoco_impl_env_eval_process(CAddOpEval) {
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 
 	RTValue left_val;
 	RTValue right_val;
@@ -704,8 +704,8 @@ caoco_impl_env_eval_process(CAddOpEval) {
 }
 
 caoco_impl_env_eval_process(CSubOpEval) {
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 
 	RTValue left_val;
 	RTValue right_val;
@@ -750,8 +750,8 @@ caoco_impl_env_eval_process(CSubOpEval) {
 }
 
 caoco_impl_env_eval_process(CMultOpEval) {
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 
 	RTValue left_val;
 	RTValue right_val;
@@ -795,8 +795,8 @@ caoco_impl_env_eval_process(CMultOpEval) {
 }
 
 caoco_impl_env_eval_process(CDivOpEval) {
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 
 	RTValue left_val;
 	RTValue right_val;
@@ -840,8 +840,8 @@ caoco_impl_env_eval_process(CDivOpEval) {
 }
 
 caoco_impl_env_eval_process(CModOpEval) {
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 
 	RTValue left_val;
 	RTValue right_val;
@@ -882,12 +882,12 @@ caoco_impl_env_eval_process(CModOpEval) {
 }
 
 caoco_impl_env_eval_process(CBinopEval) {
-	if(node.body().size()==0) { // If the node has no child, it is a literal
+	if(node.children().size()==0) { // If the node has no child, it is a literal
 		return CLiteralEval{}(node, env);
 	}
 	// If lhs node is binop,process it.
-	auto left = node.body().front();
-	auto right = node.body().back();
+	auto left = node.children().front();
+	auto right = node.children().back();
 	RTValue left_val;
 	RTValue right_val;
 	// Left
@@ -932,7 +932,7 @@ caoco_impl_env_eval_process(CBinopEval) {
 }
 
 caoco_impl_env_eval_process(CVarDeclEval) {
-	auto var_name = node.body().front().literal_str();
+	auto var_name = node.children().front().literal_str();
 
 	// Check if the variable has been declared
 	if(env.resolve_variable(var_name).valid()) {
@@ -940,9 +940,9 @@ caoco_impl_env_eval_process(CVarDeclEval) {
 	}
 
 	// Format of the node is <var name>,<expression> where expression is one of the assingment operators.(for now only simple assingment)
-	// lhs of the assingment operator is the variable name, thats why we use node.body().back().body().back() to get the rhs.
-	//auto what = node.body().back().body().back();
-	auto new_value = CBinopEval()(node.body().back().body().back(), env);
+	// lhs of the assingment operator is the variable name, thats why we use node.children().back().children().back() to get the rhs.
+	//auto what = node.children().back().children().back();
+	auto new_value = CBinopEval()(node.children().back().children().back(), env);
 
 	// Create the variable
 
@@ -958,12 +958,12 @@ caoco_impl_env_eval_process(CClassDeclEval) {
 			-> <pragmatic_block_> The body of the class
 				-> ...statements...
 	*/
-	auto class_name = node.body().front().literal_str();
+	auto class_name = node.children().front().literal_str();
 	auto new_class = std::make_shared<object_t>(object_t(class_name, env.add_subenv(class_name)));
 	auto created_class = env.create_variable(class_name, RTValue(RTValue::OBJECT, new_class));
 
 	// Process the class body
-	for (auto& statement : node.body().back().body()) {
+	for (auto& statement : node.children().back().children()) {
 		// only anonvardeclfor now
 		CVarDeclEval{}(statement, new_class->scope());
 	}
@@ -979,15 +979,15 @@ caoco_impl_env_eval_process(CFunctionDeclEval) {
 			-> <functional_block_> The body of the function
 				-> ...statements...
 	*/
-	auto function_name = node.body().front().literal_str();
+	auto function_name = node.children().front().literal_str();
 	auto arguments = [&node]() {
 		sl_vector<sl_string> args;
-		for (auto& arg : (*(node.body().begin()++)).body()) {
+		for (auto& arg : (*(node.children().begin()++)).children()) {
 			args.push_back(arg.literal_str());
 		}
 		return args;
 	}();
-	auto new_function = std::make_shared<function_t>(function_t(function_name, env.add_subenv(function_name), arguments, node.body().back()));
+	auto new_function = std::make_shared<function_t>(function_t(function_name, env.add_subenv(function_name), arguments, node.children().back()));
 	auto created_function = env.create_variable(function_name, RTValue(RTValue::FUNCTION, new_function));
 
 	return created_function.value(); // return ref to the created function
@@ -995,7 +995,7 @@ caoco_impl_env_eval_process(CFunctionDeclEval) {
 
 caoco_impl_env_eval_process(CFunctionCallEval) {
 	// front will be the function name, back will be the arguments
-	auto function_name = node.body().front().literal_str();
+	auto function_name = node.children().front().literal_str();
 
 	// Get the function from the env
 	auto resolved_function = env.resolve_variable(function_name);
@@ -1007,10 +1007,10 @@ caoco_impl_env_eval_process(CFunctionCallEval) {
 
 	// Bind the arguments to the function
 	auto& function = std::get<std::shared_ptr<function_t>>(resolved_function.value().value);
-	function->scope().create_variable(function->args().front(),CBinopEval()(node.body().back(), env));
+	function->scope().create_variable(function->args().front(),CBinopEval()(node.children().back(), env));
 
 	// Evaluate the function body(for now only 1 return statement)
-	auto result = CBinopEval()(function->body().body().front().body().back(), function->scope());
+	auto result = CBinopEval()(function->children().children().front().children().back(), function->scope());
 
 	// destroy the variables created in the function scope
 	for (auto& arg : function->args()) {
