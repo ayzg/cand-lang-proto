@@ -241,7 +241,7 @@ auto node_debug_string(const caoco::astnode& node) {
 	}
 
 	debug_string += "] ";
-	debug_string += node.literal_str();
+	//debug_string += node.literal_str();
 	debug_string += "| ";
 	return debug_string;
 }

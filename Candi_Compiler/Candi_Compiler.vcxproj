@@ -119,6 +119,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="standard.candi" />
     <None Include="ut_ceval_free_functions.candi" />
     <None Include="ut_ceval_literals.candi" />
     <None Include="ut_ceval_operators.candi" />
@@ -133,6 +134,7 @@
     <None Include="ut_parser_primaryexpr.candi" />
     <None Include="ut_parser_scopes.candi" />
     <None Include="ut_parser_statementscope.candi" />
+    <None Include="ut_program_basic.candi" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

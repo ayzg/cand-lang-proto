@@ -170,6 +170,13 @@ namespace caoco {
 	template<class... Types>
 	using sl_tuple = std::tuple<Types...>;
 
+	// Error handing
+	//using sl_exception = std::exception;
+	using sl_runtime_error = std::runtime_error;
+	using sl_out_of_range = std::out_of_range;
+
+
+
 	// Type
 	using sl_type_info = std::type_info;
 	using sl_type_index = std::type_index;

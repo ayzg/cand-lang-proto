@@ -84,7 +84,7 @@ namespace caoco {
 
 		if (!last_pass.has_value()) {
 			// Determine the following operator and first operand.
-			if (it.operation() == e_operation::unary_) { // This expression starts with a unary operation.
+			if (it.operation() == syntax::e_operation::unary_) { // This expression starts with a unary operation.
 				astnode unary_operation = it.to_statement();
 				if (*it.next(2) == end) { // Unary operation is not followed by operand.
 					unary_operation.push_back(it.next().to_statement()); // lhs of unary op is the operand of the unary op.
@@ -166,8 +166,15 @@ namespace caoco {
 
 			// We will check for single operands, if it is not. Then we assume it must be a scope or a unary operator.Otherwise Error.
 			if (it.next().type() != tk_enum::number_literal_
-				&& it.next().type() != tk_enum::alnumus_) { // is not a single operand?
-				if (it.next().operation() == e_operation::unary_) { // is a unary operator?
+				&& it.next().type() != tk_enum::alnumus_
+				&& it.next().type() != tk_enum::string_literal_
+				&& it.next().type() != tk_enum::bit_literal_
+				&& it.next().type() != tk_enum::octet_literal_
+				&& it.next().type() != tk_enum::unsigned_literal_
+				&& it.next().type() != tk_enum::real_literal_
+				&& it.next().type() != tk_enum::none_literal_
+				) { // is not a single operand?
+				if (it.next().operation() == syntax::e_operation::unary_) { // is a unary operator?
 					if (*it.next(2) == end) {
 						throw std::runtime_error("End of expression after unary operator. Operator must be followed by operand.");
 					}
@@ -191,7 +198,7 @@ namespace caoco {
 			//		. next operator is the one after the scope.
 			// Else the next operator is the token after the following operand.
 			tk_vector_cit next_operator_it;
-			if (it.next().operation() == e_operation::unary_) {
+			if (it.next().operation() == syntax::e_operation::unary_) {
 				next_operator_it = *it.next(3);
 			}
 			else if (it.next().type() == tk_enum::open_scope_) {
@@ -225,8 +232,8 @@ namespace caoco {
 
 			// If we are at the end of the expression, this is the last pass. Complete the binary operation based on associativity and rhs operand.
 			if (next_operator_it == end) {
-				if (it.associativity() == e_assoc::right_) { // right assoc push front next operand as lhs
-					if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
+				if (it.associativity() == syntax::e_assoc::right_) { // right assoc push front next operand as lhs
+					if (it.next().operation() == syntax::e_operation::unary_) { // next operand is a unary operation.
 						last_pass.value().push_front(it.next().to_statement());
 						last_pass.value().front().push_back(it.next(2).to_statement());
 					}
@@ -245,7 +252,7 @@ namespace caoco {
 					return last_pass;
 				}
 				else { // left assoc push back next operand as rhs
-					if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
+					if (it.next().operation() == syntax::e_operation::unary_) { // next operand is a unary operation.
 						last_pass.value().push_back(it.next().to_statement());
 						last_pass.value().back().push_back(it.next(2).to_statement());
 					}
@@ -268,7 +275,7 @@ namespace caoco {
 				// Else we are inside a binary operation. Check if the following operator is more or less important.
 				if (it.priority() < next_op_cursor.priority()) { // More important?
 					// Split the expression in 2 parts.Solve the right side first.Set as right hand side of the left side.Finished.
-					if (it.associativity() == e_assoc::right_) { // right assoc swap lhs and rhs
+					if (it.associativity() == syntax::e_assoc::right_) { // right assoc swap lhs and rhs
 						last_pass.value().push_front(build_statement(*it.next(), end, std::nullopt).value()); // lhs is the rest of the expression.
 						return last_pass; // End of expr.
 					}
@@ -282,13 +289,13 @@ namespace caoco {
 					//		Set as left hand side of next operator. Call self with next operator as the cursor.
 					//		If the operator is right associative. The right and left hand side are swapped.
 					astnode lhs_expression = astnode(last_pass.value().type()); // lhs is the last pass.
-					if (it.associativity() == e_assoc::right_) { // right Assoc
+					if (it.associativity() == syntax::e_assoc::right_) { // right Assoc
 						if (it.next().type() == tk_enum::open_scope_) { // next operand is a scope.
 							parser_scope_result scope = find_scope(*it.next(), end); // find the scope.
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as lhs.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the rhs.
 						}
-						else if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
+						else if (it.next().operation() == syntax::e_operation::unary_) { // next operand is a unary operation.
 							lhs_expression.push_back(it.next().to_statement()); // this unary op is the lhs.
 							lhs_expression.back().push_back(it.next(2).to_statement()); // add operand to unary op.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the rhs.
@@ -305,7 +312,7 @@ namespace caoco {
 							lhs_expression.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // solve and set as rhs.
 
 						}
-						else if (it.next().operation() == e_operation::unary_) { // next operand is a unary operation.
+						else if (it.next().operation() == syntax::e_operation::unary_) { // next operand is a unary operation.
 							lhs_expression.push_back(last_pass.value().front()); // last operation's lhs is the lhs.
 							lhs_expression.push_back(it.next().to_statement()); // this unary op is the rhs.
 							lhs_expression.back().push_back(it.next(2).to_statement()); // add operand to unary op.
@@ -752,7 +759,7 @@ namespace caoco {
 					}
 
 					// Create the node, omit the eos token.
-					astnode node{ astnode_enum::constrained_variable_definition_, *cursor, expr.it()-1};
+					astnode node{ astnode_enum::constrained_variable_definition_assingment_, *cursor, expr.it()-1};
 					node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
 					node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
 					node.push_back({ astnode_enum::simple_assignment_, (frame_scope.scope_end() + 1),(frame_scope.scope_end() + 2) });
@@ -1001,6 +1008,21 @@ namespace caoco {
 				else if (it->type() == tk_enum::func_) {
 					parse_statement(ParseDirectiveFunc(), tk_enum::func_, tk_enum::eos_);
 				}
+				else if (it->type() == tk_enum::include_) {
+					it++;
+					auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal())+".candi");
+					auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+					auto included_code = ParsePragmaticBlock()(result.begin(), result.end());
+
+					if (included_code.valid()) {
+						node.push_back(included_code.node());
+						it = it+2;//past name and eos
+					}
+					else {
+						throw std::runtime_error("ParsePragmaticBlock: Invalid include statement.");
+					}
+
+				}
 				else {
 					return make_error(it, *it, "ParsePragmaticBlock: Invalid statement.");
 				}
@@ -1105,4 +1127,59 @@ namespace caoco {
 		// Create the node, omit the eos token.
 		return make_success(node, std::next(it, 4));
 	}
+
+
+	////////////////// the parser.
+	astnode parse_program(tk_vector_cit begin, tk_vector_cit end) {
+		tk_cursor cursor(begin, end);
+		// Program will be in the form:
+		// #enter{}#start{}
+		// Or it will be a pragmatic block. {} is optional.
+		// So if a program does not begin with #enter, then it is a pragmatic block.
+		// Else this is the "main" file. Inside of #enter is a pragmatic block.
+		// Inside of #start is a functional block.
+
+		if (cursor.type_is(tk_enum::enter_)) {
+			auto program = astnode(astnode_enum::program_);
+			cursor.advance();
+			auto enter_scope = find_list(*cursor, end);
+			auto enter_block = ParsePragmaticBlock()(enter_scope.contained_begin(), enter_scope.contained_end());
+			if (enter_block.valid()) {
+				program.push_back(enter_block.node());
+			}
+			else {
+				throw std::runtime_error("parse_program: Invalid pragmatic block. Attempting to parse #enter block. Error:" + enter_block.error_message());
+			}
+			cursor.advance_to(enter_scope.scope_end());
+
+			// Check if #start is next.
+			if (cursor.type_is(tk_enum::start_)) {
+				cursor.advance();
+				auto start_scope = find_list(*cursor, end);
+				auto start_block = ParseFunctionalBlock()(start_scope.contained_begin(), start_scope.contained_end());
+				if (start_block.valid()) {
+					program.push_back(start_block.node());
+				}
+				else {
+					throw std::runtime_error("parse_program: Invalid functional block. Attempting to parse #start block. Error:" + enter_block.error_message());
+				}
+			}
+			else {
+				throw std::runtime_error("parse_program: Invalid program. No start block following #enter block.");
+			}
+			return program;
+		}
+		else {
+			auto pragma_block = ParsePragmaticBlock()(cursor.get_it(), end);
+			if (pragma_block.valid()) {
+				return pragma_block.node();
+			}
+			else {
+				throw std::runtime_error("parse_program: Invalid program. Attempting to parse a pragmatic block. Did you #enter?");
+			}
+		}
+	}
+
+
+
 } // end namespace caoco

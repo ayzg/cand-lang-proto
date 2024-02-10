@@ -657,10 +657,10 @@ caoco_impl_env_eval_process(CAddOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (get_node_operation(left.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -668,10 +668,10 @@ caoco_impl_env_eval_process(CAddOpEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -710,10 +710,10 @@ caoco_impl_env_eval_process(CSubOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (get_node_operation(left.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -721,10 +721,10 @@ caoco_impl_env_eval_process(CSubOpEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -756,10 +756,10 @@ caoco_impl_env_eval_process(CMultOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (get_node_operation(left.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -767,10 +767,10 @@ caoco_impl_env_eval_process(CMultOpEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -801,10 +801,10 @@ caoco_impl_env_eval_process(CDivOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (get_node_operation(left.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -812,10 +812,10 @@ caoco_impl_env_eval_process(CDivOpEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -846,10 +846,10 @@ caoco_impl_env_eval_process(CModOpEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if (get_node_operation(left.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -857,10 +857,10 @@ caoco_impl_env_eval_process(CModOpEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
@@ -891,10 +891,10 @@ caoco_impl_env_eval_process(CBinopEval) {
 	RTValue left_val;
 	RTValue right_val;
 	// Left
-	if(get_node_operation(left.type()) == e_operation::binary_) {
+	if(syntax::get_node_operation(left.type()) == syntax::e_operation::binary_) {
 		left_val = CBinopEval{}(left, env);
 	}
-	else if (get_node_operation(left.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(left.type()) == syntax::e_operation::none_) {
 		left_val = CLiteralEval{}(left, env);
 	}
 	else {
@@ -902,10 +902,10 @@ caoco_impl_env_eval_process(CBinopEval) {
 	}
 
 	// Right
-	if (get_node_operation(right.type()) == e_operation::binary_) {
+	if (syntax::get_node_operation(right.type()) == syntax::e_operation::binary_) {
 		right_val = CBinopEval{}(right, env);
 	}
-	else if (get_node_operation(right.type()) == e_operation::none_) {
+	else if (syntax::get_node_operation(right.type()) == syntax::e_operation::none_) {
 		right_val = CLiteralEval{}(right, env);
 	}
 	else {
