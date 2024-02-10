@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "unit_test_util.hpp"
 
+#define CAOCO_TEST_ALL 1
+#define CAOCO_TEST_NONE 0
+
+#if CAOCO_TEST_ALL
 #define CAOCO_UT_Tokenizer_Tokens 1
 #define CAOCO_UT_Tokenizer_NumberAndReal 1
 
@@ -12,6 +16,8 @@
 #define CAOCO_UT_Parser_BasicNode_Functions 1
 #define CAOCO_UT_Parser_BasicNode_Classes 1
 #define CAOCO_UT_Parser_MinimumProgram 1
+#define CAOCO_UT_Parser_BasicNode_ConditionalStatements 1
+#define CAOCO_UT_Parser_BasicNode_Loops 1
 
 #define CAOCO_UT_ConstantEvaluator_Literals 1
 #define CAOCO_UT_ConstantEvaluator_Operators 1
@@ -20,6 +26,32 @@
 #define CAOCO_UT_ConstantEvaluator_FreeFunctions 1
 
 #define CAOCO_UT_Program_BasicProgram 1
+#endif
+
+#if CAOCO_TEST_NONE
+#define CAOCO_UT_Tokenizer_Tokens 0
+#define CAOCO_UT_Tokenizer_NumberAndReal 0
+
+#define CAOCO_UT_Parser_BasicNode_SingularNodes 0
+#define CAOCO_UT_Parser_BasicNode_BasicScopes 0
+#define CAOCO_UT_Parser_BasicNode_StatementScope 0
+#define CAOCO_UT_Parser_BasicNode_PrimaryExpression 0
+#define CAOCO_UT_Parser_BasicNode_SimpleStatements 0
+#define CAOCO_UT_Parser_BasicNode_Functions 0
+#define CAOCO_UT_Parser_BasicNode_Classes 0
+#define CAOCO_UT_Parser_MinimumProgram 0
+#define CAOCO_UT_Parser_BasicNode_ConditionalStatements 0
+#define CAOCO_UT_Parser_BasicNode_Loops 0
+
+#define CAOCO_UT_ConstantEvaluator_Literals 0
+#define CAOCO_UT_ConstantEvaluator_Operators 0
+#define CAOCO_UT_ConstantEvaluator_VariableDeclaration 0
+#define CAOCO_UT_ConstantEvaluator_Structs 0
+#define CAOCO_UT_ConstantEvaluator_FreeFunctions 0
+
+#define CAOCO_UT_Program_BasicProgram 0
+#endif
+
 
 #if CAOCO_UT_Tokenizer_Tokens
 TEST(CaocoTokenizer_Tokens, CaocoTokenizer_Test) {
@@ -514,6 +546,36 @@ TEST(CaocoParser_MinimumProgram, CaocoParser_Test) {
 }
 #endif
 
+#if CAOCO_UT_Parser_BasicNode_ConditionalStatements
+TEST(CaocoParser_ControlFlow, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_conditional.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto if_statement = test_parsing_functor(
+		"if statement", caoco::ParseDirectiveIf(), result.cbegin(), result.cend());
+
+	auto if_else_statement = test_parsing_functor("if else statement", caoco::ParseDirectiveIf(), if_statement, result.cend());
+
+	auto if_elif_else = test_parsing_functor("if elif else statement", caoco::ParseDirectiveIf(), if_else_statement, result.cend());
+
+}
+#endif
+
+#if CAOCO_UT_Parser_BasicNode_Loops
+TEST(CaocoParser_Loops, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_loops.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto while_loop = test_parsing_functor(
+		"while loop", caoco::ParseDirectiveWhile(), result.cbegin(), result.cend());
+
+	//auto for_loop = test_parsing_functor("for loop", caoco::ParseDirectiveFor(), while_loop, result.cend());
+
+	//auto switch_statement = test_parsing_functor("switch statement", caoco::ParseDirectiveSwitch(), for_loop, result.cend());
+
+}
+#endif
+
 #if CAOCO_UT_ConstantEvaluator_Literals
 TEST(CaocoConstantEvaluator_Literals, CaocoConstantEvaluator_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_literals.candi");
@@ -658,6 +720,7 @@ TEST(CaocoConstantEvaluator_Structs, CaocoConstantEvaluator_Test) {
 			#var b = 2;
 		};
 	*/
+
 	//caoco::ParseDirectiveClass()
 	auto class_decl = caoco::ParseDirectiveClass()(result.cbegin(), result.cend());
 	EXPECT_TRUE(class_decl.valid());
