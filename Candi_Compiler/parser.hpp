@@ -89,17 +89,17 @@ namespace caoco {
 					return unary_operation; // Entire statement is this unary operation.
 				}
 				else { // Unary operation is followed by operand.
-					if (it.priority() < it.next(2).priority()) { // Unary operation is less important than next operation.
-						astnode next_operation = it.next(2).to_statement();	// next op is the next operation.
-						next_operation.push_back(it.next().to_statement());	// lhs of next op is the operand of the unary op.
+					if (it.priority() < it.next(2).priority()) {		// Unary operation is less important than next operation.
+						astnode next_operation = it.next(2).to_statement();			// next op is the next operation.
+						next_operation.push_back(it.next().to_statement());				// lhs of next op is the operand of the unary op.
 						unary_operation.push_back(build_statement(*it.next(2), end, std::make_optional(next_operation)).value()); // Rest of expr is operand of unary op.
 						return std::make_optional(unary_operation);	// Entire statement is a unary operation with rest of expr as the operand.
 					}
-					else if (it.priority() >= it.next(2).priority()) { // Unary operation is more or equally important than next operation.
-						astnode next_pass = it.next(2).to_statement(); // next pass is the next operation.
-						unary_operation.push_back(it.next().to_statement()); // lhs of unary op is the operand of the unary op.
-						next_pass.push_back(unary_operation); // lhs of next pass is the unary op.
-						return build_statement(*it.next(2), end, std::make_optional(next_pass));  // Rest of expr is the next pass.
+					else if (it.priority() >= it.next(2).priority()) {								// Unary operation is more or equally important than next operation.
+						astnode next_pass = it.next(2).to_statement();								// next pass is the next operation.
+						unary_operation.push_back(it.next().to_statement());						// lhs of unary op is the operand of the unary op.
+						next_pass.push_back(unary_operation);										// lhs of next pass is the unary op.
+						return build_statement(*it.next(2), end, std::make_optional(next_pass));	// Rest of expr is the next pass.
 					}
 				}
 			}
@@ -352,6 +352,8 @@ namespace caoco {
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveNone);
 	// Functional block statements
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveReturn); 
+	caoco_PARSING_PROCESS_DEF(ParseDirectiveWhile);
+	caoco_PARSING_PROCESS_DEF(ParseDirectiveFor);
 	caoco_PARSING_PROCESS_DEF(ParseDirectiveIf);
 	// literals
 	caoco_PARSING_PROCESS_DEF(ParseLiteral);
@@ -927,6 +929,119 @@ namespace caoco {
 		expr.push_back(build_statement(statement_scope.contained_begin(), statement_scope.contained_end()).value());
 		return make_success(node, statement_scope.scope_end());
 	}
+
+	caoco_PARSING_PROCESS_IMPL(ParseDirectiveIf) {
+		//Format:
+		// #if (<expression>) <functional_block> <eos>
+		// #if (<expression>) <functional_block> #else <functional_block> <eos>
+		// #if (<expression>) <functional_block> #elif <expression> <functional_block> #else <functional_block> <eos>
+		tk_cursor cursor(begin, end);
+		
+		auto parse_conditional = [this,&cursor](tk_enum type)->auto {
+			// First token must be #if
+			if (type == tk_enum::if_ || type == tk_enum::elif_) {
+				parser_scope_result conditional_scope = find_scope(cursor.next().get_it(), cursor.end());
+				if (!conditional_scope.valid) {
+					return make_error(*cursor.next(), **cursor.next(), "Invalid Scope following conditional directive.");
+				}
+				auto expr = build_statement(conditional_scope.contained_begin(), conditional_scope.contained_end());
+				if (!expr.has_value()) {
+					return make_error(conditional_scope.scope_begin(), *conditional_scope.scope_begin(), "Invalid if statement format. Expected an expression.");
+				}
+
+				// Next is a functional block
+				parser_scope_result if_block_scope = find_list(conditional_scope.scope_end(), cursor.end());
+				if (!if_block_scope.valid) {
+					return make_error(if_block_scope.scope_end(), *if_block_scope.scope_end(), "Invalid if statement format. Expected a functional block.");
+				}
+				auto if_block = ParseFunctionalBlock()(if_block_scope.contained_begin(), if_block_scope.contained_end());
+				if (!if_block.valid()) {
+					return make_error(if_block.it(), *if_block.it(), "Invalid if statement format. Expected a functional block.");
+				}
+
+				astnode node = astnode(astnode_enum::conditional_block_);
+				if(type == tk_enum::if_)
+					node = astnode{astnode_enum::if_, cursor.get_it(), if_block_scope.scope_end() };
+				else
+					node = astnode{astnode_enum::elif_, cursor.get_it(), if_block_scope.scope_end() };
+
+
+				node.push_back(expr.value());
+				node.push_back(if_block.node());
+				return make_success(node, if_block_scope.scope_end());
+			}
+			else { // parsing an else block.
+				// Next is a functional block
+				parser_scope_result if_block_scope = find_list(cursor.next().get_it(), cursor.end());
+				if (!if_block_scope.valid) {
+					return make_error(if_block_scope.scope_end(), *if_block_scope.scope_end(), "Invalid if statement format. Expected a functional block.");
+				}
+				auto if_block = ParseFunctionalBlock()(if_block_scope.contained_begin(), if_block_scope.contained_end());
+				if (!if_block.valid()) {
+					return make_error(if_block.it(), *if_block.it(), "Invalid if statement format. Expected a functional block.");
+				}
+
+				astnode node{ astnode_enum::else_, cursor.get_it(), if_block_scope.scope_end() };
+				node.push_back(if_block.node());
+				return make_success(node, if_block_scope.scope_end());
+			}
+		};
+
+		// First token must be #if
+		if (begin->type() != tk_enum::if_) {
+			return make_error(begin, *begin, 
+				"ParseDirectiveIf: Expected an if directive.");
+		}
+
+		auto node = astnode{astnode_enum::conditional_statement_};
+
+		// Parse the if block
+		auto if_block = parse_conditional(tk_enum::if_);
+		if (!if_block.valid()) {
+			return if_block; // error
+		}
+		node.push_back(if_block.node());
+		cursor.advance_to(if_block.it());
+
+		// if no elif, or else, return the if block
+		if (cursor.type_is(tk_enum::eos_)) {
+			cursor.advance();
+			return make_success(node, cursor.get_it());
+		}
+
+		// while next is an #elif
+		while (cursor.type_is(tk_enum::elif_)) {
+			auto elif_block = parse_conditional(tk_enum::elif_);
+			if (!elif_block.valid()) {
+				return elif_block; // error
+			}
+			node.push_back(elif_block.node());
+			cursor.advance_to(elif_block.it());
+		}
+
+		// expecting an else.
+		if (cursor.type_is(tk_enum::else_)) {
+			auto else_block = parse_conditional(tk_enum::else_);
+			if (!else_block.valid()) {
+				return else_block; // error
+			}
+			node.push_back(else_block.node());
+			cursor.advance_to(else_block.it());
+
+			// expecting an eos
+			if (!cursor.type_is(tk_enum::eos_)) {
+				return make_error(cursor.get_it(), cursor.get(), "ParseDirectiveIf: Expected an eos.");
+			}
+
+			cursor.advance();
+		}
+		else {
+			return make_error(cursor.get_it(), cursor.get(), "ParseDirectiveIf: Expected an else directive.");
+		}
+
+		return make_success(node, cursor.get_it());
+	}
+
 	caoco_PARSING_PROCESS_IMPL(ParseValueExpression) {
 		auto expr_scope = caoco::find_open_statement(begin->type(), caoco::tk_enum::eos_, begin, end);
 
@@ -1088,6 +1203,48 @@ namespace caoco {
 		}
 
 		return make_success(node, it);
+	}
+
+
+	caoco_PARSING_PROCESS_IMPL(ParseDirectiveWhile) {
+		tk_cursor cursor(begin, end);
+		
+		if(cursor.type_is(tk_enum::while_)) {
+			parser_scope_result conditional_scope = find_scope(cursor.next().get_it(), cursor.end());
+			if (!conditional_scope.valid) {
+				return make_error(*cursor.next(), **cursor.next(), "Invalid Scope following conditional directive.");
+			}
+			auto expr = build_statement(conditional_scope.contained_begin(), conditional_scope.contained_end());
+			if (!expr.has_value()) {
+				return make_error(conditional_scope.scope_begin(), *conditional_scope.scope_begin(), "Invalid if statement format. Expected an expression.");
+			}
+
+			// Next is a functional block
+			parser_scope_result if_block_scope = find_list(conditional_scope.scope_end(), cursor.end());
+			if (!if_block_scope.valid) {
+				return make_error(if_block_scope.scope_end(), *if_block_scope.scope_end(), "Invalid if statement format. Expected a functional block.");
+			}
+			auto if_block = ParseFunctionalBlock()(if_block_scope.contained_begin(), if_block_scope.contained_end());
+			if (!if_block.valid()) {
+				return make_error(if_block.it(), *if_block.it(), "Invalid if statement format. Expected a functional block.");
+			}
+
+			astnode node{ astnode_enum::while_, cursor.get_it(), if_block_scope.scope_end() };
+			node.push_back(expr.value());
+			node.push_back(if_block.node());
+
+			cursor.advance_to(if_block_scope.scope_end());
+			//  must be followed by eos.
+			if (!cursor.type_is(tk_enum::eos_)) {
+				return make_error(cursor.get_it(), cursor.get(), "ParseDirectiveWhile: Expected an eos.");
+			}
+			cursor.advance();
+
+			return make_success(node, cursor.get_it());
+		}
+		else {
+			return make_error(cursor.get_it(), cursor.get(), "ParseDirectiveWhile: Invalid while statement.");
+		}
 	}
 
 	// Unused ?

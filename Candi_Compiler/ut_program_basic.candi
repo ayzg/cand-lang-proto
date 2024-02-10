@@ -21,13 +21,13 @@
 
 	//#var animals = {wolf, dog}; implement list operand.
 
-	//#func make_sounds(){
-	//	#var sounds = {};
-	//	#for (animal in animals) {
-	//		sounds += animal.make_sound();
-	//	}
-	//	#return sounds;
-	//};
+	#func make_sounds{
+		//#var sounds = {};
+		//#for (animal in animals) {
+		//	sounds += animal.make_sound();
+		//}
+		#return sounds;
+	};
 }
 #start {
 	#return make_sounds();

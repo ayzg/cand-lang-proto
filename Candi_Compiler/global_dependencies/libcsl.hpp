@@ -64,29 +64,6 @@ namespace caoco {
 				chars.push_back('\0');
 
 			return chars;
-
-
-
-			//sl_vector<char> bytes;
-			//std::ifstream file(name, std::ios::binary);
-			//file.seekg(0, std::ios::end);
-			//auto size = file.tellg();
-			//file.seekg(0, std::ios::beg);
-			//bytes.resize(size);
-			//file.read(bytes.data(), size);
-			//file.close();
-
-			//// if the last char is not a null terminator, add one
-			//if (bytes.back() != '\0')
-			//	bytes.push_back('\0');
-
-			//// Convert the vector of chars to a vector of char_t
-			//sl_char8_vector chars;
-			//chars.reserve(bytes.size());
-			//for (auto& c : bytes) {
-			//	chars.push_back(static_cast<char8_t>(c));
-			//}
-			//return chars;
 		}
 
 	}

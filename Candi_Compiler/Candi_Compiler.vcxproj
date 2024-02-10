@@ -126,6 +126,8 @@
     <None Include="ut_ceval_structs.candi" />
     <None Include="ut_ceval_vardecl.candi" />
     <None Include="packages.config" />
+    <None Include="ut_parser_conditional.candi" />
+    <None Include="ut_parser_loops.candi" />
     <None Include="ut_parser_singular_nodes.candi" />
     <None Include="ut_parser_simplestatements.candi" />
     <None Include="ut_parser_classes.candi" />
