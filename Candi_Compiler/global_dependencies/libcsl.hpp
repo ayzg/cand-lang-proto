@@ -32,26 +32,61 @@ namespace caoco {
 
 		// Loads a file into a vector of chars
 		sl_char8_vector load_file_to_char8_vector(sl_string name) {
-			sl_vector<char> bytes;
-			std::ifstream file(name, std::ios::binary);
-			file.seekg(0, std::ios::end);
-			auto size = file.tellg();
-			file.seekg(0, std::ios::beg);
-			bytes.resize(size);
-			file.read(bytes.data(), size);
-			file.close();
 
-			// if the last char is not a null terminator, add one
-			if (bytes.back() != '\0')
-				bytes.push_back('\0');
+
+			std::ifstream ifs(name, std::ios::binary | std::ios::ate);
+
+			if (!ifs)
+				throw std::runtime_error(name + ": " + std::strerror(errno));
+
+			auto end = ifs.tellg();
+			ifs.seekg(0, std::ios::beg);
+
+			auto size = std::size_t(end - ifs.tellg());
+
+			if (size == 0) // avoid undefined behavior 
+				return {};
+
+			std::vector<std::byte> buffer(size);
+
+			if (!ifs.read((char*)buffer.data(), buffer.size()))
+				throw std::runtime_error(name + ": " + std::strerror(errno));
 
 			// Convert the vector of chars to a vector of char_t
 			sl_char8_vector chars;
-			chars.reserve(bytes.size());
-			for (auto& c : bytes) {
+			chars.reserve(buffer.size());
+			for (auto& c : buffer) {
 				chars.push_back(static_cast<char8_t>(c));
 			}
+
+			// if the last char is not a null terminator, add one
+			if (chars.back() != '\0')
+				chars.push_back('\0');
+
 			return chars;
+
+
+
+			//sl_vector<char> bytes;
+			//std::ifstream file(name, std::ios::binary);
+			//file.seekg(0, std::ios::end);
+			//auto size = file.tellg();
+			//file.seekg(0, std::ios::beg);
+			//bytes.resize(size);
+			//file.read(bytes.data(), size);
+			//file.close();
+
+			//// if the last char is not a null terminator, add one
+			//if (bytes.back() != '\0')
+			//	bytes.push_back('\0');
+
+			//// Convert the vector of chars to a vector of char_t
+			//sl_char8_vector chars;
+			//chars.reserve(bytes.size());
+			//for (auto& c : bytes) {
+			//	chars.push_back(static_cast<char8_t>(c));
+			//}
+			//return chars;
 		}
 
 	}
