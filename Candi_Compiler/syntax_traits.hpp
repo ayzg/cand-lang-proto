@@ -177,7 +177,7 @@ namespace caoco {
 				return node.front();
 			}
 
-			astnode& get_vardef_constraint(astnode& node) {
+			const astnode& get_vardef_constraint(const astnode& node) {
 				// todo: create a way to return some sort of sentinel node which indicates an error or an "unassigned value"
 				if (node.type() == astnode_enum::constrained_variable_definition_ || node.type() == astnode_enum::constrained_variable_definition_assingment_) {
 					return node[1];
@@ -187,7 +187,7 @@ namespace caoco {
 				}
 			}
 
-			astnode& get_vardef_assignop(astnode& node) {
+			const astnode& get_vardef_assignop(astnode& node) {
 				if (node.type() == astnode_enum::anon_variable_definition_assingment_) {
 					return node[1];
 				}

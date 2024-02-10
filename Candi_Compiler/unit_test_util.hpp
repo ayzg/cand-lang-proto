@@ -241,7 +241,7 @@ auto node_debug_string(const caoco::astnode& node) {
 	}
 
 	debug_string += "] ";
-	//debug_string += node.literal_str();
+	debug_string += node.literal_str();
 	debug_string += "| ";
 	return debug_string;
 }
@@ -250,7 +250,7 @@ void print_ast(const caoco::astnode& node, int depth = 0) {
 	for (int i = 0; i < depth; i++)
 		std::cout << "  ";
 	std::cout << node_debug_string(node) << std::endl;
-	for (auto& child : node.body())
+	for (auto& child : node.children())
 		print_ast(child, depth + 1);
 }
 

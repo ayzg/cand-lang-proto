@@ -48,72 +48,46 @@ namespace caoco {
 		};
 	private:
 		e_type type_;
-		tk_vector_cit beg_;			
-		tk_vector_cit end_;			// One token past the end of the statement.
+		sl_u8string literal_{u8""};
 		astnode* parent_{ nullptr };
 		sl_list<astnode> body_;
 	public:
 		astnode() : type_(e_type::eof_){}
 		astnode(e_type type) : type_(type){}
 		astnode(e_type type, tk_vector_cit beg, tk_vector_cit end) 
-			: type_(type), beg_(beg), end_(end) {}
+			: type_(type) {
+			literal_ = u8"";
+			for (auto it = beg; it != end; it++) {
+				literal_ += it->literal();
+			}
+		}
 		astnode(e_type type, tk_vector_cit beg, tk_vector_cit end, astnode& parent) 
-			: type_(type), beg_(beg), end_(end), parent_(&parent) {}
+			: type_(type), parent_(&parent) {
+			literal_ = u8"";
+			for (auto it = beg; it != end; it++) {
+				literal_ += it->literal();
+			}
+		}
 		
 		e_type type() const { return type_; }
-		const sl_list<astnode>& body() const { return body_; }
-		astnode& front() { return body_.front(); }
-		astnode& back() { return body_.back(); }
-		bool empty() const { return body_.empty(); }
-		astnode& push_back(astnode stmt) { body_.push_back(stmt); return body_.back(); }
-		astnode& push_front(astnode stmt) { body_.push_front(stmt); return body_.front(); }
-
-		astnode& insert(astnode statement, sl_list<astnode>::iterator it) {
-			return *body_.insert(it, statement);
+		const sl_list<astnode>& children() const { return body_; }
+		SL_CX sl_u8string literal() const {
+			return literal_;
 		}
-
-		void change_parent(astnode& new_parent) {
-			parent_ = &new_parent;
-		}
-		void change_body(sl_list<astnode> new_body) {
-			body_ = new_body;
-		}
-
-		// Tokens
-		SL_CX bool has_tokens() { return not (beg_ == end_); }
-		SL_CX tk_vector_cit token_begin() { return beg_; }
-		SL_CX tk_vector_cit token_end() { return end_; }
-
-		// Get the tokens that make up the statement in the source code.
-		SL_CX tk_vector get_tokens() const {
-			return tk_vector(beg_, end_);
-		}
-
-		// Get a string representation of the statement. NOTE: returns a char8_t string.
-		SL_CX sl_u8string literal() const  {
-			sl_u8string statement_string = u8"";
-			for (auto& token : get_tokens()) {
-				statement_string += token.literal();
-			}
-			return statement_string;
-		}
-
-		// Get a string representation of the statement.
 		SL_CX sl_string literal_str() const {
-			sl_u8string statement_string = u8"";
-			for (auto& token : get_tokens()) {
-				statement_string += token.literal();
-			}
-			return sl::to_str(statement_string);
+			return sl::to_str(literal_);
 		}
-
-		// subscript operator
-		astnode& operator[](int index) {
-			return [this, &index]()->astnode& {auto it = body_.begin();
+		const astnode& operator[](int index) const {
+			return [this, &index]()->const astnode& {auto it = body_.begin();
 			for (auto i = 0; i < index; i++) { it++; } return *it;
 			}();
 		}
 
+		// Internal parser use only.
+		astnode& push_back(astnode stmt) { body_.push_back(stmt); return body_.back(); }
+		astnode& push_front(astnode stmt) { body_.push_front(stmt); return body_.front(); }
+		astnode& front() { return body_.front(); }
+		astnode& back() { return body_.back(); }
 	};
 	using astnode_enum = astnode::e_type;
 
