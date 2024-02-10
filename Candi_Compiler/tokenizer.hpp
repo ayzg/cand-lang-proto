@@ -388,12 +388,15 @@ namespace caoco {
 			//		if_[#if] | else_[#else] | elif_[#elif] | while_[#while] | for_[#for] |
 			//		switch_[#switch] | case_[#case] | default_[#default] | break_[#break] |
 			//		continue_[#continue] | ret_[#return] | into_[#into] | print_[#print]
-			// 		func_[#func], none_literal_[#none]
+			// 		func_[#func], none_literal_[#none], include_[#include]
 			if (find_forward(keyword_begin, u8"enter")) {
 				return make_result(tk_enum::enter_, begin, it);
 			}
 			else if (find_forward(keyword_begin, u8"start")) {
 				return make_result(tk_enum::start_, begin, it);
+			}
+			else if(find_forward(keyword_begin, u8"include")){
+				return make_result(tk_enum::include_, begin, it);
 			}
 			else if (find_forward(keyword_begin, u8"type")) {
 				return make_result(tk_enum::type_, begin, it);

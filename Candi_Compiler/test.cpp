@@ -19,6 +19,8 @@
 #define CAOCO_UT_ConstantEvaluator_Structs 1
 #define CAOCO_UT_ConstantEvaluator_FreeFunctions 1
 
+#define CAOCO_UT_Program_BasicProgram 1
+
 #if CAOCO_UT_Tokenizer_Tokens
 TEST(CaocoTokenizer_Tokens, CaocoTokenizer_Test) {
 	// NOTE: the sanitized output will not contain comments/newlines/whitespace. As such there is a seperate test for those tokens.
@@ -703,4 +705,24 @@ TEST(CaocoConstantEvaluator_FreeFunctions, CaocoConstantEvaluator_Test) {
 	//EXPECT_EQ(std::get<int>(eval_result2.value), 42);
 
 }
+#endif
+
+#if CAOCO_UT_Program_BasicProgram
+TEST(CaocoProgram_BasicProgram, CaocoProgram_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_program_basic.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	for(auto& token : result){
+		std::cout << " |" << token_type_to_string(token.type());
+	}
+
+	// Parse the program
+	auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
+	//EXPECT_TRUE(parse_result.valid());
+	//if (!parse_result.valid()) {
+	//	std::cout << parse_result.error_message() << std::endl;
+	//}
+	print_ast(parse_result);
+}
+
 #endif

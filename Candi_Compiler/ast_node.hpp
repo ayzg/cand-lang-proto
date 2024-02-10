@@ -39,7 +39,7 @@ namespace caoco {
 			arguments_, type_constraints_, identifier_statement_, 
 			function_call_, variable_assignment_, type_definition_, 
 			anon_variable_definition_, anon_variable_definition_assingment_, 
-			constrained_variable_definition_, method_definition_, 
+			constrained_variable_definition_, constrained_variable_definition_assingment_, method_definition_,
 			constrained_method_definition_, shorthand_void_method_definition_, 
 			shorthand_constrained_void_method_definition_, 
 			class_definition_, 
@@ -105,6 +105,13 @@ namespace caoco {
 				statement_string += token.literal();
 			}
 			return sl::to_str(statement_string);
+		}
+
+		// subscript operator
+		astnode& operator[](int index) {
+			return [this, &index]()->astnode& {auto it = body_.begin();
+			for (auto i = 0; i < index; i++) { it++; } return *it;
+			}();
 		}
 
 	};

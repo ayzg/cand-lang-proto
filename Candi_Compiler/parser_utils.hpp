@@ -124,22 +124,22 @@ namespace caoco {
 
 		bool type_is(tk_enum tkt)  const { return get().type_is(tkt); }
 		// <@method:line> returns the line of the token at the cursor.
-		std::size_t line() const { return get().line(); }
+		sl_size line() const { return get().line(); }
 
 		// <@method:column> returns the column of the token at the cursor.
-		std::size_t column() const { return get().col(); }
+		sl_size column() const { return get().col(); }
 
 		int priority() { 
-			return std::get<static_cast<std::size_t>(e_tk_trait::priority_)>(token_traits[get().type()]); 
+			return std::get<static_cast<sl_size>(syntax::e_tk_trait::priority_)>(syntax::token_traits[get().type()]);
 		}
-		e_assoc associativity() { 
-			return std::get< static_cast<std::size_t>(e_tk_trait::associativity_)>(token_traits[get().type()]); 
+		syntax::e_assoc associativity() {
+			return std::get<static_cast<sl_size>(syntax::e_tk_trait::associativity_)>(syntax::token_traits[get().type()]);
 		}
-		e_operation operation() { 
-			return std::get< static_cast<std::size_t>(e_tk_trait::operation_)>(token_traits[get().type()]);
+		syntax::e_operation operation() { 
+			return std::get<static_cast<sl_size>(syntax::e_tk_trait::operation_)>(syntax::token_traits[get().type()]);
 		}
 		astnode to_statement() {
-			return astnode{ std::get< static_cast<std::size_t>(e_tk_trait::produced_statement_)>(token_traits[get().type()]) ,it_,it_ + 1 };
+			return astnode{ std::get<static_cast<sl_size>(syntax::e_tk_trait::produced_statement_)>(syntax::token_traits[get().type()]) ,it_,it_ + 1 };
 		}
 
 
@@ -164,10 +164,10 @@ namespace caoco {
 		// <@method:advance_to> advances the cursor to the new_cursor. Checks that cursor is within beg and end.
 		tk_cursor& advance_to(tk_vector_cit new_cursor) {
 			if (new_cursor < beg_) {
-				throw std::out_of_range("tk_cursor passed advance_to outside of begin.");
+				throw sl_out_of_range("tk_cursor passed advance_to outside of begin.");
 			}
 			else if (new_cursor >= end_) {
-				throw std::out_of_range("tk_cursor passed advance_to outside of end.");
+				throw sl_out_of_range("tk_cursor passed advance_to outside of end.");
 			}
 			else
 				it_ = new_cursor;
@@ -226,7 +226,7 @@ namespace caoco {
 			auto last_closed = begin;
 
 			if (begin->type() != open) {
-				throw std::runtime_error("[PROGRAMMER LOGIC ERROR] find_scope: begin is not at an open token.");
+				throw sl_runtime_error("[PROGRAMMER LOGIC ERROR] find_scope: begin is not at an open token.");
 			}
 
 			// find the last matching close token, if there is no matching close token, return false
@@ -288,7 +288,7 @@ namespace caoco {
 		auto last_closed = begin;
 
 		if (begin->type() != open) {
-			throw std::runtime_error("find_statement: begin iterator not on an open token.");
+			throw sl_runtime_error("find_statement: begin iterator not on an open token.");
 		}
 		if (std::next(begin)->type() == close)
 			return parser_scope_result{ true, begin, begin + 2 }; // Empty statement
@@ -309,7 +309,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close_scope before an open_scope.");
+						throw sl_runtime_error("find_statement: Found a close_scope before an open_scope.");
 				}
 				scope_type_history.pop();
 				paren_scope_depth--;
@@ -327,7 +327,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close frame token before an open frame token.");
+						throw sl_runtime_error("find_statement: Found a close frame token before an open frame token.");
 				}
 				scope_type_history.pop();
 				frame_scope_depth--;
@@ -345,7 +345,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close list token before an open list token.");
+						throw sl_runtime_error("find_statement: Found a close list token before an open list token.");
 				}
 				scope_type_history.pop();
 				list_scope_depth--;
@@ -357,7 +357,7 @@ namespace caoco {
 					break;
 				}
 				else if (it->type() == open)
-					throw std::runtime_error("find_statement: Found a repeated open token before a close token.");
+					throw sl_runtime_error("find_statement: Found a repeated open token before a close token.");
 			}
 		}
 
@@ -389,7 +389,7 @@ namespace caoco {
 		auto last_closed = begin;
 
 		if (begin->type() != open) {
-			throw std::runtime_error("find_statement: begin iterator not on an open token.");
+			throw sl_runtime_error("find_statement: begin iterator not on an open token.");
 		}
 		if (std::next(begin)->type() == close)
 			return parser_scope_result{ true, begin, begin + 2 }; // Empty statement
@@ -410,7 +410,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close_scope before an open_scope.");
+						throw sl_runtime_error("find_statement: Found a close_scope before an open_scope.");
 				}
 				scope_type_history.pop();
 				paren_scope_depth--;
@@ -428,7 +428,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close frame token before an open frame token.");
+						throw sl_runtime_error("find_statement: Found a close frame token before an open frame token.");
 				}
 				scope_type_history.pop();
 				frame_scope_depth--;
@@ -447,7 +447,7 @@ namespace caoco {
 						break;
 					}
 					else
-						throw std::runtime_error("find_statement: Found a close list token before an open list token.");
+						throw sl_runtime_error("find_statement: Found a close list token before an open list token.");
 				}
 				scope_type_history.pop();
 				list_scope_depth--;

@@ -35,7 +35,7 @@ namespace caoco {
 			atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_,
 			abit_, aarray_, apointer_, amemory_, afunction_,
 			// Directive Tokens
-			enter_, start_, type_, var_, class_, func_, print_, none_literal_,
+			enter_, start_, include_,type_, var_, class_, func_, print_, none_literal_,
 			// Modifier Tokens
 			public_, const_, static_, ref_,
 			// Control Flow Tokens
