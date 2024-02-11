@@ -4,6 +4,62 @@
 
 namespace caoco {
 
+	// A cool trick which allows for strings to be passed as template parameters using C++20 lambdas
+	#define LAMBDA_STRING(str) []() consteval { return #str; }
+
+	// Expected
+	template <typename ExpectedT, typename AlwaysT>
+	class sl_partial_expected {
+		AlwaysT always_;
+		sl_opt<ExpectedT> expected_{ sl::nullopt };
+		sl_string error_message_{ "" };
+
+		template <typename ExpectedT, typename AlwaysT>
+		sl_partial_expected(AlwaysT always, ExpectedT expected) : always_(always), expected_(expected) {}
+
+		template <typename AlwaysT>
+		sl_partial_expected(AlwaysT always) : always_(always) {}
+
+	public:
+
+		SL_CXS auto make_success(AlwaysT always, ExpectedT expected) {
+			return sl_partial_expected(always, expected);
+		}
+
+		SL_CXS auto make_failure(AlwaysT always, const sl_string& error_message) {
+			auto ret = sl_partial_expected(always);
+			ret.error_message_ = error_message;
+			return ret;
+		}
+
+		SL_CXS auto make_failure_chain(sl_partial_expected other, AlwaysT always, const sl_string& error_message) {
+			auto ret = sl_partial_expected(other.always());
+			ret.error_message_ = other.error_message_ + error_message;
+			return ret;
+		}
+
+
+		constexpr bool valid() const {
+			return expected_.has_value();
+		}
+
+		constexpr const auto& expected() const {
+			return expected_.value();
+		}
+
+		constexpr const auto& always()  const {
+			return always_;
+		}
+
+		constexpr const auto& error_message() const {
+			return error_message_;
+		}
+
+		constexpr auto chain_failure(AlwaysT always, sl_string error_message) {
+			return sl_partial_expected::make_failure_chain(*this, always, error_message);
+		}
+	};
+
 	namespace sl {
 		// Converts a string_t utf 8 string to a std::string char string
 		SL_CXIN sl_string to_str(const sl_u8string& str) {

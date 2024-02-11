@@ -98,6 +98,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ast_node.hpp" />
+    <ClInclude Include="cand_errors.hpp" />
     <ClInclude Include="char_traits.hpp" />
     <ClInclude Include="constant_evaluator.hpp" />
     <ClInclude Include="global_dependencies.hpp" />

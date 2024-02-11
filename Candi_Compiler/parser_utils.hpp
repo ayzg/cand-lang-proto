@@ -191,6 +191,8 @@ namespace caoco {
 			return peek(offset).type() == kind && peek(offset).literal() == literal;
 		}
 
+		bool at_end() const { return it_ == end_; }
+
 
 		const auto& operator*() const { return it_; }
 

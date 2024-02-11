@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "unit_test_util.hpp"
 
-#define CAOCO_TEST_ALL 1
-#define CAOCO_TEST_NONE 0
+#define CAOCO_TEST_ALL 0
+#define CAOCO_TEST_NONE 1
 
 #if CAOCO_TEST_ALL
 #define CAOCO_UT_Tokenizer_Tokens 1
@@ -50,6 +50,9 @@
 #define CAOCO_UT_ConstantEvaluator_FreeFunctions 0
 
 #define CAOCO_UT_Program_BasicProgram 0
+
+
+#define CAOCO_UT_V2Parser_SingleNodes 1
 #endif
 
 
@@ -788,4 +791,25 @@ TEST(CaocoProgram_BasicProgram, CaocoProgram_Test) {
 	print_ast(parse_result);
 }
 
+#endif
+
+
+#if CAOCO_UT_V2Parser_SingleNodes
+TEST(ut_Parser_SingleNodes, ut_Parser) {
+	auto input_vec = caoco::sl::to_u8vec(u8"#var");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	auto parse_result = caoco::parse_string_literal(result.cbegin(), result.cend());
+
+	//if(!parse_result.valid()) {
+	//	std::cout << parse_result.error_message() << std::endl;
+	//}
+
+	//EXPECT_TRUE(parse_result.valid());
+
+	auto parse_result2 = caoco::parse_operand(result.cbegin(), result.cend());
+
+	if(!parse_result2.valid()) {
+		std::cout << parse_result2.error_message() << std::endl;
+	}
+}
 #endif
