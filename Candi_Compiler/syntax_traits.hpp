@@ -38,6 +38,7 @@ namespace caoco {
 
 		namespace priority {
 			constexpr auto max = INT_MAX;
+			constexpr auto access = 160000;
 			constexpr auto functional = 150000;
 			constexpr auto unary = 140000;
 			constexpr auto factor = 130000;
@@ -56,12 +57,13 @@ namespace caoco {
 		CAOCO_TK_TRAIT(number_literal_,priority::max, left_, none_, number_literal_), // number literal
 		CAOCO_TK_TRAIT(eof_,priority::max, left_, none_, eof_), // eof
 		CAOCO_TK_TRAIT(real_literal_,priority::max, left_, none_, real_literal_), // real literal
+		CAOCO_TK_TRAIT(none_literal_,priority::max, left_, none_, none_literal_), // directive none
 		CAOCO_TK_TRAIT(string_literal_,priority::max, left_, none_, string_literal_), // string literal
 		CAOCO_TK_TRAIT(octet_literal_,priority::max, left_, none_, octet_literal_), // octet literal
 		CAOCO_TK_TRAIT(bit_literal_,priority::max, left_, none_, bit_literal_), // bit literal
 		CAOCO_TK_TRAIT(unsigned_literal_,priority::max, left_, none_, unsigned_literal_), // unsigned literal
-		CAOCO_TK_TRAIT(open_frame_,priority::max, left_, unary_, open_frame_), // ( function call
-		CAOCO_TK_TRAIT(period_,priority::functional, left_, binary_, period_), // . operator
+		CAOCO_TK_TRAIT(open_scope_,priority::max, left_, none_, open_scope_), // ( function call
+		CAOCO_TK_TRAIT(period_,priority::access, left_, binary_, period_), // . operator
 		CAOCO_TK_TRAIT(decrement_,priority::unary, left_, unary_, decrement_), // --
 		CAOCO_TK_TRAIT(increment_,priority::unary, left_, unary_, increment_), // ++
 		CAOCO_TK_TRAIT(bitwise_NOT_,priority::unary, left_, unary_, bitwise_NOT_), // ~
@@ -83,20 +85,22 @@ namespace caoco {
 		CAOCO_TK_TRAIT(bitwise_AND_,priority::bitwise, left_, binary_, bitwise_AND_), // &
 		CAOCO_TK_TRAIT(bitwise_XOR_,priority::bitwise-1, left_, binary_, bitwise_XOR_), // ^
 		CAOCO_TK_TRAIT(bitwise_OR_,priority::bitwise-2, left_, binary_, bitwise_OR_), // |
-		CAOCO_TK_TRAIT(logical_AND_,priority::logical, left_, binary_, logical_AND_), // &&
-		CAOCO_TK_TRAIT(logical_OR_,priority::logical-1, left_, binary_, logical_OR_), // ||
+		CAOCO_TK_TRAIT(logical_AND_,priority::logical-1, left_, binary_, logical_AND_), // &&
+		CAOCO_TK_TRAIT(logical_OR_,priority::logical, left_, binary_, logical_OR_), // ||
 		// Assingment operators
-		CAOCO_TK_TRAIT(simple_assignment_,priority::assignment, left_, binary_, simple_assignment_), // =
-		CAOCO_TK_TRAIT(addition_assignment_,priority::assignment, left_, binary_, addition_assignment_), // +=
-		CAOCO_TK_TRAIT(subtraction_assignment_,priority::assignment, left_, binary_, subtraction_assignment_), // -=
-		CAOCO_TK_TRAIT(multiplication_assignment_,priority::assignment, left_, binary_, multiplication_assignment_), // *=
-		CAOCO_TK_TRAIT(division_assignment_,priority::assignment, left_, binary_, division_assignment_), // /=
-		CAOCO_TK_TRAIT(remainder_assignment_,priority::assignment, left_, binary_, remainder_assignment_), // %=
-		CAOCO_TK_TRAIT(bitwise_and_assignment_,priority::assignment, left_, binary_, bitwise_and_assignment_), // &=
-		CAOCO_TK_TRAIT(bitwise_or_assignment_,priority::assignment, left_, binary_, bitwise_or_assignment_), // |=	
-		CAOCO_TK_TRAIT(bitwise_xor_assignment_,priority::assignment, left_, binary_, bitwise_xor_assignment_), // ^=
-		CAOCO_TK_TRAIT(left_shift_assignment_,priority::assignment, left_, binary_, left_shift_assignment_), // <<=
-		CAOCO_TK_TRAIT(right_shift_assignment_,priority::assignment, left_, binary_, right_shift_assignment_), // >>=
+		CAOCO_TK_TRAIT(simple_assignment_,priority::assignment, right_, binary_, simple_assignment_), // =
+		CAOCO_TK_TRAIT(addition_assignment_,priority::assignment, right_, binary_, addition_assignment_), // +=
+		CAOCO_TK_TRAIT(subtraction_assignment_,priority::assignment, right_, binary_, subtraction_assignment_), // -=
+		CAOCO_TK_TRAIT(multiplication_assignment_,priority::assignment, right_, binary_, multiplication_assignment_), // *=
+		CAOCO_TK_TRAIT(division_assignment_,priority::assignment, right_, binary_, division_assignment_), // /=
+		CAOCO_TK_TRAIT(remainder_assignment_,priority::assignment, right_, binary_, remainder_assignment_), // %=
+		CAOCO_TK_TRAIT(bitwise_and_assignment_,priority::assignment, right_, binary_, bitwise_and_assignment_), // &=
+		CAOCO_TK_TRAIT(bitwise_or_assignment_,priority::assignment, right_, binary_, bitwise_or_assignment_), // |=	
+		CAOCO_TK_TRAIT(bitwise_xor_assignment_,priority::assignment, right_, binary_, bitwise_xor_assignment_), // ^=
+		CAOCO_TK_TRAIT(left_shift_assignment_,priority::assignment, right_, binary_, left_shift_assignment_), // <<=
+		CAOCO_TK_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_, right_shift_assignment_), // >>=
+
+		CAOCO_TK_TRAIT(eos_,priority::max, left_, none_, eos_), // end of statement
 		};
 		static astnode_traits_map node_traits = {
 		CAOCO_AST_TRAIT(alnumus_,priority::max, left_, none_), // alnumus
@@ -107,8 +111,10 @@ namespace caoco {
 		CAOCO_AST_TRAIT(octet_literal_,priority::max, left_, none_), // octet literal
 		CAOCO_AST_TRAIT(bit_literal_,priority::max, left_, none_), // bit literal
 		CAOCO_AST_TRAIT(unsigned_literal_,priority::max, left_, none_), // unsigned literal
-		CAOCO_AST_TRAIT(open_frame_,priority::max, left_, unary_), // ( function call
-		CAOCO_AST_TRAIT(period_,priority::functional, left_, binary_), // . operator
+		CAOCO_AST_TRAIT(none_literal_,priority::max, left_, none_), // directive none)
+		CAOCO_AST_TRAIT(open_scope_,priority::max, left_, none_), // 
+		CAOCO_AST_TRAIT(period_,priority::access, left_, binary_), // . operator
+		CAOCO_AST_TRAIT(function_call_,priority::functional,left_,none_), // function call
 		CAOCO_AST_TRAIT(decrement_,priority::unary, left_, unary_), // --
 		CAOCO_AST_TRAIT(increment_,priority::unary, left_, unary_), // ++
 		CAOCO_AST_TRAIT(bitwise_NOT_,priority::unary, left_, unary_), // ~
@@ -130,20 +136,23 @@ namespace caoco {
 		CAOCO_AST_TRAIT(bitwise_AND_,priority::bitwise, left_, binary_), // &
 		CAOCO_AST_TRAIT(bitwise_XOR_,priority::bitwise - 1, left_, binary_), // ^
 		CAOCO_AST_TRAIT(bitwise_OR_,priority::bitwise - 2, left_, binary_), // |
-		CAOCO_AST_TRAIT(logical_AND_,priority::logical, left_, binary_), // &&
-		CAOCO_AST_TRAIT(logical_OR_,priority::logical - 1, left_, binary_), // ||
+		CAOCO_AST_TRAIT(logical_AND_,priority::logical-1, left_, binary_), // &&
+		CAOCO_AST_TRAIT(logical_OR_,priority::logical, left_, binary_), // ||
 		// Assingment operators
-		CAOCO_AST_TRAIT(simple_assignment_,priority::assignment, left_, binary_), // =
-		CAOCO_AST_TRAIT(addition_assignment_,priority::assignment, left_, binary_), // +=
-		CAOCO_AST_TRAIT(subtraction_assignment_,priority::assignment, left_, binary_), // -=
-		CAOCO_AST_TRAIT(multiplication_assignment_,priority::assignment, left_, binary_), // *=
-		CAOCO_AST_TRAIT(division_assignment_,priority::assignment, left_, binary_), // /=
-		CAOCO_AST_TRAIT(remainder_assignment_,priority::assignment, left_, binary_), // %=
-		CAOCO_AST_TRAIT(bitwise_and_assignment_,priority::assignment, left_, binary_), // &=
-		CAOCO_AST_TRAIT(bitwise_or_assignment_,priority::assignment, left_, binary_), // |=	
-		CAOCO_AST_TRAIT(bitwise_xor_assignment_,priority::assignment, left_, binary_), // ^=
-		CAOCO_AST_TRAIT(left_shift_assignment_,priority::assignment, left_, binary_), // <<=
-		CAOCO_AST_TRAIT(right_shift_assignment_,priority::assignment, left_, binary_), // >>=
+		CAOCO_AST_TRAIT(simple_assignment_,priority::assignment, right_, binary_), // =
+		CAOCO_AST_TRAIT(addition_assignment_,priority::assignment, right_, binary_), // +=
+		CAOCO_AST_TRAIT(subtraction_assignment_,priority::assignment, right_, binary_), // -=
+		CAOCO_AST_TRAIT(multiplication_assignment_,priority::assignment, right_, binary_), // *=
+		CAOCO_AST_TRAIT(division_assignment_,priority::assignment, right_, binary_), // /=
+		CAOCO_AST_TRAIT(remainder_assignment_,priority::assignment, right_, binary_), // %=
+		CAOCO_AST_TRAIT(bitwise_and_assignment_,priority::assignment, right_, binary_), // &=
+		CAOCO_AST_TRAIT(bitwise_or_assignment_,priority::assignment, right_, binary_), // |=	
+		CAOCO_AST_TRAIT(bitwise_xor_assignment_,priority::assignment, right_, binary_), // ^=
+		CAOCO_AST_TRAIT(left_shift_assignment_,priority::assignment, right_, binary_), // <<=
+		CAOCO_AST_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_), // >>=
+		CAOCO_AST_TRAIT(expression_, priority::max, left_, none_), // expression
+
+		CAOCO_AST_TRAIT(eos_,priority::max, left_, none_), // end of statement
 		};
 
 

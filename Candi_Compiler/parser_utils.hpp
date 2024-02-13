@@ -166,7 +166,7 @@ namespace caoco {
 			if (new_cursor < beg_) {
 				throw sl_out_of_range("tk_cursor passed advance_to outside of begin.");
 			}
-			else if (new_cursor >= end_) {
+			else if (new_cursor > end_) {
 				throw sl_out_of_range("tk_cursor passed advance_to outside of end.");
 			}
 			else
@@ -390,6 +390,9 @@ namespace caoco {
 		auto last_open = begin;
 		auto last_closed = begin;
 
+		if(begin+1 == end)
+			return parser_scope_result{ false, begin, end }; // Empty statement
+
 		if (begin->type() != open) {
 			throw sl_runtime_error("find_statement: begin iterator not on an open token.");
 		}
@@ -405,6 +408,10 @@ namespace caoco {
 				//currrent_scope_type = tk_enum::open_scope_;
 			}
 			else if (it->type() == tk_enum::close_scope_) {
+				if (scope_type_history.empty()) {
+					return parser_scope_result{ false, begin, end }; // Close token without open token
+				}
+
 				if (scope_type_history.top() != tk_enum::open_scope_) {
 					// Has to be a close or error
 					if (it->type() == close) {
@@ -477,7 +484,10 @@ namespace caoco {
 			return parser_scope_result{ false, begin, last_closed + 1 }; 
 		}
 		else {
-			return parser_scope_result{ true, begin, last_closed + 1 };
+			if(last_closed == begin) // Expression was never closed
+				return parser_scope_result{ false, begin, last_closed + 1 }; 
+			else
+				return parser_scope_result{ true, begin, last_closed + 1 };
 		}
 
 	} // end find_scope

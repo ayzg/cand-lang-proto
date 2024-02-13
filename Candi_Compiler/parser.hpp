@@ -23,417 +23,8 @@
 
 namespace caoco {
 
-	using expected_parse_result = sl_partial_expected<astnode, tk_vector_cit>;
-
-	template<tk_enum TOKEN_TYPE, astnode_enum NODE_TYPE, auto error_lambda>
-	constexpr inline expected_parse_result generic_parse_single_token(tk_vector_cit begin, tk_vector_cit end) {
-		if (begin->type() == TOKEN_TYPE) {
-			return expected_parse_result::make_success(std::next(begin), { NODE_TYPE, begin, std::next(begin) });
-		}
-		else {
-			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
-				NODE_TYPE, begin, error_lambda()));
-		}
-	}
-
-	expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end);
-	//expected_parse_result parse_cso_pointer(tk_vector_cit begin, tk_vector_cit end);
-	//expected_parse_result parse_cso_array(tk_vector_cit begin, tk_vector_cit end);
-	//expected_parse_result parse_cso_memory(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end);
-
-	//expected_parse_result parse_directive_const(tk_vector_cit begin, tk_vector_cit end);
-	//expected_parse_result parse_directive_static(tk_vector_cit begin, tk_vector_cit end);
-	//expected_parse_result parse_directive_ref(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end); // handles if, else if, else
-	expected_parse_result parse_directive_switch(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_directive_break(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_continue(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_default(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_control_flow(tk_vector_cit begin, tk_vector_cit end); // handles break, continue, default
-
-	expected_parse_result parse_directive_return(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit end);
-	expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_directive_include(tk_vector_cit begin, tk_vector_cit end);
-
-	expected_parse_result parse_primary_expr(tk_vector_cit begin, tk_vector_cit end); // expects an expression without the <eos>, not a statement!
-	expected_parse_result parse_operand_statement(tk_vector_cit begin, tk_vector_cit end); // expects an expression which resolves to a single operand followed by an <;eos>.
-
-	expected_parse_result parse_conditional_block(tk_vector_cit begin, tk_vector_cit end); // allows use of break,continue,default.
-	expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit end); // allows use of return. All except the above, and include is forbidden.
-	expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit end); // allows use of all except return/break/continue/default.Value expr is forbidden.
-
-
-	expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::string_literal_,
-			astnode_enum::string_literal_,
-			LAMBDA_STRING(parse_string_literal : begin is not string_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::number_literal_,
-			astnode_enum::number_literal_,
-			LAMBDA_STRING(parse_number_literal : begin is not number_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::real_literal_,
-			astnode_enum::real_literal_,
-			LAMBDA_STRING(parse_real_literal : begin is not real_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::alnumus_,
-			astnode_enum::alnumus_,
-			LAMBDA_STRING(parse_alnumus_literal : begin is not alnumus token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::unsigned_literal_,
-			astnode_enum::unsigned_literal_,
-			LAMBDA_STRING(parse_unsigned_literal : begin is not unsigned_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::octet_literal_,
-			astnode_enum::octet_literal_,
-			LAMBDA_STRING(parse_octet_literal : begin is not octet_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::bit_literal_,
-			astnode_enum::bit_literal_,
-			LAMBDA_STRING(parse_bit_literal : begin is not bit_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<
-			tk_enum::none_literal_,
-			astnode_enum::none_literal_,
-			LAMBDA_STRING(parse_directive_none : begin is not none_literal token.)
-		>(begin, end);
-	}
-
-	expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
-		switch (begin->type())
-		{
-		case tk_enum::string_literal_:
-			return parse_string_literal(begin, end);
-		case tk_enum::number_literal_:
-			return parse_number_literal(begin, end);
-		case tk_enum::real_literal_:
-			return parse_real_literal(begin, end);
-		case tk_enum::alnumus_:
-			return parse_alnumus_literal(begin, end);
-		case tk_enum::none_literal_:
-			return parse_directive_none(begin, end);
-		case tk_enum::unsigned_literal_:
-			return parse_unsigned_literal(begin, end);
-		case tk_enum::octet_literal_:
-			return parse_octet_literal(begin, end);
-		case tk_enum::bit_literal_:
-			return parse_bit_literal(begin, end);
-		default:
-			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
-				astnode_enum::operand_, begin, "parse_operand : Invalid operand, not a literal or an identifier.")
-			);
-		}
-	}
-
-	expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::atype_, astnode_enum::atype_, LAMBDA_STRING(cso_type : begin is not atype_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::avalue_, astnode_enum::avalue_, LAMBDA_STRING(cso_value : begin is not avalue_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::aidentity_, astnode_enum::aidentity_, LAMBDA_STRING(cso_identity : begin is not aidentity_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end) {
-	// <aint_ranged> 
-	//		::= <aint> <open_frame> <unary_minus?> <number_literal>> <elipsis> <unary_minus?> <number_literal> <close_frame>
-	// <aint>
-	//		::= <aint>		
-		using constrained_int_type_mask = std::tuple<
-			tk_mask<tk_enum::aint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
-			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
-			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
-		
-		auto cursor = tk_cursor(begin, end);
-		if (scan_tokens_pack<constrained_int_type_mask>(begin, end)) {
-			astnode atype_node(astnode_enum::aint_constrained_);
-			cursor.advance(2); // Skip the 'aint' and the open frame.
-
-			if (cursor.type_is(tk_enum::subtraction_)) { // negative lower bound
-				cursor.advance();
-				auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
-				unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
-				cursor.advance(2); // past number and ellipsis.
-
-				// get the upper bound
-				if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
-					cursor.advance();
-					auto& unary_op2 = atype_node.push_back({ astnode_enum::unary_minus_ });
-					unary_op2.push_back(parse_number_literal(cursor.get_it(), end).expected());
-					cursor.advance(2); // past number and close frame
-					return expected_parse_result::make_success(cursor.get_it(), atype_node);
-				}
-				else {
-					atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
-					cursor.advance(2); // past number and close frame
-					return expected_parse_result::make_success(cursor.get_it(), atype_node);
-				}
-			}
-			else { // positive lower bound
-				atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
-				cursor.advance(2); // past number and ellipsis.
-
-				// get the upper bound
-				if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
-					cursor.advance();
-					auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
-					unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
-					cursor.advance(2); // past number and close frame
-					return expected_parse_result::make_success(cursor.get_it(), atype_node);
-				}
-				else {
-					atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
-					cursor.advance(2); // past number and close frame
-					return expected_parse_result::make_success(cursor.get_it(), atype_node);
-				}
-
-			}
-		}
-		else {
-			return generic_parse_single_token<tk_enum::aint_, astnode_enum::aint_, LAMBDA_STRING(cso_int : begin is not aint_ token.)>(begin, end);
-		}
-	}
-
-	expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end) {
-	// <auint_ranged> 
-	//		::= <aint> <open_frame> <number_literal>> <elipsis> <number_literal> <close_frame>
-	// <auint>
-	//		::= <aint>	
-		using constrained_uint_type_mask = std::tuple<
-			tk_mask<tk_enum::auint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::number_literal_>,
-			tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
-
-		auto cursor = tk_cursor(begin, end);
-		if (scan_tokens_pack<constrained_uint_type_mask>(begin, end)) {
-			astnode atype_node(astnode_enum::auint_constrained_);
-			cursor.advance(2); // Skip the 'auint' and the open frame.
-			atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
-			cursor.advance(2); // past number and ellipsis.
-			atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
-			cursor.advance(2); // past number and close frame
-			return expected_parse_result::make_success(cursor.get_it(), atype_node);
-		}
-		else {
-			return generic_parse_single_token<tk_enum::auint_, astnode_enum::auint_, LAMBDA_STRING(cso_uint : begin is not auint_ token.)>(begin, end);
-		}
-	}
-
-	expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::areal_, astnode_enum::areal_, LAMBDA_STRING(cso_real : begin is not areal_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::abit_, astnode_enum::abit_, LAMBDA_STRING(cso_bit : begin is not abit_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end) {
-		return generic_parse_single_token<tk_enum::aoctet_, astnode_enum::aoctet_, LAMBDA_STRING(cso_octet : begin is not aoctet_ token.)>(begin, end);
-	}
-
-	expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
-		switch (begin->type())
-		{
-		case tk_enum::atype_:
-			return parse_cso_type(begin, end);
-		case tk_enum::avalue_:
-			return parse_cso_value(begin, end);
-		case tk_enum::aidentity_:
-			return parse_cso_identity(begin, end);
-		case tk_enum::aint_:
-			return parse_cso_int(begin, end);
-		case tk_enum::auint_:
-			return parse_cso_uint(begin, end);
-		case tk_enum::areal_:
-			return parse_cso_real(begin, end);
-		case tk_enum::abit_:
-			return parse_cso_bit(begin, end);
-		case tk_enum::aoctet_:
-			return parse_cso_octet(begin, end);
-		default:
-			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
-				astnode_enum::cso_, begin, "parse_cso : Invalid C& Special Object.")
-			);
-		}
-	}
-
-
-	// <@class:parsing_result>
-	// <@brief> A struct containing the result of a parsing method.
-	// <@member:cursor> The end of the parsed statement.
-	// <@member:valid>	If the statement is valid, error handling will be done by caller.
-	// <@member:error_message>	The error message if the statement is invalid. 
-	//							NOTE: Error messages are passed up a call stack through a parsing_process.
-	struct parsing_result {
-		tk_vector_cit it_;
-		astnode node_;
-		bool valid_{ true };
-		sl_string error_message_{ "" };
-
-		parsing_result() = default;
-		parsing_result(astnode node,tk_vector_cit it = {}, bool valid = true, sl_string error_message = "")
-			: node_(node),it_(it), valid_(valid), error_message_(error_message) {}
-
-		constexpr tk_vector_cit it() const noexcept { return it_; }
-		constexpr astnode& node() noexcept { return node_; }
-		constexpr bool valid() const noexcept { return valid_; }
-		constexpr sl_string error_message() const noexcept { return error_message_; }
-	};
-
-	// <@class:parsing_process> virtual base class for a parsing process functor.
-	class parsing_process {
-		std::stringstream error_stream_;
-		parsing_result make_result(astnode node, tk_vector_cit cursor, bool valid = true, sl_string error_message = "") {
-			error_stream_ << error_message << "\n";
-			return parsing_result{ node,cursor, valid, error_stream_.str() };
-		}
-	protected:
-		parsing_result make_error(tk_vector_cit cursor, tk offending_token, sl_string error_message) {
-			error_stream_ << "\n" << error_message << " Offending token: " << sl::to_str(offending_token.literal())
-				<< "| Line: " << offending_token.line() << "| Col: " << offending_token.col() << "\n";
-			return parsing_result{ astnode(astnode_enum::invalid_),cursor, false, error_stream_.str() };
-		}
-		parsing_result make_success(astnode node,tk_vector_cit end) {
-			return make_result(node,end, true);
-		}
-
-		parsing_result make_pass(tk_vector_cit it) {
-			return make_result(astnode(astnode_enum::none_),it, false);
-		}
-
-		parsing_process(const sl_type_info& parsing_process_type) { error_stream_ << "[" << parsing_process_type.name() << "]"; };
-		parsing_process(const parsing_process& other) {
-			error_stream_ << other.error_stream_.str();
-		};
-		virtual parsing_result perform(tk_vector_cit begin, tk_vector_cit end) = 0;
-	public:
-		parsing_result operator()(tk_vector_cit begin, tk_vector_cit end) {
-			return perform(begin, end);
-		}
-		virtual ~parsing_process() = default;
-	};
-
-	expected_parse_result expression_split_parse(tk_vector_cit begin, tk_vector_cit end, astnode* last_pass = nullptr) {
-		tk_cursor cursor(begin, end);
-		if (last_pass == nullptr) { // 1. First pass
-			// 1.1. Determine the following operator and first operand.
-			// Unary operation
-			if (cursor.operation() == syntax::e_operation::unary_) {
-				auto unary_op_node = cursor.to_statement();
-				cursor.advance(); // pass the unary operation.
-
-				// Case: Unary operation is not followed by operand, error. 
-				if (cursor.at_end()) {
-					return expected_parse_result::make_failure(begin, ca_error::parser::operation_missing_operand(
-						unary_op_node.type(), cursor.get_it(), "Unary operation is not followed by operand.")
-					);
-				}
-
-				// Get the operand of the unary operation.
-				auto operand = parse_operand(cursor.get_it(), end);
-				if (!operand.valid())
-					return operand; // Return the error.
-
-				cursor.advance_to(operand.always()); // pass the operand.
-
-				// Case: Unary operation is not followed by operator -> unary operation is the entire statement.
-				if (cursor.at_end()) {
-					return expected_parse_result::make_success(cursor.get_it(), unary_op_node); // Finished.
-				}
-				else if (cursor.operation() == syntax::e_operation::none_){ // operand after unary operation -> error.
-					return expected_parse_result::make_failure(cursor.get_it(),
-						ca_error::parser::invalid_expression(cursor.get_it(), "Operand is followed by operand.")
-					);
-				}
-				else {
-				// Case: Unary operation is followed by operator.
-				// If the next operator has higher priority -> Rest of expr is the operand of the unary op.
-					if(syntax::get_node_priority(unary_op_node.type()) < cursor.priority()) {
-						auto next_operation = cursor.to_statement();
-						next_operation.push_back(operand.expected());
-						auto rest_of_expr = expression_split_parse(cursor.get_it(), end, &next_operation);
-						if (!rest_of_expr.valid())
-							return rest_of_expr; // Error.
-						unary_op_node.push_back(rest_of_expr.expected()); 
-						return expected_parse_result::make_success(rest_of_expr.always(), unary_op_node); // Finished.
-					}
-					else { // If the next operator has lower or equal priority -> Rest of expr is the next pass.
-						auto next_operation = cursor.to_statement();
-						unary_op_node.push_back(operand.expected());
-						next_operation.push_back(unary_op_node);
-						return expression_split_parse(cursor.get_it(), end, &next_operation); // Continue parsing.
-					}
-				}
-			} // end first pass case: unary operation
-			// case : open scope
-			else if (cursor.type_is(tk_enum::open_scope_)) {
-
-			}
-		} // end first pass
-	}
-	expected_parse_result parse_primary_expr(tk_vector_cit begin, tk_vector_cit end) {
-		
-	}
-
-	sl_opt<astnode> build_statement(tk_vector_cit begin,tk_vector_cit end, sl_opt<astnode> last_pass = sl::nullopt) {
-		tk_cursor it(begin,end);
+	sl_opt<astnode> build_statement(tk_vector_cit begin, tk_vector_cit end, sl_opt<astnode> last_pass = sl::nullopt) {
+		tk_cursor it(begin, end);
 		if (!last_pass.has_value()) {
 			// Determine the following operator and first operand.
 			if (it.operation() == syntax::e_operation::unary_) { // This expression starts with a unary operation.
@@ -470,7 +61,7 @@ namespace caoco {
 						return build_statement(scope.contained_begin(), scope.contained_end());
 					}
 					else { // If the scope is followed by an operator, the scope is a lhs operand.
-						astnode next_pass = tk_cursor(scope.scope_end(),end).to_statement(); // next pass is the following operator.
+						astnode next_pass = tk_cursor(scope.scope_end(), end).to_statement(); // next pass is the following operator.
 						next_pass.push_back(build_statement(scope.contained_begin(), scope.contained_end()).value()); // lhs of next pass is the scope.
 						return build_statement(scope.scope_end(), end, std::make_optional(next_pass)); // Rest of expr is the next pass.
 					}
@@ -490,12 +81,12 @@ namespace caoco {
 
 					astnode function_call = astnode(astnode_enum::function_call_, *it, arg_scope.scope_end());
 					function_call.push_back(it.to_statement()); // lhs of function call is the this operand.
-					function_call.push_back({astnode_enum::arguments_,arg_scope.contained_begin(), arg_scope.contained_end()}); // rhs of function call is the arguments.
+					function_call.push_back({ astnode_enum::arguments_,arg_scope.contained_begin(), arg_scope.contained_end() }); // rhs of function call is the arguments.
 
 					if (arg_scope.scope_end() == end) { // If there is no following operator the entire statement is the function call.
 						return function_call;
 					}
-					else { 
+					else {
 						astnode first_pass = tk_cursor(arg_scope.scope_end(), end).to_statement(); // first pass is the following operator.
 						first_pass.push_back(function_call); // lhs of first pass is the function call.
 						return build_statement(arg_scope.scope_end(), end, first_pass); // Rest of expr is the first pass.
@@ -689,6 +280,1021 @@ namespace caoco {
 			}
 		}
 	}
+
+
+	using expected_parse_result = sl_partial_expected<astnode, tk_vector_cit>;
+
+	template<tk_enum TOKEN_TYPE, astnode_enum NODE_TYPE, auto error_lambda>
+	constexpr inline expected_parse_result generic_parse_single_token(tk_vector_cit begin, tk_vector_cit end) {
+		if (begin->type() == TOKEN_TYPE) {
+			return expected_parse_result::make_success(std::next(begin), { NODE_TYPE, begin, std::next(begin) });
+		}
+		else {
+			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+				NODE_TYPE, begin, error_lambda()));
+		}
+	}
+
+	// Operand parsers. Note: an expression in a scope is an operand.
+	expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end);
+
+	// C& Special Object parsers.
+	expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end);
+	//expected_parse_result parse_cso_pointer(tk_vector_cit begin, tk_vector_cit end);
+	//expected_parse_result parse_cso_array(tk_vector_cit begin, tk_vector_cit end);
+	//expected_parse_result parse_cso_memory(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end);
+
+	// Expressions and value statement split parser. (non-directive statements).
+	// NEED TO FIX: This function is not parsing the arguments correctly because find_open_statement does not account for ( , or ) as closing or opening tokens.
+	// NOTE: currently arguments containing scopes are not supported.
+	expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end); // This is not the same as function definition arguments. This is for function calls.
+	expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass = nullptr);
+	astnode expression_simplify(astnode node);
+	expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end); // expects an expression without the <eos>, not a statement!
+	expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end); // expects an expression which resolves to a single operand followed by an <;eos>.
+
+	//expected_parse_result parse_directive_const(tk_vector_cit begin, tk_vector_cit end);
+	//expected_parse_result parse_directive_static(tk_vector_cit begin, tk_vector_cit end);
+	//expected_parse_result parse_directive_ref(tk_vector_cit begin, tk_vector_cit end);
+
+	expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end); // handles if, else if, else
+	expected_parse_result parse_directive_switch(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end);
+
+	expected_parse_result parse_directive_break(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_continue(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_default(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_control_flow(tk_vector_cit begin, tk_vector_cit end); // handles break, continue, default
+
+	expected_parse_result parse_directive_return(tk_vector_cit begin, tk_vector_cit end);
+
+	expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit end);
+	expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit end);
+
+	expected_parse_result parse_directive_include(tk_vector_cit begin, tk_vector_cit end);
+
+
+	expected_parse_result parse_conditional_block(tk_vector_cit begin, tk_vector_cit end); // allows use of break,continue,default.
+	expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit end); // allows use of return. All except the above, and include is forbidden.
+	expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit end); // allows use of all except return/break/continue/default.Value expr is forbidden.
+
+	expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::string_literal_,
+			astnode_enum::string_literal_,
+			LAMBDA_STRING(parse_string_literal : begin is not string_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::number_literal_,
+			astnode_enum::number_literal_,
+			LAMBDA_STRING(parse_number_literal : begin is not number_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::real_literal_,
+			astnode_enum::real_literal_,
+			LAMBDA_STRING(parse_real_literal : begin is not real_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::alnumus_,
+			astnode_enum::alnumus_,
+			LAMBDA_STRING(parse_alnumus_literal : begin is not alnumus token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::unsigned_literal_,
+			astnode_enum::unsigned_literal_,
+			LAMBDA_STRING(parse_unsigned_literal : begin is not unsigned_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::octet_literal_,
+			astnode_enum::octet_literal_,
+			LAMBDA_STRING(parse_octet_literal : begin is not octet_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::bit_literal_,
+			astnode_enum::bit_literal_,
+			LAMBDA_STRING(parse_bit_literal : begin is not bit_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<
+			tk_enum::none_literal_,
+			astnode_enum::none_literal_,
+			LAMBDA_STRING(parse_directive_none : begin is not none_literal token.)
+		>(begin, end);
+	}
+
+	expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
+		switch (begin->type())
+		{
+		case tk_enum::string_literal_:
+			return parse_string_literal(begin, end);
+		case tk_enum::number_literal_:
+			return parse_number_literal(begin, end);
+		case tk_enum::real_literal_:
+			return parse_real_literal(begin, end);
+		case tk_enum::alnumus_:
+			return parse_alnumus_literal(begin, end);
+		case tk_enum::none_literal_:
+			return parse_directive_none(begin, end);
+		case tk_enum::unsigned_literal_:
+			return parse_unsigned_literal(begin, end);
+		case tk_enum::octet_literal_:
+			return parse_octet_literal(begin, end);
+		case tk_enum::bit_literal_:
+			return parse_bit_literal(begin, end);
+		case tk_enum::open_scope_:// scope containing a value expression resolving to an operand.
+		{
+			parser_scope_result scope = find_scope(begin, end);
+			if (!scope.valid) {
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Mismatched parentheses in operand."));
+			}
+			else if (scope.is_empty()) {
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Empty operand."));
+			}
+			else {
+				auto expr = expression_split_parse(tk_cursor(scope.contained_begin(), scope.contained_end()));
+				if (!expr.valid())
+					return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in operand."));
+
+				auto nd = astnode(astnode_enum::expression_, scope.scope_begin(), scope.scope_end());
+				nd.push_back(expr.expected());
+				return expected_parse_result::make_success(scope.scope_end(),nd);
+			}
+		}
+		default:
+			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+				astnode_enum::operand_, begin, "parse_operand : Invalid operand, not a literal or an identifier.")
+			);
+		}
+	}
+
+	expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::atype_, astnode_enum::atype_, LAMBDA_STRING(cso_type : begin is not atype_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::avalue_, astnode_enum::avalue_, LAMBDA_STRING(cso_value : begin is not avalue_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::aidentity_, astnode_enum::aidentity_, LAMBDA_STRING(cso_identity : begin is not aidentity_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end) {
+	// <aint_ranged> 
+	//		::= <aint> <open_frame> <unary_minus?> <number_literal>> <elipsis> <unary_minus?> <number_literal> <close_frame>
+	// <aint>
+	//		::= <aint>		
+		using constrained_int_type_mask = std::tuple<
+			tk_mask<tk_enum::aint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+			tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
+		
+		auto cursor = tk_cursor(begin, end);
+		if (scan_tokens_pack<constrained_int_type_mask>(begin, end)) {
+			astnode atype_node(astnode_enum::aint_constrained_);
+			cursor.advance(2); // Skip the 'aint' and the open frame.
+
+			if (cursor.type_is(tk_enum::subtraction_)) { // negative lower bound
+				cursor.advance();
+				auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
+				unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and ellipsis.
+
+				// get the upper bound
+				if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
+					cursor.advance();
+					auto& unary_op2 = atype_node.push_back({ astnode_enum::unary_minus_ });
+					unary_op2.push_back(parse_number_literal(cursor.get_it(), end).expected());
+					cursor.advance(2); // past number and close frame
+					return expected_parse_result::make_success(cursor.get_it(), atype_node);
+				}
+				else {
+					atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+					cursor.advance(2); // past number and close frame
+					return expected_parse_result::make_success(cursor.get_it(), atype_node);
+				}
+			}
+			else { // positive lower bound
+				atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and ellipsis.
+
+				// get the upper bound
+				if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
+					cursor.advance();
+					auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
+					unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
+					cursor.advance(2); // past number and close frame
+					return expected_parse_result::make_success(cursor.get_it(), atype_node);
+				}
+				else {
+					atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+					cursor.advance(2); // past number and close frame
+					return expected_parse_result::make_success(cursor.get_it(), atype_node);
+				}
+
+			}
+		}
+		else {
+			return generic_parse_single_token<tk_enum::aint_, astnode_enum::aint_, LAMBDA_STRING(cso_int : begin is not aint_ token.)>(begin, end);
+		}
+	}
+
+	expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end) {
+	// <auint_ranged> 
+	//		::= <aint> <open_frame> <number_literal>> <elipsis> <number_literal> <close_frame>
+	// <auint>
+	//		::= <aint>	
+		using constrained_uint_type_mask = std::tuple<
+			tk_mask<tk_enum::auint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::number_literal_>,
+			tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
+
+		auto cursor = tk_cursor(begin, end);
+		if (scan_tokens_pack<constrained_uint_type_mask>(begin, end)) {
+			astnode atype_node(astnode_enum::auint_constrained_);
+			cursor.advance(2); // Skip the 'auint' and the open frame.
+			atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+			cursor.advance(2); // past number and ellipsis.
+			atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+			cursor.advance(2); // past number and close frame
+			return expected_parse_result::make_success(cursor.get_it(), atype_node);
+		}
+		else {
+			return generic_parse_single_token<tk_enum::auint_, astnode_enum::auint_, LAMBDA_STRING(cso_uint : begin is not auint_ token.)>(begin, end);
+		}
+	}
+
+	expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::areal_, astnode_enum::areal_, LAMBDA_STRING(cso_real : begin is not areal_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::abit_, astnode_enum::abit_, LAMBDA_STRING(cso_bit : begin is not abit_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end) {
+		return generic_parse_single_token<tk_enum::aoctet_, astnode_enum::aoctet_, LAMBDA_STRING(cso_octet : begin is not aoctet_ token.)>(begin, end);
+	}
+
+	expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
+		switch (begin->type())
+		{
+		case tk_enum::atype_:
+			return parse_cso_type(begin, end);
+		case tk_enum::avalue_:
+			return parse_cso_value(begin, end);
+		case tk_enum::aidentity_:
+			return parse_cso_identity(begin, end);
+		case tk_enum::aint_:
+			return parse_cso_int(begin, end);
+		case tk_enum::auint_:
+			return parse_cso_uint(begin, end);
+		case tk_enum::areal_:
+			return parse_cso_real(begin, end);
+		case tk_enum::abit_:
+			return parse_cso_bit(begin, end);
+		case tk_enum::aoctet_:
+			return parse_cso_octet(begin, end);
+		default:
+			return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+				astnode_enum::cso_, begin, "parse_cso : Invalid C& Special Object.")
+			);
+		}
+	}
+
+	astnode expression_simplify(astnode node) {
+		if (node.children().empty()) return node;
+
+		if (node.front().type() == astnode_enum::expression_) {
+			auto expr = node.front().front();
+			node.front() = expr;
+		}
+
+		if (node.back().type() == astnode_enum::expression_) {
+			auto expr = node.back().front();
+			node.back() = expr;
+		}
+
+		auto new_front = expression_simplify(node.front());
+		auto new_back = expression_simplify(node.back());
+
+		node.front() = new_front;
+		node.back() = new_back;
+
+		return node;
+	}
+
+	expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vector_cit end) {
+		auto result = expression_split_parse(tk_cursor(begin, end));
+		if (!result.valid()) return expected_parse_result::make_failure(result.always(), ca_error::parser::invalid_expression(
+			result.always(), "expression_split_and_simplify : Invalid expression."));
+		auto simplified = expression_simplify(result.expected());
+		return expected_parse_result::make_success(result.always(), simplified);
+	}
+
+	expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass) {
+		// 1. First Pass
+		if (last_pass == nullptr) {
+			// Expecting operand or a unary operator.
+			if (cursor.operation() == syntax::e_operation::none_) {
+				auto first_operand_parse_result = parse_operand(cursor.get_it(), cursor.end());
+				if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
+				auto first_operand = first_operand_parse_result.expected();
+				return expression_split_parse(cursor.advance_to(first_operand_parse_result.always()), &first_operand);
+			}
+
+			if (cursor.operation() == syntax::e_operation::unary_) {
+				sl_vector<astnode> unary_operators;
+
+				// Find the first operand following the unary operator.
+				auto unary_cursor = cursor;
+				while (unary_cursor.operation() == syntax::e_operation::unary_) {
+					unary_operators.push_back(unary_cursor.to_statement());
+
+					if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+						return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+							unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+					}
+
+					unary_cursor.advance();
+				}
+				std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
+
+				// Expecting an operand following the unary operator.
+				auto first_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+				if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
+				auto first_operand = first_operand_parse_result.expected();
+				auto next_operator_begin = first_operand_parse_result.always();
+
+				// No following operator -> End of expr.
+				if (next_operator_begin == cursor.end()) {
+					// Apply the unary operators to the operand
+					astnode* last_unary_op = &first_operand;
+					for (auto& op : unary_operators) {
+						op.push_back(*last_unary_op);
+						last_unary_op = &op;
+					}
+					return expected_parse_result::make_success(next_operator_begin, *last_unary_op);
+				}
+
+				// Check if the next operator is a binary operator.
+				if (syntax::e_operation::binary_ == syntax::get_token_operation(next_operator_begin->type())) {
+					// Check if the next operator is more important than the unary operators.
+					if (syntax::get_token_priority(next_operator_begin->type()) > syntax::get_node_priority(unary_operators.begin()->type())) {
+						auto rest_of_expr_result = expression_split_parse(unary_cursor);
+						if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+
+						auto rest_of_expr = rest_of_expr_result.expected();
+						// Apply the unary operators to the rest of the expression.
+						astnode* last_unary_op = &rest_of_expr;
+						for (auto& op : unary_operators) {
+							op.push_back(*last_unary_op);
+							last_unary_op = &op;
+						}
+
+						return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
+					}
+					else {
+						// Apply the unary operators to the operand
+						astnode* last_unary_op = &first_operand;
+						for (auto& op : unary_operators) {
+							op.push_back(*last_unary_op);
+							last_unary_op = &op;
+						}
+
+						return expression_split_parse(cursor.advance_to(next_operator_begin), last_unary_op);
+					}
+				}
+
+				// SPECIAL CASE: check for a function call.
+				if (next_operator_begin->type() == tk_enum::open_scope_) {
+					auto arg_scope = find_scope(next_operator_begin, cursor.end());
+					if (!arg_scope.valid) {
+						return expected_parse_result::make_failure(next_operator_begin, ca_error::parser::invalid_expression(
+							next_operator_begin, "expression_split_parse : Invalid function call scope."));
+					}
+
+					auto arg_parse = parse_arguments(next_operator_begin, cursor.end());
+					if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+
+
+					auto function_call_args = arg_parse.expected();
+					// Bind the arguments to the operand as a function call.
+					auto function_call = astnode(astnode_enum::function_call_, next_operator_begin, arg_scope.scope_end());
+					function_call.push_back(first_operand);
+					function_call.push_back(function_call_args);
+					// Function call is now the new operand.
+					first_operand = function_call;
+					// Next operation is the end of the function call scope.
+					next_operator_begin = arg_scope.scope_end();
+
+					// No following operator -> End of expr.
+					if (next_operator_begin == cursor.end()) {
+						// Apply the unary operators to the operand
+						astnode* last_unary_op = &first_operand;
+						for (auto& op : unary_operators) {
+							op.push_back(*last_unary_op);
+							last_unary_op = &op;
+						}
+						return expected_parse_result::make_success(next_operator_begin, *last_unary_op);
+					}
+					// Check if the next operator is a binary operator.
+					if (syntax::e_operation::binary_ == syntax::get_token_operation(next_operator_begin->type())) {
+						// Check if the next operator is more important than the unary operators.
+						if (syntax::get_token_priority(next_operator_begin->type()) > syntax::get_node_priority(unary_operators.begin()->type())) {
+							auto rest_of_expr_result = expression_split_parse(unary_cursor);
+							if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+
+							auto rest_of_expr = rest_of_expr_result.expected();
+							// Apply the unary operators to the rest of the expression.
+							astnode* last_unary_op = &rest_of_expr;
+							for (auto& op : unary_operators) {
+								op.push_back(*last_unary_op);
+								last_unary_op = &op;
+							}
+
+							return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
+						}
+						else {
+							// Apply the unary operators to the operand
+							astnode* last_unary_op = &first_operand;
+							for (auto& op : unary_operators) {
+								op.push_back(*last_unary_op);
+								last_unary_op = &op;
+							}
+
+							return expression_split_parse(cursor.advance_to(next_operator_begin), last_unary_op);
+						}
+					}
+				}
+
+
+
+				auto this_operator = cursor.to_statement();
+				this_operator.push_back(first_operand);
+				return expression_split_parse(cursor.advance_to(next_operator_begin), &this_operator);
+			}
+		}
+		// 2. Following Pass.
+		else {
+			if (cursor.at_end()) {
+				return expected_parse_result::make_success(cursor.get_it(), *last_pass);
+			}
+
+			// Was the last pass an operand/unary ?
+			if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_
+				|| syntax::get_node_operation(last_pass->type()) == syntax::e_operation::unary_) {
+				// Expecting a binary operator on the cursor. or a function call.
+				if (!(cursor.operation() == syntax::e_operation::binary_)) {
+					// Has to be a function call or else it is an error.
+					if (cursor.type_is(tk_enum::open_scope_)) {
+						auto arg_scope = find_scope(cursor.get_it(), cursor.end());
+						if (!arg_scope.valid) {
+							return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+								cursor.get_it(), "expression_split_parse : Invalid function call scope."));
+						}
+
+						auto arg_parse = parse_arguments(cursor.get_it(), cursor.end());
+						if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+
+
+						auto function_call_args = arg_parse.expected();
+
+						/*auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());*/
+						// Bind the arguments to the operand as a function call.
+						auto function_call = astnode(astnode_enum::function_call_, cursor.get_it(), arg_scope.scope_end());
+						function_call.push_back(*last_pass);
+						function_call.push_back(function_call_args);
+						// continue parsing the rest of the expression.
+						return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &function_call);
+					}
+					else {
+						return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+							cursor.get_it(), "expression_split_parse : Operand followed by operand."));
+					}
+				}
+
+				// Expecting an operand following the binary operator.
+				if (cursor.operation() == syntax::e_operation::binary_) {
+					// Handle a following operand.
+					if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::none_) {
+						auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+						if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+						auto next_operand = next_operand_parse_result.expected();
+
+						// Get the following operator
+						tk_cursor cursor_next = cursor;
+						cursor_next.advance_to(next_operand_parse_result.always());
+
+						// No following operator -> End of expr.
+						if (cursor_next.at_end()) {
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(next_operand);
+							return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+						}
+						else if (cursor_next.type_is(tk_enum::open_scope_)) {
+							// Special case: function call.
+							auto arg_scope = find_scope(cursor_next.get_it(), cursor_next.end());
+							if (!arg_scope.valid) {
+								return expected_parse_result::make_failure(cursor_next.get_it(), ca_error::parser::invalid_expression(
+									cursor_next.get_it(), "expression_split_parse : Invalid function call scope."));
+							}
+
+							if (cursor.priority() > syntax::priority::functional) {
+								auto arg_parse = parse_arguments(cursor_next.get_it(), cursor_next.end());
+								if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+
+								//auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+								auto function_call_args = arg_parse.expected();
+
+								// Bind the arguments to the operand as a function call.
+								auto function_call = astnode(astnode_enum::function_call_, cursor_next.get_it(), arg_scope.scope_end());
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(next_operand);
+								function_call.push_back(this_operator);
+								function_call.push_back(function_call_args);
+								// continue parsing the rest of the expression.
+								return expression_split_parse(cursor_next.advance_to(arg_scope.scope_end()), &function_call);
+							}//else fallthrough
+
+						}
+						//else
+						if (cursor.priority() == cursor_next.priority()) {
+							if (cursor.associativity() == syntax::e_assoc::right_) {
+								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(rest_of_expr.expected());
+								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+							}
+							else {
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(next_operand);
+								return expression_split_parse(cursor_next, &this_operator);
+							}
+						}
+						if (cursor.priority() < cursor_next.priority()) {
+							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(rest_of_expr.expected());
+							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+						}
+						else {
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(next_operand);
+							return expression_split_parse(cursor_next, &this_operator);
+
+						}
+					}
+					else if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::unary_) {
+						sl_vector<astnode> unary_operators;
+
+						// Find the first operand following the unary operator.
+						auto unary_cursor = cursor.next();
+						while (unary_cursor.operation() == syntax::e_operation::unary_) {
+							unary_operators.push_back(unary_cursor.to_statement());
+
+							if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+								return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+									unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+							}
+
+							unary_cursor.advance();
+						}
+						std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
+
+						// Expecting an operand following the unary operator.
+						auto next_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+						if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+						auto next_operand = next_operand_parse_result.expected();
+						auto next_operator_begin = next_operand_parse_result.always();
+
+						// Get the following operator
+						tk_cursor cursor_next = cursor;
+						cursor_next.advance_to(next_operator_begin);
+
+						// No following operator -> End of expr.
+						if (cursor_next.at_end()) {
+							// Apply the unary operators to the operand
+							astnode* last_unary_op = &next_operand;
+							for (auto& op : unary_operators) {
+								op.push_back(*last_unary_op);
+								last_unary_op = &op;
+							}
+
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(*last_unary_op);
+							return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+						}
+						else {
+							if (cursor.priority() == cursor_next.priority()) {
+								if (cursor.associativity() == syntax::e_assoc::right_) {
+									auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+									if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+									auto this_operator = cursor.to_statement();
+									this_operator.push_front(*last_pass);
+									this_operator.push_back(rest_of_expr.expected());
+									return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+								}
+								else {
+									auto this_operator = cursor.to_statement();
+									this_operator.push_front(*last_pass);
+									this_operator.push_back(next_operand);
+									return expression_split_parse(cursor_next, &this_operator);
+								}
+							}
+							if (cursor.priority() < cursor_next.priority()) {
+								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(rest_of_expr.expected());
+								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+							}
+							else {
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(next_operand);
+								return expression_split_parse(cursor_next, &this_operator);
+
+							}
+						}
+
+					}
+					else
+						throw "not implemented yet.";
+				}
+			}
+
+			// Was the last pass a binary operator ?
+			if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::binary_) {
+				if (last_pass->children().size() == 2) {
+					auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+					if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+					auto next_operand = next_operand_parse_result.expected();
+
+					// Get the following operator
+					tk_cursor cursor_next = cursor;
+					cursor_next.advance_to(next_operand_parse_result.always());
+
+					// No following operator -> End of expr.
+					if (cursor_next.at_end()) {
+						auto this_operator = cursor.to_statement();
+						this_operator.push_front(*last_pass);
+						this_operator.push_back(next_operand);
+						return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+					}
+					else {
+						if (cursor.priority() == cursor_next.priority()) {
+							if (cursor.associativity() == syntax::e_assoc::left_) {
+								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(rest_of_expr.expected());
+								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+							}
+							else {
+								auto this_operator = cursor.to_statement();
+								this_operator.push_front(*last_pass);
+								this_operator.push_back(next_operand);
+								return expression_split_parse(cursor_next, &this_operator);
+							}
+						}
+						else if (cursor.priority() < cursor_next.priority()) {
+							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(rest_of_expr.expected());
+							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+						}
+						else {
+							auto this_operator = cursor.to_statement();
+							this_operator.push_front(*last_pass);
+							this_operator.push_back(next_operand);
+							return expression_split_parse(cursor_next, &this_operator);
+
+						}
+					}
+				}
+				else
+					throw "not implemented yet.";
+			}
+
+		}
+	}
+
+	expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end) {
+		tk_cursor cursor(begin, end);
+		// check if the scope is redundant
+		if (cursor.type_is(tk_enum::open_scope_)) {
+			parser_scope_result scope = find_scope(cursor.get_it(), cursor.end());
+
+			if (!scope.valid) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_primary_expression : Invalid scope."));
+			}
+
+			if (scope.is_empty()) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_primary_expression : Empty expression scope."));
+			}
+
+			// If the end of the scope is the end of the expression, then the scope is redundant.
+			if (scope.scope_end() == cursor.end()) {
+				return parse_primary_expression(scope.contained_begin(), scope.contained_end());
+			}
+		}
+		return expression_split_and_simplify(begin, end);
+	}
+
+	expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end) {
+		parser_scope_result expr_scope;
+		try {
+			expr_scope = caoco::find_open_statement(begin->type(), caoco::tk_enum::eos_, begin, end);
+			if(!expr_scope.valid) {
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+					begin, "parse_value_statement : Invalid value statement, missing an end of statement token ';'?\n"));
+			}
+		}
+		catch (std::exception e) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+				begin, "parse_value_statement : Invalid value statement format.\n Scope Error:" + sl_string(e.what())));
+		}
+		auto result = parse_primary_expression(expr_scope.scope_begin(), expr_scope.contained_end());
+		if (!result.valid()) return result;
+
+		return expected_parse_result::make_success(expr_scope.scope_end(), result.expected());
+	}
+
+	expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
+		parser_scope_result scope = find_scope(begin, end);
+		if (!scope.valid) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+				begin, "parse_arguments : Invalid arguments scope."));
+		}
+
+		if (scope.is_empty()) {
+			return expected_parse_result::make_success(begin, astnode(astnode_enum::arguments_, begin, end));
+		}
+
+		// Get each argument out of the scope.
+		auto scope_cursor = tk_cursor(scope.contained_begin(), scope.scope_end());
+		sl_vector<astnode> arguments;
+		while(!scope_cursor.at_end()) {
+			auto arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::comma_, scope_cursor.get_it(), scope_cursor.end());
+			
+			if(!arg_expr_scope.valid) {
+				// Try finding the last argument.
+				auto last_arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::close_scope_, scope_cursor.get_it(), scope_cursor.end());
+				if (!last_arg_expr_scope.valid) {
+					return expected_parse_result::make_failure(scope_cursor.get_it(), ca_error::parser::invalid_expression(
+						scope_cursor.get_it(), "parse_arguments : Invalid argument scope."));
+				}
+
+				// Get the last argument.
+				auto arg = parse_primary_expression(last_arg_expr_scope.scope_begin(), last_arg_expr_scope.contained_end());
+				if (!arg.valid()) return arg;
+				arguments.push_back(arg.expected());
+				break;
+			}
+
+			auto arg = parse_primary_expression(arg_expr_scope.scope_begin(), arg_expr_scope.contained_end());
+			if (!arg.valid()) return arg;
+			arguments.push_back(arg.expected());
+			scope_cursor.advance_to(arg.always()+1);
+		}
+
+		astnode args_node(astnode_enum::arguments_, scope.scope_begin(), scope.scope_end());
+		for (auto& arg : arguments) {
+			args_node.push_back(arg);
+		}
+
+		return expected_parse_result::make_success(scope.scope_end(), args_node);
+	}
+
+	//expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end) {
+	//	//Format:
+	//	// #if (<expression>) <functional_block> <eos>
+	//	// #if (<expression>) <functional_block> #else <functional_block> <eos>
+	//	// #if (<expression>) <functional_block> #elif <expression> <functional_block> #else <functional_block> <eos>
+	//	tk_cursor cursor(begin, end);
+
+	//	auto parse_conditional = [&cursor](tk_enum type)->auto {
+	//		// First token must be #if
+	//		if (type == tk_enum::if_ || type == tk_enum::elif_) {
+	//			parser_scope_result conditional_scope = find_scope(cursor.next().get_it(), cursor.end());
+	//			if (!conditional_scope.valid) {
+	//				return expected_parse_result::make_failure(*cursor.next()
+	//					,"Invalid Scope following conditional directive.");
+	//			}
+	//			auto expr = build_statement(conditional_scope.contained_begin(), conditional_scope.contained_end());
+	//			if (!expr.has_value()) {
+	//				return expected_parse_result::make_failure(conditional_scope.scope_begin()
+	//					,"Invalid if statement format. Expected an expression.");
+	//			}
+
+	//			// Next is a functional block
+	//			parser_scope_result if_block_scope = find_list(conditional_scope.scope_end(), cursor.end());
+	//			if (!if_block_scope.valid) {
+	//				return expected_parse_result::make_failure(if_block_scope.scope_end(), 
+	//					"Invalid if statement format. Expected a functional block.");
+	//			}
+	//			auto if_block = ParseFunctionalBlock()(if_block_scope.contained_begin(), if_block_scope.contained_end());
+	//			if (!if_block.valid()) {
+	//				return expected_parse_result::make_failure(if_block.it(), 
+	//					"Invalid if statement format. Expected a functional block.");
+	//			}
+
+	//			astnode node = astnode(astnode_enum::conditional_block_);
+	//			if (type == tk_enum::if_)
+	//				node = astnode{ astnode_enum::if_, cursor.get_it(), if_block_scope.scope_end() };
+	//			else
+	//				node = astnode{ astnode_enum::elif_, cursor.get_it(), if_block_scope.scope_end() };
+
+
+	//			node.push_back(expr.value());
+	//			node.push_back(if_block.node());
+	//			return expected_parse_result::make_success(if_block_scope.scope_end(), node);
+	//		}
+	//		else { // parsing an else block.
+	//			// Next is a functional block
+	//			parser_scope_result if_block_scope = find_list(cursor.next().get_it(), cursor.end());
+	//			if (!if_block_scope.valid) {
+	//				return expected_parse_result::make_failure(if_block_scope.scope_end(), 
+	//					"Invalid if statement format. Expected a functional block.");
+	//			}
+	//			auto if_block = ParseFunctionalBlock()(if_block_scope.contained_begin(), if_block_scope.contained_end());
+	//			if (!if_block.valid()) {
+	//				return expected_parse_result::make_failure(if_block.it(), 
+	//					"Invalid if statement format. Expected a functional block.");
+	//			}
+
+	//			astnode node{ astnode_enum::else_, cursor.get_it(), if_block_scope.scope_end() };
+	//			node.push_back(if_block.node());
+	//			return expected_parse_result::make_success( if_block_scope.scope_end(), node);
+	//		}
+	//	};
+
+	//	// First token must be #if
+	//	if (begin->type() != tk_enum::if_) {
+	//		return expected_parse_result::make_failure(begin,
+	//			"ParseDirectiveIf: Expected an if directive.");
+	//	}
+
+	//	auto node = astnode{ astnode_enum::conditional_statement_ };
+
+	//	// Parse the if block
+	//	auto if_block = parse_conditional(tk_enum::if_);
+	//	if (!if_block.valid()) {
+	//		return if_block; // error
+	//	}
+	//	node.push_back(if_block.expected());
+	//	cursor.advance_to(if_block.always());
+
+	//	// if no elif, or else, return the if block
+	//	if (cursor.type_is(tk_enum::eos_)) {
+	//		cursor.advance();
+	//		return expected_parse_result::make_success(cursor.get_it(),node);
+	//	}
+
+	//	// while next is an #elif
+	//	while (cursor.type_is(tk_enum::elif_)) {
+	//		auto elif_block = parse_conditional(tk_enum::elif_);
+	//		if (!elif_block.valid()) {
+	//			return elif_block; // error
+	//		}
+	//		node.push_back(elif_block.expected());
+	//		cursor.advance_to(elif_block.always());
+	//	}
+
+	//	// expecting an else.
+	//	if (cursor.type_is(tk_enum::else_)) {
+	//		auto else_block = parse_conditional(tk_enum::else_);
+	//		if (!else_block.valid()) {
+	//			return else_block; // error
+	//		}
+	//		node.push_back(else_block.expected());
+	//		cursor.advance_to(else_block.always());
+
+	//		// expecting an eos
+	//		if (!cursor.type_is(tk_enum::eos_)) {
+	//			return expected_parse_result::make_failure(cursor.get_it(),
+	//				"ParseDirectiveIf: Expected an eos.");
+	//		}
+
+	//		cursor.advance();
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(cursor.get_it(),
+	//			"ParseDirectiveIf: Expected an else directive.");
+	//	}
+
+	//	return expected_parse_result::make_success(cursor.get_it(), node);
+	//}
+
+	// <@class:parsing_result>
+	// <@brief> A struct containing the result of a parsing method.
+	// <@member:cursor> The end of the parsed statement.
+	// <@member:valid>	If the statement is valid, error handling will be done by caller.
+	// <@member:error_message>	The error message if the statement is invalid. 
+	//							NOTE: Error messages are passed up a call stack through a parsing_process.
+	struct parsing_result {
+		tk_vector_cit it_;
+		astnode node_;
+		bool valid_{ true };
+		sl_string error_message_{ "" };
+
+		parsing_result() = default;
+		parsing_result(astnode node,tk_vector_cit it = {}, bool valid = true, sl_string error_message = "")
+			: node_(node),it_(it), valid_(valid), error_message_(error_message) {}
+
+		constexpr tk_vector_cit it() const noexcept { return it_; }
+		constexpr astnode& node() noexcept { return node_; }
+		constexpr bool valid() const noexcept { return valid_; }
+		constexpr sl_string error_message() const noexcept { return error_message_; }
+	};
+
+	// <@class:parsing_process> virtual base class for a parsing process functor.
+	class parsing_process {
+		std::stringstream error_stream_;
+		parsing_result make_result(astnode node, tk_vector_cit cursor, bool valid = true, sl_string error_message = "") {
+			error_stream_ << error_message << "\n";
+			return parsing_result{ node,cursor, valid, error_stream_.str() };
+		}
+	protected:
+		parsing_result make_error(tk_vector_cit cursor, tk offending_token, sl_string error_message) {
+			error_stream_ << "\n" << error_message << " Offending token: " << sl::to_str(offending_token.literal())
+				<< "| Line: " << offending_token.line() << "| Col: " << offending_token.col() << "\n";
+			return parsing_result{ astnode(astnode_enum::invalid_),cursor, false, error_stream_.str() };
+		}
+		parsing_result make_success(astnode node,tk_vector_cit end) {
+			return make_result(node,end, true);
+		}
+
+		parsing_result make_pass(tk_vector_cit it) {
+			return make_result(astnode(astnode_enum::none_),it, false);
+		}
+
+		parsing_process(const sl_type_info& parsing_process_type) { error_stream_ << "[" << parsing_process_type.name() << "]"; };
+		parsing_process(const parsing_process& other) {
+			error_stream_ << other.error_stream_.str();
+		};
+		virtual parsing_result perform(tk_vector_cit begin, tk_vector_cit end) = 0;
+	public:
+		parsing_result operator()(tk_vector_cit begin, tk_vector_cit end) {
+			return perform(begin, end);
+		}
+		virtual ~parsing_process() = default;
+	};
 
 
 	sl_opt<astnode> build_statement2(tk_vector_cit begin,

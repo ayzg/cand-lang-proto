@@ -239,6 +239,12 @@ auto node_debug_string(const caoco::astnode& node) {
 	case caoco::astnode_enum::period_: debug_string += "period_"; break;
 	case caoco::astnode_enum::conditional_block_: debug_string += "conditional_block_"; break;
 	case caoco::astnode_enum::conditional_statement_: debug_string += "conditional_statement_"; break;
+	case caoco::astnode_enum::bit_literal_: debug_string += "bit_literal_"; break;
+	case caoco::astnode_enum::octet_literal_: debug_string += "octet_literal_"; break;
+	case caoco::astnode_enum::unsigned_literal_: debug_string += "unsigned_literal_"; break;
+	case caoco::astnode_enum::none_literal_: debug_string += "none_literal_"; break;
+		case caoco::astnode_enum::unary_minus_: debug_string += "unary_minus_"; break;
+			case caoco::astnode_enum::aint_constrained_: debug_string += "aint_constrained_"; break;
 	default: debug_string += "This node type is not string-convertible. Please implement a string conversion for this node type in the node_debug_string function in test.cpp.";
 	}
 
@@ -268,4 +274,18 @@ caoco::tk_vector_cit test_parsing_functor(caoco::sl_string test_name, ParsingFun
 	}
 	print_ast(parse_result.node()); // Print the AST for debugging purposes
 	return parse_result.it(); // The correct value is 1 past the end of the parsed tokens, so the next parsing method can start there.
+}
+
+// Test a parsing functor given a subset of tokens. Prints the test_name followed by the AST.
+template<typename ParsingFunctorT>
+caoco::tk_vector_cit test_parsing_function(caoco::sl_string test_name, ParsingFunctorT&& parsing_functor, caoco::tk_vector_cit begin, caoco::tk_vector_cit end) {
+	// Empty Class Definition
+	std::cout << "[Testing Parsing Method][Test Case:" << test_name << "]" << std::endl;
+	auto parse_result = parsing_functor(begin, end);
+	EXPECT_TRUE(parse_result.valid());
+	if (!parse_result.valid()) {
+		std::cout << parse_result.error_message() << std::endl;
+	}
+	print_ast(parse_result.expected()); // Print the AST for debugging purposes
+	return parse_result.always(); // The correct value is 1 past the end of the parsed tokens, so the next parsing method can start there.
 }

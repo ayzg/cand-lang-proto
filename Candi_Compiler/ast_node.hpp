@@ -6,7 +6,7 @@ namespace caoco {
 	class astnode {
 	public:
 		enum class e_type : int {
-			none_ = -1, invalid_, 
+			none_ = -1, invalid_, eos_,
 			string_literal_, number_literal_, real_literal_, none_literal_, 
 			alnumus_, unsigned_literal_, octet_literal_, bit_literal_, 
 			
@@ -77,6 +77,7 @@ namespace caoco {
 		
 		e_type type() const { return type_; }
 		const sl_list<astnode>& children() const { return body_; }
+		sl_list<astnode>& children_unsafe() { return body_; }
 		SL_CX sl_u8string literal() const {
 			return literal_;
 		}
@@ -92,6 +93,8 @@ namespace caoco {
 		// Internal parser use only.
 		astnode& push_back(astnode stmt) { body_.push_back(stmt); return body_.back(); }
 		astnode& push_front(astnode stmt) { body_.push_front(stmt); return body_.front(); }
+		astnode& pop_back() { body_.pop_back(); return body_.back(); }
+		astnode& pop_front() { body_.pop_front(); return body_.front(); }
 		astnode& front() { return body_.front(); }
 		astnode& back() { return body_.back(); }
 
@@ -199,6 +202,7 @@ namespace caoco {
 			case e_type::conditional_block_: debug_string += "conditional_block_"; break;
 			case e_type::conditional_statement_: debug_string += "conditional_statement_"; break;
 			case e_type::operand_: debug_string += "operand_"; break;
+			case e_type::unary_minus_: debug_string += "unary_minus_"; break;
 			default: debug_string += "This node type is not string-convertible. Please implement a string conversion for this node type in the node_debug_string function in test.cpp.";
 			}
 			debug_string += "]";

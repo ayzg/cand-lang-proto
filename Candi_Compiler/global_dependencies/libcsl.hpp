@@ -85,6 +85,13 @@ namespace caoco {
 			return vec;
 		}
 
+		sl_vector<char8_t> to_u8vec(const char* str) {
+			sl_vector<char8_t> vec;
+			for (int i = 0; str[i] != '\0'; i++) {
+				vec.push_back(str[i]);
+			}
+			return vec;
+		}
 
 		// Loads a file into a vector of chars
 		sl_char8_vector load_file_to_char8_vector(sl_string name) {
