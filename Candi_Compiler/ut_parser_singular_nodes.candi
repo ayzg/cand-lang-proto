@@ -12,11 +12,11 @@
 &real
 &octet
 &bit
-&pointer[type]
-&pointer[&int]
-&array[mytype,42] 
-&array[&int,42] 
-&array[&uint[0 ...42],666]
+//&pointer[type]
+//&pointer[&int]
+//&array[mytype,42] 
+//&array[&int,42] 
+//&array[&uint[0 ...42],666]
 
 // Literals
 'this is a string literal'

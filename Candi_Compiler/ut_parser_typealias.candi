@@ -1,0 +1,7 @@
+// type alias
+#type IntAlias = int;
+// type_definition
+#type Int = &int;
+// Type definition with contraints
+#type IntRange = &int[1 ...10];
+

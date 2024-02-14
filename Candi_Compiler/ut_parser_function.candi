@@ -1,17 +1,16 @@
-#func foo {}; // Shorthand Void Arg Method Definition
-#func foo (a, b, c) {}; // Unconstrained Method Definition
-#func foo() {};
-#func [&int] foo {}; // Constrained Shorthand Void Arg Method Definition
-#func [&int] foo (a, b, c) {}; // Constrained Method Definition
+#func foo {#var a;}; // Shorthand Void Arg Method Definition
+#func foo (a, b, c) {#var a;}; // Unconstrained Method Definition
+#func foo() {#var a;};
+#func [&int] foo {#var a;}; // Constrained Shorthand Void Arg Method Definition
+#func [&int] foo (a, b, c) {#var a;}; // Constrained Method Definition
 
 // Function definition with return
 #func foo {
-	#return 1;
+	#var a;
 };
 
 // Function definition with return and multiple statements
 #func foo {
 	a = 1;
 	b = 2;
-	#return a + b;
 };

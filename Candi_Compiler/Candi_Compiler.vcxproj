@@ -98,6 +98,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ast_node.hpp" />
+    <ClInclude Include="cand_errors.hpp" />
     <ClInclude Include="char_traits.hpp" />
     <ClInclude Include="constant_evaluator.hpp" />
     <ClInclude Include="global_dependencies.hpp" />
@@ -127,7 +128,9 @@
     <None Include="ut_ceval_vardecl.candi" />
     <None Include="packages.config" />
     <None Include="ut_parser_conditional.candi" />
+    <None Include="ut_parser_functionalblock.candi" />
     <None Include="ut_parser_loops.candi" />
+    <None Include="ut_parser_pragmaticblock.candi" />
     <None Include="ut_parser_singular_nodes.candi" />
     <None Include="ut_parser_simplestatements.candi" />
     <None Include="ut_parser_classes.candi" />
@@ -136,6 +139,8 @@
     <None Include="ut_parser_primaryexpr.candi" />
     <None Include="ut_parser_scopes.candi" />
     <None Include="ut_parser_statementscope.candi" />
+    <None Include="ut_parser_typealias.candi" />
+    <None Include="ut_parser_variabledecl.candi" />
     <None Include="ut_program_basic.candi" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

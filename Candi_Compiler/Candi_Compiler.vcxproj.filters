@@ -16,6 +16,7 @@
     <ClInclude Include="constant_evaluator.hpp" />
     <ClInclude Include="global_dependencies.hpp" />
     <ClInclude Include="unit_test_util.hpp" />
+    <ClInclude Include="cand_errors.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">
@@ -73,6 +74,18 @@
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="ut_parser_loops.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_typealias.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_variabledecl.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_pragmaticblock.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_functionalblock.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
   </ItemGroup>
