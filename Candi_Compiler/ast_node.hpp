@@ -41,7 +41,7 @@ namespace caoco {
 			program_, compiled_program_, interpreted_program_, 
 			pragmatic_block_, functional_block_, 
 			arguments_, type_constraints_, identifier_statement_, 
-			function_call_, variable_assignment_, type_definition_, 
+			function_call_, variable_assignment_, type_definition_, type_alias_,
 			anon_variable_definition_, anon_variable_definition_assingment_, 
 			constrained_variable_definition_, constrained_variable_definition_assingment_, method_definition_,
 			constrained_method_definition_, shorthand_void_method_definition_, 
@@ -203,6 +203,7 @@ namespace caoco {
 			case e_type::conditional_statement_: debug_string += "conditional_statement_"; break;
 			case e_type::operand_: debug_string += "operand_"; break;
 			case e_type::unary_minus_: debug_string += "unary_minus_"; break;
+			case e_type::type_alias_: debug_string += "type_alias_"; break;
 			default: debug_string += "This node type is not string-convertible. Please implement a string conversion for this node type in the node_debug_string function in test.cpp.";
 			}
 			debug_string += "]";

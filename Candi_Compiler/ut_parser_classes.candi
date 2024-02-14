@@ -11,6 +11,6 @@
 #class Foo {
     #var foo = a;
     #var bar;
-	#func foobar {#return 1;};
+	#func foobar {#var a;};
 };
 

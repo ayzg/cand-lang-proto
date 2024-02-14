@@ -59,7 +59,15 @@
 #define CAOCO_UT_V2Parser_ValueStatementREPL 0
 
 #define CAOCO_UT_V2Parser_BasicScopeFinder 1
+#define CAOCO_UT_V2Parser_ListScopeFinder 1
 #define CAOCO_UT_V2Parser_StatementScopeFinder 1
+
+#define CAOCO_UT_V2Parser_TypeAlias 1
+#define CAOCO_UT_V2Parser_VariableDeclaration 1
+#define CAOCO_UT_V2Parser_Functions 1
+#define CAOCO_UT_V2Parser_Classes 1
+#define CAOCO_UT_V2Parser_PragmaticBlock 1
+
 
 #define CAOCO_UT_V2Parser_ValueExpressions_NotWorking 1
 #endif
@@ -1401,6 +1409,43 @@ TEST(CaocoParser_BasicNode_BasicScopes, CaocoParser_Test) {
 }
 #endif
 
+#if CAOCO_UT_V2Parser_ListScopeFinder 
+TEST(CaocoParser_BasicNode_ListScopes, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("{}{a}{{}}{({})[{}]{}}");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	// empty list
+	std::cout << "Testing empty list:";
+	caoco::parser_scope_result empty_list = caoco::find_list_scope(result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_list.valid);
+	for (auto i = empty_list.scope_begin(); i != empty_list.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// list with 1 element
+	std::cout << "Testing list with 1 element:";
+	caoco::parser_scope_result list_with_1_element = caoco::find_list_scope(empty_list.scope_end(), result.cend());
+	EXPECT_TRUE(list_with_1_element.valid);
+	for (auto i = list_with_1_element.scope_begin(); i != list_with_1_element.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// double list
+	std::cout << "Testing double list:";
+	caoco::parser_scope_result double_list = caoco::find_list_scope(list_with_1_element.scope_end(), result.cend());
+	EXPECT_TRUE(double_list.valid);
+	for (auto i = double_list.scope_begin(); i != double_list.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// complex list
+	std::cout << "Testing complex list:";
+	caoco::parser_scope_result complex_list = caoco::find_list_scope(double_list.scope_end(), result.cend());
+	EXPECT_TRUE(complex_list.valid);
+	for (auto i = complex_list.scope_begin(); i != complex_list.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	
+
+}
+#endif
+
 #if CAOCO_UT_V2Parser_StatementScopeFinder
 TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_statementscope.candi");
@@ -1479,6 +1524,221 @@ TEST(ut_Parser_ValueStatements, ut_Parser) {
 }
 #endif
 
+#if CAOCO_UT_V2Parser_TypeAlias
+TEST(ut_Parser_TypeAlias, ut_Parser) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_typealias.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+
+	// Type alias
+	// #type IntAlias = Int;
+	std::cout << "Testing #type IntAlias = Int;" << std::endl;
+	auto px2 = caoco::parse_directive_type(result.cbegin(), result.cend());
+	EXPECT_TRUE(px2.valid());
+	if(px2.valid()) print_ast(px2.expected());
+	else std::cout << px2.error_message() << std::endl;
+
+
+	// Type definition
+	// #type Int = &int;
+	std::cout << "Testing #type Int = &int;" << std::endl;
+	auto px1 = caoco::parse_directive_type(px2.always(), result.cend());
+	EXPECT_TRUE(px1.valid());
+	if (px1.valid()) print_ast(px1.expected());
+	else std::cout << px1.error_message() << std::endl;
+
+
+	// Type definition with contraints
+	// #type IntRange = &int[1 ...10];
+	std::cout << "Testing #type IntRange = &int[1 ...10];" << std::endl;
+	auto px3 = caoco::parse_directive_type(px1.always(), result.cend());
+	EXPECT_TRUE(px3.valid());
+	if (px3.valid()) print_ast(px3.expected());
+	else std::cout << px3.error_message() << std::endl;
+
+}
+#endif
+
+#if CAOCO_UT_V2Parser_VariableDeclaration
+TEST(ut_Parser_VariableDeclaration, ut_Parser) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_variabledecl.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	// Anon Var Decl
+	// #var foo;
+	std::cout << "Testing #var foo;" << std::endl;
+	auto anon_var_decl = caoco::parse_directive_var(result.begin(), result.cend());
+	EXPECT_TRUE(anon_var_decl.valid());
+	if(anon_var_decl.valid()) print_ast(anon_var_decl.expected());
+	else std::cout << anon_var_decl.error_message() << std::endl;
+
+	// Anon Var Decl Assingment
+	// #var foo = 1;
+	std::cout << "Testing #var foo = 1;" << std::endl;
+	auto anon_var_decl_assign = caoco::parse_directive_var(anon_var_decl.always(), result.cend());
+	EXPECT_TRUE(anon_var_decl_assign.valid());
+	if(anon_var_decl_assign.valid()) print_ast(anon_var_decl_assign.expected());
+	else std::cout << anon_var_decl_assign.error_message() << std::endl;	
+
+	// Complex Anon Var Decl Assingment
+	// #var foo = 1 + c * (3 / 4);
+	std::cout << "Testing #var foo = 1 + c * (3 / 4);" << std::endl;
+	auto anon_var_decl_assign_complex = caoco::parse_directive_var(anon_var_decl_assign.always(), result.cend());
+	EXPECT_TRUE(anon_var_decl_assign_complex.valid());
+	if(anon_var_decl_assign_complex.valid()) print_ast(anon_var_decl_assign_complex.expected());
+	else std::cout << anon_var_decl_assign_complex.error_message() << std::endl;
+
+	// Type Contrained Var Decl
+	// #var [Int] foo;
+	std::cout << "Testing #var [Int] foo;" << std::endl;
+	auto type_constrained_var_decl = caoco::parse_directive_var(anon_var_decl_assign_complex.always(), result.cend());
+	EXPECT_TRUE(type_constrained_var_decl.valid());
+	if(type_constrained_var_decl.valid()) print_ast(type_constrained_var_decl.expected());
+	else std::cout << type_constrained_var_decl.error_message() << std::endl;
+
+	// Type Contrained Var Decl Assingment
+	// #var [Int] foo = 1;
+	std::cout << "Testing #var [Int] foo = 1;" << std::endl;
+	auto type_constrained_var_decl_assign = caoco::parse_directive_var(type_constrained_var_decl.always(), result.cend());
+	EXPECT_TRUE(type_constrained_var_decl_assign.valid());
+	if(type_constrained_var_decl_assign.valid()) print_ast(type_constrained_var_decl_assign.expected());
+	else std::cout << type_constrained_var_decl_assign.error_message() << std::endl;
+
+
+	// Complex Type Constrined Var Decl Assingment
+	// #var [Int] foo = 1 + c * (3 / 4);
+	std::cout << "Testing #var [Int] foo = 1 + c * (3 / 4);" << std::endl;
+	auto type_constrained_var_decl_assign_complex = caoco::parse_directive_var(type_constrained_var_decl_assign.always(), result.cend());
+	EXPECT_TRUE(type_constrained_var_decl_assign_complex.valid());
+	if(type_constrained_var_decl_assign_complex.valid()) print_ast(type_constrained_var_decl_assign_complex.expected());
+	else std::cout << type_constrained_var_decl_assign_complex.error_message() << std::endl;
+}
+#endif
+
+#if CAOCO_UT_V2Parser_Functions
+TEST(ut_Parser_Functions, ut_Parser) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_function.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	// Shorthand Void Arg Method <#func> <alnumus> <functional_block>
+	std::cout << "Testing #func foo {};" << std::endl;
+	auto shorthand_void_arg_method = caoco::parse_directive_func(result.cbegin(), result.cend());
+	EXPECT_TRUE(shorthand_void_arg_method.valid());
+	if (!shorthand_void_arg_method.valid()) {
+		std::cout << shorthand_void_arg_method.error_message() << std::endl;
+	}
+	else 
+		print_ast(shorthand_void_arg_method.expected());
+
+	// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
+	std::cout << "Testing #func foo (a, b, c) {};" << std::endl;
+	auto unconstrained_method = caoco::parse_directive_func(shorthand_void_arg_method.always(), result.cend());
+	EXPECT_TRUE(unconstrained_method.valid());
+	if (!unconstrained_method.valid()) {
+		std::cout << unconstrained_method.error_message() << std::endl;
+	}
+	else
+	print_ast(unconstrained_method.expected());
+
+	// Unconstrained Method Definition w/ no Args
+	std::cout << "Testing #func foo() {};" << std::endl;
+	auto unconstrained_method_no_args = caoco::parse_directive_func(unconstrained_method.always(), result.cend());
+	EXPECT_TRUE(unconstrained_method_no_args.valid());
+	if (!unconstrained_method_no_args.valid()) {
+		std::cout << unconstrained_method_no_args.error_message() << std::endl;
+	}
+	else
+	print_ast(unconstrained_method_no_args.expected());
+
+	// Constrained Shorthand Void Arg Method #func [&int] foo {};
+	std::cout << "Testing #func [&int] foo {};" << std::endl;
+	auto constrained_shorthand_void_arg_method = caoco::parse_directive_func(unconstrained_method_no_args.always(), result.cend());
+	EXPECT_TRUE(constrained_shorthand_void_arg_method.valid());
+	if (!constrained_shorthand_void_arg_method.valid()) {
+		std::cout << constrained_shorthand_void_arg_method.error_message() << std::endl;
+	}
+	else
+	print_ast(constrained_shorthand_void_arg_method.expected());
+
+
+	// Constrained method definition #func [&int] foo (a, b, c) {};
+	std::cout << "Testing #func [&int] foo (a, b, c) {};" << std::endl;
+	auto constrained_method = caoco::parse_directive_func(constrained_shorthand_void_arg_method.always(), result.cend());
+	EXPECT_TRUE(constrained_method.valid());
+	if (!constrained_method.valid()) {
+		std::cout << constrained_method.error_message() << std::endl;
+	}
+	else
+	print_ast(constrained_method.expected());
+	
+	/*Function definition with returns and statements
+		#func foo{
+			#return 1;
+		};
+	*/
+	std::cout << "Testing #func foo{#return 1;}; " << std::endl;
+	auto function_with_return = caoco::parse_directive_func(constrained_method.always(), result.cend());
+	EXPECT_TRUE(function_with_return.valid());
+	if (!function_with_return.valid()) {
+		std::cout << function_with_return.error_message() << std::endl;
+	}
+	else
+		print_ast(function_with_return.expected());
+
+
+	/* Function definition with return and multiple statements
+		#func foo {
+			a = 1;
+			b = 2;
+			#return a + b;
+		};
+	*/
+	std::cout << "Testing #func foo {a = 1;b = 2;#return a + b;}; " << std::endl;
+	auto function_with_multiple_statements = caoco::parse_directive_func(function_with_return.always(), result.cend());
+	EXPECT_TRUE(function_with_multiple_statements.valid());
+	if (!function_with_multiple_statements.valid()) {
+		std::cout << function_with_multiple_statements.error_message() << std::endl;
+	}
+	else
+	print_ast(function_with_multiple_statements.expected());
+
+}
+#endif
+
+#if CAOCO_UT_V2Parser_Classes
+TEST(CaocoParser_BasicNode_Classes, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_classes.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto empty_class_def_end = test_parsing_function(
+		"Empty Class Definition", &caoco::parse_directive_class,result.cbegin(), result.cend());
+	auto class_def_with_members_end = test_parsing_function(
+		"Class Definition with Members", &caoco::parse_directive_class, empty_class_def_end, result.cend());
+	auto class_def_with_members_and_methods_end = test_parsing_function(
+		"Class Definition with Members and Methods", &caoco::parse_directive_class, class_def_with_members_end, result.cend());
+}
+#endif
+
+#if CAOCO_UT_V2Parser_PragmaticBlock
+
+TEST(CaocoParser_BasicNode_PragmaticBlock, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_pragmaticblock.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto pragmatic_block_with_directives_end = test_parsing_function(
+		"Pragmatic Block with Directives", &caoco::parse_pragmatic_block, result.cbegin(), result.cend());
+}
+#endif
+
+#if CAOCO_UT_V2Parser_FunctionalBlock
+TEST(CaocoParser_BasicNode_FunctionalBlock, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_functionalblock.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto functional_block_with_statements_end = test_parsing_function(
+		"Functional Block with Statements", &caoco::parse_functional_block, result.cbegin(), result.cend());
+}
+#endif
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

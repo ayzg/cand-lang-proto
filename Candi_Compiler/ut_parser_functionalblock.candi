@@ -1,0 +1,14 @@
+{
+	#var a;
+
+	#type a = b;
+
+	#func foo() {#var a;};
+
+	a = 1;
+
+	#class A {
+		a = 1;
+		#func foo() {#var a;};
+	};
+}

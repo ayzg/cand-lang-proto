@@ -78,6 +78,8 @@ While using these names for your own purposes right now might not cause a proble
 #include <list> // std::list
 #include <initializer_list> // std::initializer_list
 #include <tuple>
+#include <stack>
+#include <deque>
 
 // Utils
 #include <cstdlib> // numeric string conversions
@@ -151,6 +153,9 @@ namespace caoco {
 	/// <@section:Containers>
 	template<typename T, std::size_t N>
 	using sl_array = std::array<T, N>;
+
+	template<class T,class Container = std::deque<T>>
+	using sl_stack = std::stack<T,Container>;
 
 	template<class T,class Allocator = std::allocator<T>> 
 	using sl_vector = std::vector<T,Allocator>;
