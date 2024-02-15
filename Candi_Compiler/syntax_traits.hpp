@@ -163,6 +163,37 @@ namespace caoco {
 		e_assoc get_token_associativity(tk_enum token_type);
 		int get_token_priority(tk_enum token_type);
 
+
+		SL_CX bool is_opening_scope(const tk & t) {
+			switch (t.type())
+			{	
+			case(tk_enum::open_scope_):
+			case(tk_enum::open_list_):
+			case(tk_enum::open_frame_):
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		SL_CX bool is_closing_scope(const tk & t) {
+			switch (t.type())
+			{
+			case(tk_enum::close_scope_):
+			case(tk_enum::close_list_):
+			case(tk_enum::close_frame_):
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		bool is_closing_scope_of(const tk& topen, const tk& tclose) {
+			return (topen == tk_enum::open_scope_ && tclose == tk_enum::close_scope_) ||
+				(topen == tk_enum::open_list_ && tclose == tk_enum::close_list_) ||
+				(topen == tk_enum::open_frame_ && tclose == tk_enum::close_frame_);
+		}
+
 		// Specific Methods based on the node type.
 		namespace ast {
 

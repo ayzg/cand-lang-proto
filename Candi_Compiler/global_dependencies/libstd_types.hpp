@@ -217,5 +217,8 @@ namespace caoco {
 
 		// Algorithms
 		using std::any_of;
+
+		// Iterator Utils
+		using std::advance;
 	}
 }

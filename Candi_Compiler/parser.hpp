@@ -76,7 +76,7 @@ expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit e
 //expected_parse_result parse_directive_ref(tk_vector_cit begin, tk_vector_cit end);
 
 expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end); // handles if, else if, else
-expected_parse_result parse_directive_switch(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_on(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end);
 
@@ -1153,7 +1153,7 @@ expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit en
 
 		auto functional_block = parse_functional_block(func_body_scope.scope_begin(), func_body_scope.scope_end());
 		if (!functional_block.valid()) {
-			return {false, "ParseDirectiveFunc: Invalid func statement format." };
+			return {false, "directive_func:functional_block: Could not parse functional block." };
 		}
 		nd.push_back(functional_block.expected());
 		return { true, "" };
@@ -1161,7 +1161,7 @@ expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit en
 
 	// Shorthand Void Arg Method Definition <#func> <alnumus> <functional_block>
 	if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_list_ })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
-		parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, *cursor.next(2), cursor.end());
+		parser_scope_result method_def_body_scope = find_list_scope( *cursor.next(2), cursor.end());
 
 		// After list scope must be an eos.
 		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
@@ -1229,7 +1229,7 @@ expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit en
 	// Shorthand Void Constrained Method Def or Constrained Method Def
 	else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame_ })) {
 		// Find the scope of the frame.
-		parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
+		parser_scope_result frame_scope = find_list_scope(*cursor.next(), cursor.end());
 
 		// After the frame scope must be an alnumus and an open list -> Shorthand Void Constrained Function Def
 		if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_list_ })) {
@@ -1264,11 +1264,11 @@ expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit en
 			parser_scope_result method_arguments_scope = find_scope(frame_scope.scope_end() + 1, cursor.end());
 
 			if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
-				parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, method_arguments_scope.scope_end(), cursor.end());
+				parser_scope_result method_def_body_scope = find_list_scope( method_arguments_scope.scope_end(), cursor.end());
 				// After list scope must be an eos.
 				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
 					// Create the node, omit the eos token.
-					astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
+					astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
 					node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
 					node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
 
@@ -1550,6 +1550,18 @@ expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit 
 			else if (it->type() == tk_enum::func_) {
 				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
 			}
+			else if (it->type() == tk_enum::if_) {
+				parse_statement(&parse_directive_if, tk_enum::if_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::while_) {
+				parse_statement(&parse_directive_while, tk_enum::while_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::on_) {
+				parse_statement(&parse_directive_on, tk_enum::on_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::for_) {
+				parse_statement(&parse_directive_for, tk_enum::for_, tk_enum::eos_);
+			}
 			//else if (it->type() == tk_enum::include_) {
 			//	it++;
 			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
@@ -1574,56 +1586,223 @@ expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit 
 	return expected_parse_result::make_success(it, node);
 }
 	
-	
-// Main paring method.
-//astnode parse_program(tk_vector_cit begin, tk_vector_cit end) {
-//	tk_cursor cursor(begin, end);
-//	// Program will be in the form:
-//	// #enter{}#start{}
-//	// Or it will be a pragmatic block. {} is optional.
-//	// So if a program does not begin with #enter, then it is a pragmatic block.
-//	// Else this is the "main" file. Inside of #enter is a pragmatic block.
-//	// Inside of #start is a functional block.
+expected_parse_result parse_directive_on(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
 
-//	if (cursor.type_is(tk_enum::enter_)) {
-//		auto program = astnode(astnode_enum::program_);
-//		cursor.advance();
-//		auto enter_scope = find_list(*cursor, end);
-//		auto enter_block = ParsePragmaticBlock()(enter_scope.contained_begin(), enter_scope.contained_end());
-//		if (enter_block.valid()) {
-//			program.push_back(enter_block.node());
-//		}
-//		else {
-//			throw std::runtime_error("parse_program: Invalid pragmatic block. Attempting to parse #enter block. Error:" + enter_block.error_message());
-//		}
-//		cursor.advance_to(enter_scope.scope_end());
+	// Expecting an #on directive on begin.
+	if (begin->type() != tk_enum::on_) {
+		return expected_parse_result::make_failure(begin, 
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveOn: Expected an #on directive."));
+	}
 
-//		// Check if #start is next.
-//		if (cursor.type_is(tk_enum::start_)) {
-//			cursor.advance();
-//			auto start_scope = find_list(*cursor, end);
-//			auto start_block = ParseFunctionalBlock()(start_scope.contained_begin(), start_scope.contained_end());
-//			if (start_block.valid()) {
-//				program.push_back(start_block.node());
-//			}
-//			else {
-//				throw std::runtime_error("parse_program: Invalid functional block. Attempting to parse #start block. Error:" + enter_block.error_message());
-//			}
-//		}
-//		else {
-//			throw std::runtime_error("parse_program: Invalid program. No start block following #enter block.");
-//		}
-//		return program;
-//	}
-//	else {
-//		auto pragma_block = ParsePragmaticBlock()(cursor.get_it(), end);
-//		if (pragma_block.valid()) {
-//			return pragma_block.node();
-//		}
-//		else {
-//			throw std::runtime_error("parse_program: Invalid program. Attempting to parse a pragmatic block. Did you #enter?");
-//		}
-//	}
-//}
+	cursor.advance();
+
+	// Expecting a conditional expression.
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following on directive.");
+	}
+	auto expr = parse_primary_expression(conditional_scope.contained_begin(), conditional_scope.contained_end());
+	if (!expr.valid()) {
+		return expected_parse_result::make_failure(conditional_scope.scope_begin()
+			, "Invalid #on conditional statement format. Expected an expression." + expr.error_message());
+	}
+
+	// next is a list scope.
+	parser_scope_result on_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!on_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #on block format. Expected a functional block.");
+	}
+
+	// inside the on block , expecting #if directives.
+	auto conditional_it = on_block_scope.contained_begin();
+	sl_vector<astnode> conditionals;
+	while(conditional_it < on_block_scope.contained_end()) {
+		if (conditional_it->type_is(tk_enum::if_)) {
+			auto cond = parse_directive_if(conditional_it, on_block_scope.contained_end());
+			if (!cond.valid()) {
+				return cond; // error
+			}
+			conditional_it = cond.always();
+			conditionals.push_back(cond.expected());
+		}
+		else {
+			return expected_parse_result::make_failure(conditional_it,
+				"Invalid #on block format. Expected an #if directive.");
+		}
+	}
+	cursor.advance_to(on_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(conditional_it,
+			"Invalid #on block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::on_, begin, on_block_scope.scope_end() };
+	node.push_back(expr.expected());
+	node.push_back({astnode_enum::on_block_, on_block_scope.scope_begin(), on_block_scope.scope_end()});
+	for (auto& c : conditionals) {
+		node.push_back(c);
+	}
+
+	return expected_parse_result::make_success(on_block_scope.scope_end() + 1, node);
+};
+
+expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	// Expecting an #while directive on begin.
+	if (begin->type() != tk_enum::while_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveWhile: Expected an #while directive."));
+	}
+
+	cursor.advance();
+
+	// Expecting a conditional expression.
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following while directive.");
+	}
+	auto expr = parse_primary_expression(conditional_scope.contained_begin(), conditional_scope.contained_end());
+	if (!expr.valid()) {
+		return expected_parse_result::make_failure(conditional_scope.scope_begin()
+			, "Invalid #while conditional statement format. Expected an expression." + expr.error_message());
+	}
+
+	// next is a list scope.
+	parser_scope_result while_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!while_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #while block format. Expected a functional block.");
+	}
+
+	// inside the while block , expecting #if directives.
+	auto while_block = parse_functional_block(while_block_scope.scope_begin(), while_block_scope.scope_end());
+	if (!while_block.valid()) {
+		return expected_parse_result::make_failure(while_block.always(),
+			"Invalid #while block format. Invalid functional block." + while_block.error_message());
+	}
+
+
+	cursor.advance_to(while_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(while_block.always(),
+			"Invalid #while block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::while_, begin, while_block_scope.scope_end() };
+	node.push_back(expr.expected());
+	node.push_back(while_block.expected());
+
+	return expected_parse_result::make_success(while_block_scope.scope_end()+1, node);
+}
+
+expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	if (begin->type() != tk_enum::for_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveFor: Expected an #for directive."));
+	}
+
+	cursor.advance();
+
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following for directive.");
+	}
+
+	auto conditional_scope_statements = find_seperated_paren_scopes(conditional_scope,tk_enum::eos_);
+	sl_vector<astnode> conditions;
+	for (auto& s : conditional_scope_statements) {
+		auto expr = parse_primary_expression(s.contained_begin(), s.contained_end());
+		if (!expr.valid()) {
+		return expected_parse_result::make_failure(s.scope_begin()
+				, "Invalid #for conditional statement format. Expected an expression." + expr.error_message());
+		}
+		conditions.push_back(expr.expected());
+	}
+
+	parser_scope_result for_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!for_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #for block format. Expected a functional block.");
+	}
+
+	auto for_block = parse_functional_block(for_block_scope.scope_begin(), for_block_scope.scope_end());
+	if (!for_block.valid()) {
+		return expected_parse_result::make_failure(for_block.always(),
+			"Invalid #for block format. Invalid functional block." + for_block.error_message());
+	}
+
+	cursor.advance_to(for_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(for_block.always(),
+			"Invalid #for block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::for_, begin, for_block_scope.scope_end()};
+	for (auto& c : conditions) {
+		node.push_back(c);
+	}
+	node.push_back(for_block.expected());
+
+	return expected_parse_result::make_success(for_block_scope.scope_end() + 1, node);
+};
+
+ //Main paring method.
+astnode parse_program(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	// Program will be in the form:
+	// #enter{}#start{}
+	// Or it will be a pragmatic block. {} is optional.
+	// So if a program does not begin with #enter, then it is a pragmatic block.
+	// Else this is the "main" file. Inside of #enter is a pragmatic block.
+	// Inside of #start is a functional block.
+
+	if (cursor.type_is(tk_enum::enter_)) {
+		auto program = astnode(astnode_enum::program_);
+		cursor.advance();
+		auto enter_scope = find_list(*cursor, end);
+		auto enter_block = parse_pragmatic_block(enter_scope.scope_begin(), enter_scope.scope_end());
+		if (enter_block.valid()) {
+			program.push_back(enter_block.expected());
+		}
+		else {
+			throw std::runtime_error("parse_program: Invalid pragmatic block. Attempting to parse #enter block. Error:" + enter_block.error_message());
+		}
+		cursor.advance_to(enter_scope.scope_end());
+
+		// Check if #start is next.
+		if (cursor.type_is(tk_enum::start_)) {
+			cursor.advance();
+			auto start_scope = find_list(*cursor, end);
+			auto start_block = parse_functional_block(start_scope.scope_begin(), start_scope.scope_end());
+			if (start_block.valid()) {
+				program.push_back(start_block.expected());
+			}
+			else {
+				throw std::runtime_error("parse_program: Invalid functional block. Attempting to parse #start block. Error:" + enter_block.error_message());
+			}
+		}
+		else {
+			throw std::runtime_error("parse_program: Invalid program. No start block following #enter block.");
+		}
+		return program;
+	}
+	else {
+			throw std::runtime_error("parse_program: Invalid program. Attempting to parse a pragmatic block. Did you #enter?");
+	}
+}
 
 } // end namespace caoco

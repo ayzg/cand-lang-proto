@@ -518,6 +518,138 @@ namespace caoco {
 		}
 
 		return parser_scope_result{ true, begin, last_closed + 1 };
+	} // end find_list_scope
+	parser_scope_result find_list_scope(tk_cursor crsr) {
+		return find_list_scope(crsr.get_it(), crsr.end());
+	}
+
+	// 1. Specific Method for extracting a seperated list scope. {<separator>}
+	sl_vector<parser_scope_result> find_seperated_list_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
+		sl_vector< parser_scope_result> scopes;
+		if (begin->type() != tk_enum::open_list_) {
+			scopes.push_back(parser_scope_result{ false, begin, end });
+			return scopes;
+		}
+		sl_stack<tk_enum> scope_type_history;
+		tk_vector_cit last_closed = begin;
+		begin++; // Skip the open list token
+		for (auto i = begin; i < end;) {
+			if (i->type_is(separator) && scope_type_history.empty()) {
+				scopes.push_back(parser_scope_result{ true, last_closed, i+1 });
+				last_closed = i;
+			}
+			else if(syntax::is_opening_scope(*i)){
+				scope_type_history.push(i->type());
+			}
+			else if(syntax::is_closing_scope(*i) && !scope_type_history.empty()) {
+				if (syntax::is_closing_scope_of(scope_type_history.top(), i->type())) {
+					scope_type_history.pop();
+				}
+				else {
+					scopes.push_back(parser_scope_result{ false, i, end }); // Wrong closing scope
+					return scopes;
+				}
+			}
+			else if(i->type_is(tk_enum::close_list_) && scope_type_history.empty()) {
+				// end of list
+				scopes.push_back(parser_scope_result{ true, last_closed, i+1});
+				return scopes;
+			}
+			else if(i->type_is(tk_enum::eof_)) {
+				scopes.push_back(parser_scope_result{ false, i, end }); // End of file
+				return scopes;
+			}
+			sl::advance(i,1);
+		}
+	}
+	sl_vector<parser_scope_result> find_seperated_list_scopes(parser_scope_result ls, tk_enum separator) {
+		return find_seperated_list_scopes(ls.scope_begin(), ls.scope_end(), separator);
+	}
+
+	// 1. Specific Method for extracting a seperated parentheses scope. (<separator>)
+	sl_vector<parser_scope_result> find_seperated_paren_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
+		sl_vector< parser_scope_result> scopes;
+		if (begin->type() != tk_enum::open_scope_) {
+			scopes.push_back(parser_scope_result{ false, begin, end });
+			return scopes;
+		}
+		sl_stack<tk_enum> scope_type_history;
+		tk_vector_cit last_closed = begin;
+		begin++; // Skip the open list token
+		for (auto i = begin; i < end;) {
+			if (i->type_is(separator) && scope_type_history.empty()) {
+				scopes.push_back(parser_scope_result{ true, last_closed, i + 1 });
+				last_closed = i;
+			}
+			else if (syntax::is_opening_scope(*i)) {
+				scope_type_history.push(i->type());
+			}
+			else if (syntax::is_closing_scope(*i) && !scope_type_history.empty()) {
+				if (syntax::is_closing_scope_of(scope_type_history.top(), i->type())) {
+					scope_type_history.pop();
+				}
+				else {
+					scopes.push_back(parser_scope_result{ false, i, end }); // Wrong closing scope
+					return scopes;
+				}
+			}
+			else if (i->type_is(tk_enum::close_scope_) && scope_type_history.empty()) {
+				// end of list
+				scopes.push_back(parser_scope_result{ true, last_closed, i + 1 });
+				return scopes;
+			}
+			else if (i->type_is(tk_enum::eof_)) {
+				scopes.push_back(parser_scope_result{ false, i, end }); // End of file
+				return scopes;
+			}
+			sl::advance(i, 1);
+		}
+	}
+	sl_vector<parser_scope_result> find_seperated_paren_scopes(parser_scope_result ls, tk_enum separator) {
+		return find_seperated_paren_scopes(ls.scope_begin(), ls.scope_end(), separator);
+	}
+
+	// 1. Specific Method for extracting a seperated frame scope. [<separator>]
+	sl_vector<parser_scope_result> find_seperated_frame_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
+		sl_vector< parser_scope_result> scopes;
+		if (begin->type() != tk_enum::open_frame_) {
+			scopes.push_back(parser_scope_result{ false, begin, end });
+			return scopes;
+		}
+		sl_stack<tk_enum> scope_type_history;
+		tk_vector_cit last_closed = begin;
+		begin++; // Skip the open list token
+		for (auto i = begin; i < end;) {
+			if (i->type_is(separator) && scope_type_history.empty()) {
+				scopes.push_back(parser_scope_result{ true, last_closed, i + 1 });
+				last_closed = i;
+			}
+			else if (syntax::is_opening_scope(*i)) {
+				scope_type_history.push(i->type());
+			}
+			else if (syntax::is_closing_scope(*i) && !scope_type_history.empty()) {
+				if (syntax::is_closing_scope_of(scope_type_history.top(), i->type())) {
+					scope_type_history.pop();
+				}
+				else {
+					scopes.push_back(parser_scope_result{ false, i, end }); // Wrong closing scope
+					return scopes;
+				}
+			}
+			else if (i->type_is(tk_enum::close_frame_) && scope_type_history.empty()) {
+				// end of list
+				scopes.push_back(parser_scope_result{ true, last_closed, i + 1 });
+				return scopes;
+			}
+			else if (i->type_is(tk_enum::eof_)) {
+				scopes.push_back(parser_scope_result{ false, i, end }); // End of file
+				return scopes;
+			}
+			sl::advance(i, 1);
+		}
+	}
+	sl_vector<parser_scope_result> find_seperated_frame_scopes(parser_scope_result ls, tk_enum separator) {
+		return find_seperated_frame_scopes(ls.scope_begin(), ls.scope_end(), separator);
 	}
 
 	parser_scope_result find_open_statement(tk_enum open, tk_enum close, tk_vector_cit begin, tk_vector_cit end) {
@@ -653,3 +785,10 @@ namespace caoco {
 	}
 
 };
+
+//
+//my[int] 1;
+//oh (what) ret what;
+//oh_my = oh(my);
+//req(oh_my);
+//

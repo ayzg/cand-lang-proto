@@ -1,0 +1,5 @@
+#on(x){
+	#if(1){#var a;}
+	#elif(2){#var b;}
+	#else{#var c;};
+};
