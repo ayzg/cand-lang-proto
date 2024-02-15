@@ -35,7 +35,7 @@ namespace caoco {
 			const_, static_, ref_, 
 			if_, else_, elif_, while_, for_, 
 			switch_, case_, default_, break_, continue_, 
-			return_, into_, //goto_,
+			return_, into_, on_,//goto_,
 			
 			statement_, expression_, declaration_, operand_,
 			program_, compiled_program_, interpreted_program_, 
@@ -48,7 +48,7 @@ namespace caoco {
 			shorthand_constrained_void_method_definition_, 
 			class_definition_, 
 
-			conditional_statement_,conditional_block_,
+			conditional_statement_,conditional_block_,on_block_,
 			
 			open_scope_, close_scope_, open_list_, close_list_, open_frame_, close_frame_, eof_,
 		};

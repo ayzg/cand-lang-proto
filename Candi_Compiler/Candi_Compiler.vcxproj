@@ -128,8 +128,9 @@
     <None Include="ut_ceval_vardecl.candi" />
     <None Include="packages.config" />
     <None Include="ut_parser_conditional.candi" />
+    <None Include="ut_parser_for.candi" />
     <None Include="ut_parser_functionalblock.candi" />
-    <None Include="ut_parser_loops.candi" />
+    <None Include="ut_parser_while.candi" />
     <None Include="ut_parser_pragmaticblock.candi" />
     <None Include="ut_parser_singular_nodes.candi" />
     <None Include="ut_parser_simplestatements.candi" />
@@ -139,6 +140,7 @@
     <None Include="ut_parser_primaryexpr.candi" />
     <None Include="ut_parser_scopes.candi" />
     <None Include="ut_parser_statementscope.candi" />
+    <None Include="ut_parser_switch.candi" />
     <None Include="ut_parser_typealias.candi" />
     <None Include="ut_parser_variabledecl.candi" />
     <None Include="ut_program_basic.candi" />

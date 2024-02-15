@@ -40,7 +40,7 @@ namespace caoco {
 			public_, const_, static_, ref_,
 			// Control Flow Tokens
 			if_, else_, elif_, while_, for_, switch_, case_, default_, break_,
-			continue_, return_, into_
+			continue_, return_, into_,on_
 		};
 	private:
 		e_type type_;

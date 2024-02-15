@@ -464,6 +464,9 @@ namespace caoco {
 			else if (find_forward(keyword_begin, u8"none")) {
 				return make_result(tk_enum::none_literal_, begin, it);
 			}
+			else if (find_forward(keyword_begin, u8"on")) {
+				return make_result(tk_enum::on_, begin, it);
+			}
 			else {
 				return make_invalid_result(begin, "Invalid directive keyword:" + sl_string(begin,it));
 			}
