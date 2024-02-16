@@ -4,7 +4,7 @@
 Pronunciation: “**candy**” or “**see-and**”
 
 # Goals 
-- Quick and easy deployment of a minimum viable product with the ability to opt in to type and logic safety incrementally.   
+- Quick and easy deployment of a minimum viable product with the ability to scale and stay maintainable by opting in to type and logic safety incrementally.     
 - Plug and play on top of any C++ environment and call native methods from C&. #include “candi.h” is all you need.   
 
 # Design Philosophies 
