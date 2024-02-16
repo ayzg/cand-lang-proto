@@ -1,7 +1,7 @@
 # C& 
 # Compiled and Interpreted Practical Programming Language
 
-Pronunciation: “**can-di**” or “**see-and**”
+Pronunciation: “**candy**” or “**see-and**”
 
 # Goals 
 - Quick and easy deployment of a minimum viable product with the ability to opt in to type and logic safety incrementally.   
