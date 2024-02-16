@@ -17,6 +17,7 @@
     <ClInclude Include="global_dependencies.hpp" />
     <ClInclude Include="unit_test_util.hpp" />
     <ClInclude Include="cand_errors.hpp" />
+    <ClInclude Include="preprocessor.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">
@@ -92,6 +93,15 @@
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="ut_parser_for.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="hundred_doors.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_program_shortform.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_preprocessor_include.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
   </ItemGroup>

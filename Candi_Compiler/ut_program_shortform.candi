@@ -1,0 +1,65 @@
+enter {
+	include standard
+
+	class Wolf {
+		var name $str;
+		func make_sound()
+			return 'howl';
+	}
+
+
+	class Dog {
+		var name;
+		func make_sound() 
+			return 'bark';
+	}
+
+	class Number {
+		var value $int;
+		func make_sound() 
+			return value.to_str();
+	}
+
+	var wolf = Wolf();
+	var dog = Dog();
+	var one = Number(1);
+
+	//var animals = {wolf, dog}; implement list operand.
+	//animals += Number(1); //oh no we added a 1
+	
+	//unsafe
+	func make_sounds(animal_list) {
+		//var sounds = {};
+		for (a in animal_list) {
+			sounds += a.name + ' | ' + a.make_sound();
+		}
+		return sounds;
+	}
+	//Runtime Error: a.name in line 33 is not a valid operation, Object 'a' of type 'Number' does not contain a member 'name'. 
+
+	//safe - this will fail because the list is not a list does not conform
+
+
+	requires animal_list is $list
+	requires animal_list has only ({
+			var name $str;
+			func make_sound()->$str;})
+	func make_sounds(animal_list) 
+	{
+		var sounds $str = {};
+		for (a in animal_list) {
+			sounds += a.make_sound();
+		}
+		return sounds;
+	}
+
+	//Error: make_sounds in line 47 is not a valid operation.
+	//Failed Contraint: 
+	//		requires animal_list has only ({var name $str;func make_sound()->$str;})
+	//Contraint failed for element 2 of animal_list. Object 'a' of type 'Number' does not contain a member 'name' of type $str.
+
+	Object 'a' of type 'Number' does not contain a member 'make_sound'
+}
+start {
+	return make_sounds();
+}

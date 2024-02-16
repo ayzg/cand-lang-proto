@@ -46,16 +46,21 @@ namespace caoco {
 		e_type type_;
 		sl_char8_vector_cit beg_;
 		sl_char8_vector_cit end_;
+		sl_u8string literal_;
 
 		sl_size line_;
 		sl_size col_;
 	public:
-		SL_CX tk() noexcept : type_(e_type::none_), beg_(), end_(), line_(0), col_(0) {}
-		SL_CX tk(e_type type) noexcept : type_(type), beg_(), end_(), line_(0), col_(0) {}
+		SL_CX tk() noexcept : type_(e_type::none_), beg_(), end_(), line_(0), col_(0), literal_(){}
+		SL_CX tk(e_type type) noexcept : type_(type), beg_(), end_(), line_(0), col_(0),literal_() {}
 		SL_CX tk(e_type type, sl_char8_vector_cit beg, sl_char8_vector_cit end) noexcept
-			: type_(type), beg_(beg), end_(end), line_(0), col_(0) {}
+			: type_(type), beg_(beg), end_(end), line_(0), col_(0) {
+			literal_ = sl_u8string(beg_, end_);
+		}
 		SL_CX tk(e_type type, sl_char8_vector_cit beg, sl_char8_vector_cit end, sl_size line, sl_size col) noexcept
-			: type_(type), beg_(beg), end_(end), line_(line), col_(col) {}
+			: type_(type), beg_(beg), end_(end), line_(line), col_(col) {
+			literal_ = sl_u8string(beg_, end_);
+		}
 	public:
 		SL_CX e_type type() const noexcept { return type_; }
 		SL_CX sl_char8_vector_cit beg() const noexcept { return beg_; }
@@ -65,11 +70,13 @@ namespace caoco {
 		SL_CX sl_size col() const noexcept { return col_; }
 		SL_CX sl_u8string literal() const {
 			// WARNING: Attempting to check or dereference the end or begin of a token with no literal will result in an exception.
-			return sl_u8string(beg_, end_);
+			return literal_;
+			//return sl_u8string(beg_, end_);
 		}
 		SL_CX sl_string literal_str() const {
 			// WARNING: Attempting to check or dereference the end or begin of a token with no literal will result in an exception.
-			return sl::to_str(sl_u8string(beg_, end_));
+			//return sl::to_str(sl_u8string(beg_, end_));
+			return sl::to_str(literal_);
 		}
 		SL_CX bool type_is(e_type type) const noexcept {
 			return type_ == type;
