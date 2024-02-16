@@ -1,4 +1,4 @@
-# C& Compiled and Interpreted Practical Programming Language
+# C& compiled and interpreted practical programming language
 
 Pronunciation: “**can-di**”(C.A.N.D.I.) or “**see-and**”(C&) 
 
