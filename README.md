@@ -4,8 +4,9 @@
 Pronunciation: “**candy**” or “**see-and**”
 
 # Goals 
-1. Quick and easy **deployment of a minimum viable product** with the **ability to scale and stay maintainable** by opting in to **type and logic safety** incrementally.     
-2. **Plug and play** on top of any C++ environment and call native C++ methods from C&. **#include “candi.h” is all you need.**  
+1. Quick and easy **deployment of a minimum viable product** with the **ability to scale and stay maintainable** by opting in to **type and logic safety** incrementally.
+2. Low cognitive load on the programmer with **legible self-explanatory syntax** that is **familiar in logic to mainstream C-like languages**. (C/C++)    
+3. **Plug and play** on top of any C++ environment and call native C++ methods from C&. **#include “candi.h” is all you need.**  
 
 # Design Philosophies 
 1. “When there is a right way, there should be one choice. When there is no right way, there should be as many choices as possible.” 
