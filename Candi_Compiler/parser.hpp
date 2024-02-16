@@ -1447,21 +1447,24 @@ expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit e
 			else if (it->type() == tk_enum::func_) {
 				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
 			}
-			//else if (it->type() == tk_enum::include_) {
-			//	it++;
-			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
-			//	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-			//	auto included_code = ParsePragmaticBlock()(result.begin(), result.end());
+			else if (it->type() == tk_enum::include_) {
+				it++;
+				auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
+				auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+				auto included_code = parse_pragmatic_block(result.begin(), result.end());
 
-			//	if (included_code.valid()) {
-			//		node.push_back(included_code.node());
-			//		it = it + 2;//past name and eos
-			//	}
-			//	else {
-			//		throw std::runtime_error("ParsePragmaticBlock: Invalid include statement.");
-			//	}
+				if (included_code.valid()) {
+					for (const auto & n : included_code.expected().children()){
+						node.push_back(n);
+					}
+					it = it + 2;//past name and eos
+				}
+				else {
+					return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
+						it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
+				}
 
-			//}
+			}
 			else {
 				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
 			}
@@ -1561,6 +1564,9 @@ expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit 
 			}
 			else if (it->type() == tk_enum::for_) {
 				parse_statement(&parse_directive_for, tk_enum::for_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::return_){
+				parse_statement(&parse_directive_return, tk_enum::return_, tk_enum::eos_);
 			}
 			//else if (it->type() == tk_enum::include_) {
 			//	it++;
@@ -1760,6 +1766,27 @@ expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end
 	return expected_parse_result::make_success(for_block_scope.scope_end() + 1, node);
 };
 
+expected_parse_result parse_directive_return(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	if (begin->type() != tk_enum::return_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveReturn: Expected a return directive."));
+	}
+
+	cursor.advance();
+
+	// expecting a value statement.
+	auto value_statement = parse_value_statement(cursor.get_it(), cursor.end());
+	if (!value_statement.valid()) {
+		return expected_parse_result::make_failure(cursor.get_it(),
+			"ParseDirectiveReturn: Invalid return statement format. Expected a value statement." + value_statement.error_message());
+	}
+
+	astnode node{ astnode_enum::return_, begin, value_statement.always() };
+	node.push_back(value_statement.expected());
+	return expected_parse_result::make_success(value_statement.always(), node);
+}
  //Main paring method.
 astnode parse_program(tk_vector_cit begin, tk_vector_cit end) {
 	tk_cursor cursor(begin, end);

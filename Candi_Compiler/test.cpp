@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "unit_test_util.hpp"
 
-#define CAOCO_TEST_ALL 1
-#define CAOCO_TEST_NONE 0
+#define CAOCO_TEST_ALL 0
+#define CAOCO_TEST_NONE 1
 
 #if CAOCO_TEST_ALL
 #define CAOCO_UT_V2Parser_SingleNodes 1
@@ -20,34 +20,23 @@
 #define CAOCO_UT_V2Parser_Classes 1
 #define CAOCO_UT_V2Parser_PragmaticBlock 1
 #define CAOCO_UT_V2Parser_FunctionalBlock 1
-#define CAOCO_UT_V2Parser_MinimumProgram 1
 #define CAOCO_UT_V2Parser_ConditionalStatements 1
 #define CAOCO_UT_V2Parser_SwitchStatement 1
 #define CAOCO_UT_V2Parser_WhileLoop 1
 #define CAOCO_UT_V2Parser_ForLoop 1
 
+#define CAOCO_UT_V2Parser_ReturnStatement 1
+
+#define CAOCO_UT_V2Parser_MinimumProgram 1
+#define CAOCO_UT_V2Parser_BasicProgram 1
+
 #define CAOCO_UT_V2ParserUtils_SeperatedList 1
+
+#define CAOCO_UT_Preprocessor_Include 1
 #endif
 
 #if CAOCO_TEST_NONE
-#define CAOCO_UT_V2Parser_SingleNodes 0
-#define CAOCO_UT_V2Parser_ValueExpressions 0
-#define CAOCO_UT_V2Parser_ValueStatements 0
-#define CAOCO_UT_V2Parser_ValueStatementREPL 0
-
-#define CAOCO_UT_V2Parser_BasicScopeFinder 0
-#define CAOCO_UT_V2Parser_ListScopeFinder 0
-#define CAOCO_UT_V2Parser_StatementScopeFinder 0
-
-#define CAOCO_UT_V2Parser_TypeAlias 0
-#define CAOCO_UT_V2Parser_VariableDeclaration 0
-#define CAOCO_UT_V2Parser_Functions 0
-#define CAOCO_UT_V2Parser_Classes 0
-#define CAOCO_UT_V2Parser_PragmaticBlock 0
-#define CAOCO_UT_V2Parser_FunctionalBlock 0
-
-// For tests which are still not complete...
-#define CAOCO_UT_V2Parser_ValueExpressions_NotWorking 0
+#define CAOCO_UT_Preprocessor_Include 1
 #endif
 
 
@@ -1054,6 +1043,46 @@ TEST(CaocoParserUtils_SeperatedList, CaocoParser_Test) {
 			std::cout << a->literal_str();
 		}
 		std::cout << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_UT_V2Parser_ReturnStatement 
+TEST(CaocoParser_ReturnStatement, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("#return a;\0");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+
+	auto return_statement = test_parsing_function(
+		"return statement", &caoco::parse_directive_return, result.cbegin(), result.cend());
+}
+#endif
+
+#if CAOCO_UT_V2Parser_BasicProgram
+TEST(CaocoParser_BasicProgram, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_program_basic.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	try {
+		auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
+		print_ast(parse_result);
+	}catch(std::exception e){
+		std::cout << e.what() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_UT_Preprocessor_Include 
+TEST(CaocoPreprocessor_Include, CaocoPreprocessor_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_preprocessor_include.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto preprocessed = caoco::preprocess(result, "ut_preprocessor_include.candi");
+
+	if(!std::get<1>(preprocessed)){
+		std::cout << "Preprocessing Error: " << std::get<2>(preprocessed) << std::endl;
+	}
+	else {
+		for (auto& token : std::get<0>(preprocessed)) {
+			std::cout << token.literal_str();
+		}
 	}
 }
 #endif

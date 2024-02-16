@@ -23,9 +23,9 @@
 
 	#func make_sounds{
 		//#var sounds = {};
-		//#for (animal in animals) {
-		//	sounds += animal.make_sound();
-		//}
+		#for (animals) {
+			sounds += animal.make_sound();
+		};
 		#return sounds;
 	};
 }

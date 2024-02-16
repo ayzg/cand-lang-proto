@@ -62,7 +62,9 @@ namespace caoco {
 
 	namespace sl {
 		// Converts a string_t utf 8 string to a std::string char string
-		SL_CXIN sl_string to_str(const sl_u8string& str) {
+		SL_CXIN sl_string to_str(const sl_u8string& str) 
+		{
+			
 			return sl_string(str.begin(), str.end());
 		}
 
