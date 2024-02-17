@@ -74,7 +74,28 @@ namespace caoco {
 				literal_ += it->literal();
 			}
 		}
-		
+		astnode(e_type type, const sl_u8string & literal,const sl_vector<astnode> & children) : type_(type), literal_(literal){
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+		astnode(e_type type, const char8_t * literal, const sl_vector<astnode>& children) : type_(type), literal_(literal) {
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+		template<sl_size LIT_SIZE>
+		astnode(e_type type, const char8_t literal[LIT_SIZE], const sl_vector<astnode>& children) : type_(type), literal_(literal) {
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+
+		astnode(e_type type, const sl_u8string& literal) : type_(type), literal_(literal) {}
+		astnode(e_type type, const char8_t* literal) : type_(type), literal_(literal) {}
+		template<sl_size LIT_SIZE>
+		astnode(e_type type, const char8_t literal[LIT_SIZE]) : type_(type), literal_(literal) {}
+
 		e_type type() const { return type_; }
 		const sl_list<astnode>& children() const { return body_; }
 		sl_list<astnode>& children_unsafe() { return body_; }
