@@ -91,6 +91,11 @@ namespace caoco {
 			}
 		}
 
+		template<typename...  ChildTs> requires (std::is_same_v<astnode, ChildTs> && ...)
+		astnode(e_type type, const sl_u8string& literal, ChildTs... children) : type_(type), literal_(literal) {
+			(body_.push_back(children), ...);
+		}
+
 		astnode(e_type type, const sl_u8string& literal) : type_(type), literal_(literal) {}
 		astnode(e_type type, const char8_t* literal) : type_(type), literal_(literal) {}
 		template<sl_size LIT_SIZE>

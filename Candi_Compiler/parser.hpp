@@ -338,24 +338,29 @@ expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
 }
 
 astnode expression_simplify(astnode node) {
-	if (node.children().empty()) return node;
-
-	if (node.front().type() == astnode_enum::expression_) {
-		auto expr = node.front().front();
-		node.front() = expr;
+	if(node.type() == astnode_enum::expression_){
+		auto expr = node.front();
+		return expression_simplify(expr);
 	}
+	else{
+		if (node.children().empty()) return node;
 
-	if (node.back().type() == astnode_enum::expression_) {
-		auto expr = node.back().front();
-		node.back() = expr;
+		if (node.front().type() == astnode_enum::expression_) {
+			auto expr = node.front().front();
+			node.front() = expr;
+		}
+
+		if (node.back().type() == astnode_enum::expression_) {
+			auto expr = node.back().front();
+			node.back() = expr;
+		}
+
+		auto new_front = expression_simplify(node.front());
+		auto new_back = expression_simplify(node.back());
+
+		node.front() = new_front;
+		node.back() = new_back;
 	}
-
-	auto new_front = expression_simplify(node.front());
-	auto new_back = expression_simplify(node.back());
-
-	node.front() = new_front;
-	node.back() = new_back;
-
 	return node;
 }
 
@@ -818,8 +823,10 @@ expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
 			begin, "parse_arguments : Invalid arguments scope."));
 	}
 
+	// Early Return, if arugments scope is empty.
 	if (scope.is_empty()) {
-		return expected_parse_result::make_success(begin, astnode(astnode_enum::arguments_, begin, end));
+		return expected_parse_result::make_success(scope.scope_end(),
+			astnode(astnode_enum::arguments_, scope.scope_begin(), scope.scope_end()));
 	}
 
 	// Get each argument out of the scope.

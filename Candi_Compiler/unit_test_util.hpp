@@ -368,7 +368,7 @@ caoco::tk_vector_cit test_and_compare_parsing_function(caoco::sl_string test_nam
 
 // Test a parsing functor given a subset of tokens. Prints the test_name followed by the AST.
 template<typename ParsingFunctorT>
-caoco::tk_vector_cit test_and_compare_parsing_function_from_u8(caoco::sl_string test_name,
+bool test_and_compare_parsing_function_from_u8(caoco::sl_string test_name,
 	ParsingFunctorT&& parsing_functor,
 	const caoco::astnode& expected_ast,
 	const caoco::sl_u8string & code
@@ -377,23 +377,24 @@ caoco::tk_vector_cit test_and_compare_parsing_function_from_u8(caoco::sl_string 
 	auto lex_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
 	if (!lex_result.valid()) {
 		std::cout << lex_result.error_message() << std::endl;
-		return source_file.cbegin();
+		return false;
 	}
 	else {
 		auto result = lex_result.expected();
 
 		std::cout << "[Testing Parsing Method][Test Case:" << test_name << "]" << std::endl;
 		auto parse_result = parsing_functor(result.begin(), result.end());
-		EXPECT_TRUE(parse_result.valid());
+		//EXPECT_TRUE(parse_result.valid());
 		if (!parse_result.valid()) {
 			std::cout << parse_result.error_message() << std::endl;
+			return false;
 		}
 		else {
 			auto parsed_ast = parse_result.expected();
 			print_ast(parsed_ast);
 			EXPECT_TRUE(compare_ast(parse_result.expected(), expected_ast));
 		}
-		return parse_result.always();
+		return true;
 	}
 }
 
@@ -425,7 +426,6 @@ bool test_and_compare_split_parsing_function_from_u8(const caoco::sl_string & te
 		return true;
 	}
 }
-
 
 
 
