@@ -111,6 +111,15 @@ While using these names for your own purposes right now might not cause a proble
 #define SL_CXSIN constexpr static inline
 #define SL_CXS constexpr static
 
+
+#define SL_SA static auto
+#define SL_INA inline auto
+#define SL_CXA constexpr auto
+#define SL_SINA static inline auto
+#define SL_CXINA constexpr inline auto
+#define SL_CXSINA constexpr static inline auto
+#define SL_CXSA constexpr static auto
+
 //#define __CINIT constinit
 #define SL_CE consteval
 #define SL_CINIT constinit
@@ -122,6 +131,7 @@ While using these names for your own purposes right now might not cause a proble
 #define SL_CASEF template<>
 
 namespace caoco {
+	using sl_nullopt = std::nullopt_t;
 
 	/// <@section:Basic Types>
 	using sl_size = std::size_t;

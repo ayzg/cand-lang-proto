@@ -5,6 +5,32 @@
 
 namespace caoco {
 	namespace ca_error {
+		namespace tokenizer {
+
+			auto invalid_char = [](sl_size line, sl_size col, char8_t c,sl_string error="") {
+				std::stringstream ss;
+				ss << "\n[User Syntax Error]: ";
+				ss << "\nInvalid character at line: " << line << " column: " << col << " \nerror detail: " << error;
+				ss << "\n Offending character: " << static_cast<char>(c);
+				return ss.str();
+			};
+
+			auto lexer_syntax_error = [](sl_size line, sl_size col, char8_t c, sl_string error="") {
+				std::stringstream ss;
+				ss << "\n[User Syntax Error]: ";
+				ss << "\nLexer syntax error at line: " << line << " column: " << col 
+					<< "\n Offending character: " << static_cast<char>(c) << "\nerror detail: " << error;
+				return ss.str();
+			};
+
+			auto programmer_logic_error = [](sl_size line, sl_size col, char8_t c, sl_string error="") {
+				std::stringstream ss;
+				ss << "\n[Compiler programmer logic error]: ";
+				ss << "\nFailed to tokenize at line: " << line << " column: " << col 
+					<< "\n Offending character: " << static_cast<char>(c) << " \nerror detail: " << error;
+				return ss.str();
+			};
+		}
 		namespace parser {
 			auto programmer_logic_error = [](astnode_enum attempted_astnode_type, tk_vector_cit error_location, sl_string error_message = "") {
 				std::stringstream ss;

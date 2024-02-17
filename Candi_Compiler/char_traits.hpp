@@ -102,6 +102,14 @@ namespace caoco {
 			return c == '_';
 		}
 
+		SL_CXS bool is_alnum(char8_t c) {
+			return is_alpha(c) || is_numeric(c);
+		}
+
+		SL_CXS bool is_alus(char8_t c) {
+			return is_alpha(c) || is_underscore(c);
+		}
+
 		SL_CXS bool is_alnumus(char8_t c) {
 			return is_alpha(c) || is_numeric(c) || is_underscore(c);
 		}

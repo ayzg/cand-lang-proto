@@ -1,17 +1,20 @@
 #pragma once
 #include "global_dependencies.hpp"
 #include "char_traits.hpp"
+#include "cand_constants.hpp"
 #include "token.hpp"
-
+#include "cand_errors.hpp"
 namespace caoco {
 	class tokenizer {
 		// Constants
-		SL_CXS char8_t EOF_CHAR = '\0';
-
+		SL_CXS char8_t EOF_CHAR = ca_constant::u8::EOF_CHAR;
+	public:
+		using lex_result = sl_partial_expected<tk, sl_char8_vector_cit>;
+		using tokenizer_result = sl_expected<tk_vector>;
 		// Internal classes
-		class lex_result;
-		struct lex_error;
-
+		//class lex_result;
+		//struct lex_error;
+		private:
 		SL_CXIN lex_result make_result(tk_enum type, sl_char8_vector_cit beg_it, sl_char8_vector_cit end_it);
 		SL_CXIN lex_result make_none_result(sl_char8_vector_cit beg_it);
 		SL_CXIN lex_result make_invalid_result(sl_char8_vector_cit beg_it, const sl_string& error);
@@ -42,81 +45,126 @@ namespace caoco {
 		SL_CX lex_result lex_candi_special(sl_char8_vector_cit it);
 		SL_CX lex_result lex_period(sl_char8_vector_cit it);
 
-		tk_vector tokenize();
+		constexpr tokenizer_result tokenize();
 	public:
 		tokenizer() = delete;
 		SL_CX explicit tokenizer(sl_char8_vector_cit beg, sl_char8_vector_cit end) {
 			beg_ = beg;
 			end_ = end;
 		};
-		tk_vector operator()(){
+		tokenizer_result operator()(){
 			// Check for empty input
 			if (beg_ == end_) {
-				return tk_vector();
+				return tokenizer_result::make_failure("Empty input");
 			}
 			return tokenize();
 		}
 	};
 
-	// Internal classes
-	class tokenizer::lex_result {
-		tk token_;
-		sl_char8_vector_cit end_it_;
-		sl_string error_;
-	public:
-		SL_CX lex_result(tk token, sl_char8_vector_cit end_it, sl_string error = "")
-			: token_(token), end_it_(end_it), error_(error) {}
-		SL_CX const tk& token() const { return token_; }
-		SL_CX const sl_string& error() const { return error_; }
-		SL_CX sl_char8_vector_cit end_it() const { return end_it_; }
-	};
+	//// Internal classes
+	//class tokenizer::lex_result {
+	//	tk token_;
+	//	sl_char8_vector_cit end_it_;
+	//	sl_string error_;
+	//public:
+	//	SL_CX lex_result(tk token, sl_char8_vector_cit end_it, sl_string error = "")
+	//		: token_(token), end_it_(end_it), error_(error) {}
+	//	SL_CX const tk& token() const { return token_; }
+	//	SL_CX const sl_string& error() const { return error_; }
+	//	SL_CX sl_char8_vector_cit end_it() const { return end_it_; }
+	//};
 
-	struct tokenizer::lex_error : public std::logic_error {
-		auto make_error(sl_size line, sl_size col, sl_string error) {
-			return "Error at line: " + std::to_string(line)
-				+ ", column: " + std::to_string(col)
-				+ " Details: " + error + "\n";
+	//struct tokenizer::lex_error : public std::logic_error {
+	//	auto make_error(sl_size line, sl_size col, sl_string error) {
+	//		return "Error at line: " + std::to_string(line)
+	//			+ ", column: " + std::to_string(col)
+	//			+ " Details: " + error + "\n";
 
-		}
-		lex_error(sl_size line, sl_size col, sl_string error)
-			: std::logic_error(make_error(line, col, error)) {}
-	};
+	//	}
+	//	lex_error(sl_size line, sl_size col, sl_string error)
+	//		: std::logic_error(make_error(line, col, error)) {}
+	//};
 
 	// Main tokenizer method
-	tk_vector tokenizer::tokenize() {
+	constexpr tokenizer::tokenizer_result tokenizer::tokenize() {
+		enum keyword_syntax_switch{
+			keyword_syntax_switch_none,
+			keyword_syntax_switch_directive,
+			keyword_syntax_switch_keyword
+		}keyword_syntax_switch;
+		bool keyword_syntax_switched = false;
+		auto swap_keyword_syntax = 
+			[&keyword_syntax_switch,&keyword_syntax_switched](tk token,sl_size line,sl_size col)->sl_boolerror {
+			if (token.is_directive()){
+				if (keyword_syntax_switched) {
+					if(token.literal()[0] == u8'#'){
+						if (keyword_syntax_switch == keyword_syntax_switch_keyword) {
+							return "Directive in Keyword File. Mixing keyword and directive keyword syntax in a single file is forbbiden.";
+						}
+					}
+					else {
+						if (keyword_syntax_switch == keyword_syntax_switch_directive) {
+							return "Keyword in Directive File. Mixing keyword and directive keyword syntax in a single file is forbbiden.";
+						}
+					}
+				}
+				else {
+					if (token.literal()[0] == u8'#') {
+						keyword_syntax_switch = keyword_syntax_switch_directive;
+						keyword_syntax_switched = true;
+					}
+					else {
+						keyword_syntax_switch = keyword_syntax_switch_keyword;
+						keyword_syntax_switched = true;
+					}
+				}
+			}
+			return true;
+		};
+		
 		sl_char8_vector_cit it = beg_;
 		tk_vector output_tokens;
 		sl_size current_line = 1;
 		sl_size current_col = 1;
 
 		// Lambda for executing a lexer and updating the iterator.
-		auto perform_lex = [&](auto lexer) SL_CX-> bool{
+		auto perform_lex = [&](auto lexer) SL_CX-> sl_expected<bool> {
 			lex_result lex_result = (this->*lexer)(it);
-			const tk& result_token = lex_result.token();
-			if (lex_result.token().type() == tk_enum::none_) { // No match, try next lexer
-				return false;
+			if(!lex_result.valid()){
+			    return  sl_expected<bool>::make_failure(lex_result.error_message());
 			}
-			else if (lex_result.token().type() == tk_enum::invalid_) {
-				throw lex_error(current_line,current_col,lex_result.error());
+			const tk& result_token = lex_result.expected();
+			sl_char8_vector_cit result_end = lex_result.always();
+			
+			if (result_token.type() == tk_enum::none_) { // No match, try next lexer
+				return sl_expected<bool>::make_success(false);
 			}
+			//else if (result_token.type() == tk_enum::invalid_) {
+			//	throw lex_error(current_line,current_col,lex_result.error());
+			//}
 			else { // Lexing was successful
 				// Update position based on the number of characters consumed
-				current_line += std::count(it, lex_result.end_it(), '\n');
+				current_line += std::count(it, result_end, '\n');
 
 				// Find the last newline before the current character
-				sl_char8_vector_cit last_newline = std::find(sl_reverse_iterator(lex_result.end_it()), sl_reverse_iterator(it), '\n').base();
+				sl_char8_vector_cit last_newline = std::find(sl_reverse_iterator(result_end), sl_reverse_iterator(it), '\n').base();
 				// If there is no newline before the current character, use the start of the string
 				if (last_newline == end_) {
 					last_newline = beg_;
 				}
 
 				// Calculate the character index within the line
-				current_col = std::distance(last_newline, lex_result.end_it());
+				current_col = std::distance(last_newline, result_end);
+
+				// SPECIAL CASE: Keyword syntax switch
+				auto switch_result = swap_keyword_syntax(result_token,current_line,current_col);
+				if(!switch_result.valid())
+					return sl_expected<bool>::make_failure(switch_result.error_message());
 
 				// Set the line and col of the resulting token and emplace it into the output vector
 				output_tokens.push_back(tk(result_token.type(), result_token.beg(), result_token.end(),current_line,current_col));
-				it = lex_result.end_it(); // Advance the iterator to the end of lexing. Note lex end and token end may differ.
-				return true;
+				it = result_end; // Advance the iterator to the end of lexing. Note lex end and token end may differ.
+				return sl_expected<bool>::make_success(true);
 			}
 		};
 
@@ -125,21 +173,24 @@ namespace caoco {
 		while (it != end_) {
 			bool match = false;
 			for (auto lexer : { &tokenizer::lex_solidus,&tokenizer::lex_apostrophe,&tokenizer::lex_newline,
-					&tokenizer::lex_whitespace,&tokenizer::lex_eof, &tokenizer::lex_number,&tokenizer::lex_alnumus,
-					&tokenizer::lex_directive,&tokenizer::lex_candi_special,&tokenizer::lex_operator,&tokenizer::lex_scopes, &tokenizer::lex_eos,
+					&tokenizer::lex_whitespace,&tokenizer::lex_eof,& tokenizer::lex_directive,&tokenizer::lex_number,&tokenizer::lex_alnumus,
+					&tokenizer::lex_candi_special,&tokenizer::lex_operator,&tokenizer::lex_scopes, &tokenizer::lex_eos,
 					&tokenizer::lex_comma, &tokenizer::lex_period }) {
-				if (perform_lex(lexer)) {
+				auto lex_result = perform_lex(lexer);
+				if (!lex_result.valid()) { // Error inside one of the lexers
+					return tokenizer_result::make_failure(
+						ca_error::tokenizer::lexer_syntax_error(current_line, current_col, get(it),lex_result.error_message()));
+				}
+				else if (lex_result.expected()) {
 					// Note: The iterator 'it' is advanced in perform_lex lambda.
 					match = true;
 					break; // Exit for-loop
 				}
 			}
 
-			if (!match) {// None of the lexers matched, report an error
-				std::stringstream char_error;
-				char_error << " Unrecognized character : '" << static_cast<char>(get(it)) << "'\n";
-				// Stop lexing and throw. 
-				throw lex_error(current_line, current_col, char_error.str());
+			if (!match) { // None of the lexers matched, report an error
+				return tokenizer_result::make_failure(
+					ca_error::tokenizer::invalid_char(current_line, current_col, get(it)));
 			}
 		}
 
@@ -148,7 +199,7 @@ namespace caoco {
 		tk_vector sanitized = [&]() SL_CX{
 			tk_vector new_output;
 			for (auto i = output_tokens.cbegin(); i != output_tokens.cend(); ++i) {
-				const std::initializer_list<tk_enum> REDUNDANT_TOKEN_KINDS{
+				const sl_ilist<tk_enum> REDUNDANT_TOKEN_KINDS{
 					tk_enum::whitespace_,
 					tk_enum::line_comment_,
 					tk_enum::block_comment_,
@@ -166,20 +217,20 @@ namespace caoco {
 			return new_output;
 		}(); // Note: The lambda is immediately called.
 
-		return sanitized;
+		return tokenizer_result::make_success(sanitized);
 	} // end tokenize
 
 	// Lexer's Utility methods
 	SL_CXIN tokenizer::lex_result tokenizer::make_result(tk_enum type, sl_char8_vector_cit beg_it, sl_char8_vector_cit end_it) {
-		return lex_result(tk(type, beg_it, end_it), end_it);
+		return lex_result::make_success(end_it, tk(type, beg_it, end_it));
 	}
 
 	SL_CXIN tokenizer::lex_result tokenizer::make_none_result(sl_char8_vector_cit beg_it) {
-		return lex_result(tk(tk_enum::none_, beg_it, beg_it), beg_it);
+		return lex_result::make_success(beg_it,tk(tk_enum::none_, beg_it, beg_it));
 	}
 
 	SL_CXIN tokenizer::lex_result tokenizer::make_invalid_result(sl_char8_vector_cit beg_it, const sl_string& error) {
-		return lex_result(tk(tk_enum::invalid_, beg_it, beg_it), beg_it, error);
+		return lex_result::make_failure(beg_it, error);
 	}
 	
 	SL_CX char8_t tokenizer::get(sl_char8_vector_cit it) {
@@ -211,17 +262,18 @@ namespace caoco {
 
 	// Lexers
 	SL_CX tokenizer::lex_result tokenizer::lex_solidus(sl_char8_vector_cit it) {
+		using namespace ca_constant;
 		auto begin = it;
-		if (get(it) == '/') {
-			if (peek(it, 1) == '/' && peek(it, 2) != '/') {			// Line comment two solidus '//' closed by '\n'
-				while (!char_traits::is_newline(get(it)) && get(it) != '\0') {
+		if (get(it) == u8::chars::DIV) {
+			if (peek(it, 1) == u8::chars::DIV && peek(it, 2) != u8::chars::DIV) {			// Line comment two solidus '//' closed by '\n'
+				while (!char_traits::is_newline(get(it)) && get(it) != u8::EOF_CHAR) {
 					advance(it);
 				}
 				return make_result(tk_enum::line_comment_,begin,it);
 			}
-			else if (peek(it, 1) == '/' && peek(it, 2) == '/') {	// Block comment three solidus '///' closed by '///'
+			else if (peek(it, 1) == u8::chars::DIV && peek(it, 2) == u8::chars::DIV) {	// Block comment three solidus '///' closed by '///'
 				advance(it, 3);
-				while (!find_forward(it, u8"///")) {
+				while (!find_forward(it, u8::other::BLOCK_COMMENT)) {
 					advance(it);
 				}
 				advance(it, 3);
@@ -236,7 +288,7 @@ namespace caoco {
 			else {
 				advance(it);
 				// if the next character is a '=' then we have a division assignment operator
-				if (get(it) == '=') {
+				if (get(it) == u8::chars::EQ) {
 					advance(it);
 					return  make_result(tk_enum::division_assignment_, begin, it);
 				}
@@ -373,106 +425,152 @@ namespace caoco {
 	}
 
 	SL_CX tokenizer::lex_result tokenizer::lex_directive(sl_char8_vector_cit it) {
-		auto begin = it;
-		if (get(it) == '#') {
+		using namespace ca_constant;
+		auto beg = it;
+		if (get(it) == u8::chars::HASH) {
 			advance(it);
-			auto keyword_begin = it;
-			while (char_traits::is_alpha(get(it))) {
+			while (char_traits::is_alus(get(it))) {
 				advance(it);
 			} // keyword is from keyword_begin to the next non-alpha
-
-			// From keyword_begin to it must be one of the candi directive keywords, otherwise error.
-			// Directive Tokens: 
-			//		enter_[#enter] | start_[#start] | type_[#type] | var_[#var] | class_[#class] |
-			//		public_[#public] | const_[#const] | static_[#static] | ref_[#ref] |
-			//		if_[#if] | else_[#else] | elif_[#elif] | while_[#while] | for_[#for] |
-			//		switch_[#switch] | case_[#case] | default_[#default] | break_[#break] |
-			//		continue_[#continue] | ret_[#return] | into_[#into] | print_[#print]
-			// 		func_[#func], none_literal_[#none], include_[#include]
-			if (find_forward(keyword_begin, u8"enter")) {
-				return make_result(tk_enum::enter_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"start")) {
-				return make_result(tk_enum::start_, begin, it);
-			}
-			else if(find_forward(keyword_begin, u8"include")){
-				return make_result(tk_enum::include_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"type")) {
-				return make_result(tk_enum::type_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"var")) {
-				return make_result(tk_enum::var_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"class")) {
-				return make_result(tk_enum::class_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"public")) {
-				return make_result(tk_enum::public_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"const")) {
-				return make_result(tk_enum::const_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"static")) {
-				return make_result(tk_enum::static_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"ref")) {
-				return make_result(tk_enum::ref_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"if")) {
-				return make_result(tk_enum::if_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"else")) {
-				return make_result(tk_enum::else_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"elif")) {
-				return make_result(tk_enum::elif_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"while")) {
-				return make_result(tk_enum::while_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"for")) {
-				return make_result(tk_enum::for_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"switch")) {
-				return make_result(tk_enum::switch_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"case")) {
-				return make_result(tk_enum::case_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"default")) {
-				return make_result(tk_enum::default_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"break")) {
-				return make_result(tk_enum::break_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"continue")) {
-				return make_result(tk_enum::continue_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"return")) {
-				return make_result(tk_enum::return_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"into")) {
-				return make_result(tk_enum::into_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"print")) {
-				return make_result(tk_enum::print_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"func")) {
-				return make_result(tk_enum::func_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"none")) {
-				return make_result(tk_enum::none_literal_, begin, it);
-			}
-			else if (find_forward(keyword_begin, u8"on")) {
-				return make_result(tk_enum::on_, begin, it);
-			}
+			// From beg to it must be one of the candi directive keywords, otherwise error.
+			if (find_forward(beg, u8::directives::ENTER))
+				return make_result(tk_enum::enter_, beg, it);
+			else if (find_forward(beg, u8::directives::START))
+				return make_result(tk_enum::start_, beg, it);
+			else if (find_forward(beg, u8::directives::INCLUDE))
+				return make_result(tk_enum::include_, beg, it);
+			else if (find_forward(beg, u8::directives::MACRO))
+				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::directives::TYPE))
+				return make_result(tk_enum::type_, beg, it);
+			else if (find_forward(beg, u8::directives::VAR))
+				return make_result(tk_enum::var_, beg, it);
+			else if (find_forward(beg, u8::directives::CLASS))
+				return make_result(tk_enum::class_, beg, it);
+			else if (find_forward(beg, u8::directives::OBJECT))
+				return make_result(tk_enum::obj_, beg, it);
+			else if (find_forward(beg, u8::directives::PRIVATE))
+				return make_result(tk_enum::private_, beg, it);
+			else if (find_forward(beg, u8::directives::PUBLIC))
+				return make_result(tk_enum::public_, beg, it);
+			else if (find_forward(beg, u8::directives::FUNC))
+				return make_result(tk_enum::func_, beg, it);
+			else if (find_forward(beg, u8::directives::CONST))
+				return make_result(tk_enum::const_, beg, it);
+			else if (find_forward(beg, u8::directives::STATIC))
+				return make_result(tk_enum::static_, beg, it);
+			else if (find_forward(beg, u8::directives::IF))
+				return make_result(tk_enum::if_, beg, it);
+			else if (find_forward(beg, u8::directives::ELSE))
+				return make_result(tk_enum::else_, beg, it);
+			else if (find_forward(beg, u8::directives::ELIF))
+				return make_result(tk_enum::elif_, beg, it);
+			else if (find_forward(beg, u8::directives::WHILE))
+				return make_result(tk_enum::while_, beg, it);
+			else if (find_forward(beg, u8::directives::FOR))
+				return make_result(tk_enum::for_, beg, it);
+			else if (find_forward(beg, u8::directives::ON))
+				return make_result(tk_enum::on_, beg, it);
+			else if (find_forward(beg, u8::directives::BREAK))
+				return make_result(tk_enum::break_, beg, it);
+			else if (find_forward(beg, u8::directives::CONTINUE))
+				return make_result(tk_enum::continue_, beg, it);
+			else if (find_forward(beg, u8::directives::RETURN))
+				return make_result(tk_enum::return_, beg, it);
+			else if (find_forward(beg, u8::directives::PRINT))
+				return make_result(tk_enum::print_, beg, it);
+			else if (find_forward(beg, u8::directives::NONE))
+				return make_result(tk_enum::none_literal_, beg, it);
+			else if (find_forward(beg, u8::directives::INT))
+				return make_result(tk_enum::aint_, beg, it);
+			else if (find_forward(beg, u8::directives::UINT))
+				return make_result(tk_enum::auint_, beg, it);
+			else if (find_forward(beg, u8::directives::REAL))
+				return make_result(tk_enum::areal_, beg, it);
+			else if (find_forward(beg, u8::directives::BYTE))
+				return make_result(tk_enum::aoctet_, beg, it); // TODO: make byte
+			else if (find_forward(beg, u8::directives::BIT))
+				return make_result(tk_enum::abit_, beg, it);
+			else if (find_forward(beg, u8::directives::STR))
+				return make_result(tk_enum::astr_, beg, it);
 			else {
-				return make_invalid_result(begin, "Invalid directive keyword:" + sl_string(begin,it));
+				return make_invalid_result(beg, "Invalid keyword:" + sl_string(beg, it));
+			}
+		}
+		else if (char_traits::is_alpha(get(it))) {
+			advance(it);
+			//auto beg = it;
+			while (char_traits::is_alus(get(it))) {
+				advance(it);
+			} 
+
+
+			if (find_forward(beg, u8::keywords::ENTER))
+				return make_result(tk_enum::enter_, beg, it);
+			else if (find_forward(beg, u8::keywords::START))
+				return make_result(tk_enum::start_, beg, it);
+			else if (find_forward(beg, u8::keywords::INCLUDE))
+				return make_result(tk_enum::include_, beg, it);
+			else if (find_forward(beg, u8::keywords::MACRO))
+				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::keywords::TYPE))
+				return make_result(tk_enum::type_, beg, it);
+			else if (find_forward(beg, u8::keywords::VAR))
+				return make_result(tk_enum::var_, beg, it);
+			else if (find_forward(beg, u8::keywords::CLASS))
+				return make_result(tk_enum::class_, beg, it);
+			else if (find_forward(beg, u8::keywords::OBJECT))
+				return make_result(tk_enum::obj_, beg, it);
+			else if (find_forward(beg, u8::keywords::PRIVATE))
+				return make_result(tk_enum::private_, beg, it);
+			else if (find_forward(beg, u8::keywords::PUBLIC))
+				return make_result(tk_enum::public_, beg, it);
+			else if (find_forward(beg, u8::keywords::FUNC))
+				return make_result(tk_enum::func_, beg, it);
+			else if (find_forward(beg, u8::keywords::CONST))
+				return make_result(tk_enum::const_, beg, it);
+			else if (find_forward(beg, u8::keywords::STATIC))
+				return make_result(tk_enum::static_, beg, it);
+			else if (find_forward(beg, u8::keywords::IF))
+				return make_result(tk_enum::if_, beg, it);
+			else if (find_forward(beg, u8::keywords::ELSE))
+				return make_result(tk_enum::else_, beg, it);
+			else if (find_forward(beg, u8::keywords::ELIF))
+				return make_result(tk_enum::elif_, beg, it);
+			else if (find_forward(beg, u8::keywords::WHILE))
+				return make_result(tk_enum::while_, beg, it);
+			else if (find_forward(beg, u8::keywords::FOR))
+				return make_result(tk_enum::for_, beg, it);
+			else if (find_forward(beg, u8::keywords::ON))
+				return make_result(tk_enum::on_, beg, it);
+			else if (find_forward(beg, u8::keywords::BREAK))
+				return make_result(tk_enum::break_, beg, it);
+			else if (find_forward(beg, u8::keywords::CONTINUE))
+				return make_result(tk_enum::continue_, beg, it);
+			else if (find_forward(beg, u8::keywords::RETURN))
+				return make_result(tk_enum::return_, beg, it);
+			else if (find_forward(beg, u8::keywords::PRINT))
+				return make_result(tk_enum::print_, beg, it);
+			else if (find_forward(beg, u8::keywords::NONE))
+				return make_result(tk_enum::none_literal_, beg, it);
+			else if (find_forward(beg, u8::keywords::INT))
+				return make_result(tk_enum::aint_, beg, it);
+			else if (find_forward(beg, u8::keywords::UINT))
+				return make_result(tk_enum::auint_, beg, it);
+			else if (find_forward(beg, u8::keywords::REAL))
+				return make_result(tk_enum::areal_, beg, it);
+			else if (find_forward(beg, u8::keywords::BYTE))
+				return make_result(tk_enum::aoctet_, beg, it); // TODO: make byte
+			else if (find_forward(beg, u8::keywords::BIT))
+				return make_result(tk_enum::abit_, beg, it);
+			else if (find_forward(beg, u8::keywords::STR))
+				return make_result(tk_enum::astr_, beg, it);
+			else {
+				return make_none_result(beg);
 			}
 		}
 		else {
-			return make_none_result(begin);
+			return make_none_result(beg);
 		}
 	}
 

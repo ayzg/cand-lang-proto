@@ -2,7 +2,8 @@
 #include "unit_test_util.hpp"
 
 #define CAOCO_TEST_ALL 0
-#define CAOCO_TEST_NONE 1
+#define CAOCO_TEST_NONE 0
+#define CAOCO_TEST_TOKENIZER 1
 
 #if CAOCO_TEST_ALL
 #define CAOCO_UT_V2Parser_SingleNodes 1
@@ -39,7 +40,150 @@
 #define CAOCO_UT_Preprocessor_Include 1
 #endif
 
+#if CAOCO_TEST_TOKENIZER 
+#define CAOCO_TEST_TOKENIZER_Keywords 1
+#define CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow 1
+#endif
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if CAOCO_TEST_TOKENIZER_Keywords
+TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
+	// non-directive keywords
+	auto input_vec1 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
+ public func const static if else elif while for on break continue return print none int uint real\
+ byte bit str\0");
+	auto expected_result1 = caoco::tk_vector({
+		{caoco::tk_enum::include_},
+		{caoco::tk_enum::macro_},
+		{caoco::tk_enum::enter_},
+		{caoco::tk_enum::start_},
+		{caoco::tk_enum::type_},
+		{caoco::tk_enum::var_},
+		{caoco::tk_enum::class_},
+		{caoco::tk_enum::obj_},
+		{caoco::tk_enum::private_},
+		{caoco::tk_enum::public_},
+		{caoco::tk_enum::func_},
+		{caoco::tk_enum::const_},
+		{caoco::tk_enum::static_},
+		{caoco::tk_enum::if_},
+		{caoco::tk_enum::else_},
+		{caoco::tk_enum::elif_},
+		{caoco::tk_enum::while_},
+		{caoco::tk_enum::for_},
+		{caoco::tk_enum::on_},
+		{caoco::tk_enum::break_},
+		{caoco::tk_enum::continue_},
+		{caoco::tk_enum::return_},
+		{caoco::tk_enum::print_},
+		{caoco::tk_enum::none_literal_},
+		{caoco::tk_enum::aint_},
+		{caoco::tk_enum::auint_},
+		{caoco::tk_enum::areal_},
+		{caoco::tk_enum::aoctet_},
+		{caoco::tk_enum::abit_},
+		{caoco::tk_enum::astr_}
+		});
+	auto exp_result1 = caoco::tokenizer(input_vec1.cbegin(), input_vec1.cend())();
+	if(!exp_result1.valid()){
+		std::cout << exp_result1.error_message() << std::endl;
+	}
+	auto result1 = exp_result1.extract();
+	for (auto& tk : result1) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < result1.size(); ++i) {
+		EXPECT_EQ(result1[i].type(), expected_result1[i].type());
+		if (result1[i].type() != expected_result1[i].type()) {
+			std::cout << "Tokenization result expected keyword token: " << expected_result1[i].type_to_string()
+				<< " Got: " << result1[i].type_to_string() << std::endl;
+		}
+	}
 
+
+	// directive keywords
+	auto input_vec2 = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj \
+#private #public #func #const #static #if #else #elif #while #for #on #break #continue #return \
+#print #none #int #uint #real #byte #bit #str\0");
+	auto expected_result2 = caoco::tk_vector({
+		{caoco::tk_enum::include_},
+		{caoco::tk_enum::macro_},
+		{caoco::tk_enum::enter_},
+		{caoco::tk_enum::start_},
+		{caoco::tk_enum::type_},
+		{caoco::tk_enum::var_},
+		{caoco::tk_enum::class_},
+		{caoco::tk_enum::obj_},
+		{caoco::tk_enum::private_},
+		{caoco::tk_enum::public_},
+		{caoco::tk_enum::func_},
+		{caoco::tk_enum::const_},
+		{caoco::tk_enum::static_},
+		{caoco::tk_enum::if_},
+		{caoco::tk_enum::else_},
+		{caoco::tk_enum::elif_},
+		{caoco::tk_enum::while_},
+		{caoco::tk_enum::for_},
+		{caoco::tk_enum::on_},
+		{caoco::tk_enum::break_},
+		{caoco::tk_enum::continue_},
+		{caoco::tk_enum::return_},
+		{caoco::tk_enum::print_},
+		{caoco::tk_enum::none_literal_},
+		{caoco::tk_enum::aint_},
+		{caoco::tk_enum::auint_},
+		{caoco::tk_enum::areal_},
+		{caoco::tk_enum::aoctet_},
+		{caoco::tk_enum::abit_},
+		{caoco::tk_enum::astr_}
+		});
+	auto exp_result2 = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+
+	if (!exp_result2.valid()) {
+		std::cout << exp_result2.error_message() << std::endl;
+	}
+	auto result2 = exp_result2.extract();
+	for (auto& tk : result2) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	for (auto& tk : result2) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < result2.size(); ++i) {
+		EXPECT_EQ(result2[i].type(), expected_result2[i].type());
+		if (result2[i].type() != expected_result2[i].type()) {
+			std::cout << "Tokenization result expected keyword token: " << expected_result2[i].type_to_string()
+				<< " Got: " << result2[i].type_to_string() << std::endl;
+		}
+	}
+}
+#endif
+
+#if CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow
+TEST(ut_Tokenizer_KeywordsMixedShouldThrow, ut_Tokenizer) {
+	auto input_vec = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj #private\
+ public #func #const #static #if #else #elif #while #for #on #break #continue #return #print #none #int #uint #real\
+ #byte #bit #str");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	EXPECT_FALSE(result.valid());
+	if(!result.valid()){
+		std::cout << result.error_message() << std::endl;
+	}
+
+
+	auto input_vec2 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
+ #public func const static if else elif while for on break continue return print none int uint real\
+ byte bit str\0");
+
+	result = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+	EXPECT_FALSE(result.valid());
+	if (!result.valid()) {
+		std::cout << result.error_message() << std::endl;
+	}
+}
+#endif
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 

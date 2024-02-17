@@ -18,6 +18,7 @@
     <ClInclude Include="unit_test_util.hpp" />
     <ClInclude Include="cand_errors.hpp" />
     <ClInclude Include="preprocessor.hpp" />
+    <ClInclude Include="cand_constants.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">

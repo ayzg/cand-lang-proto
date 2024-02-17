@@ -1447,24 +1447,24 @@ expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit e
 			else if (it->type() == tk_enum::func_) {
 				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
 			}
-			else if (it->type() == tk_enum::include_) {
-				it++;
-				auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
-				auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-				auto included_code = parse_pragmatic_block(result.begin(), result.end());
+			//else if (it->type() == tk_enum::include_) {
+			//	it++;
+			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
+			//	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+			//	auto included_code = parse_pragmatic_block(result.begin(), result.end());
 
-				if (included_code.valid()) {
-					for (const auto & n : included_code.expected().children()){
-						node.push_back(n);
-					}
-					it = it + 2;//past name and eos
-				}
-				else {
-					return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
-						it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
-				}
+			//	if (included_code.valid()) {
+			//		for (const auto & n : included_code.expected().children()){
+			//			node.push_back(n);
+			//		}
+			//		it = it + 2;//past name and eos
+			//	}
+			//	else {
+			//		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
+			//			it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
+			//	}
 
-			}
+			//}
 			else {
 				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
 			}

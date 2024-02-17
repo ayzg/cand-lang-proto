@@ -5,7 +5,7 @@
 #include "token.hpp"
 #include "tokenizer.hpp"
 #include "ast_node.hpp"
-#include "preprocessor.hpp"
+//#include "preprocessor.hpp"
 #include "parser.hpp"
 #include "constant_evaluator.hpp"
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -131,11 +131,17 @@ caoco::sl_string token_to_string(const caoco::tk& token) {
 
 void test_single_token(const char8_t* input, caoco::tk_enum expected_type, caoco::sl_u8string expected_literal) {
 	auto input_vec = caoco::sl::to_u8vec(input);
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	EXPECT_EQ(result.size(), 1);
-	EXPECT_EQ(result.at(0).type(), expected_type);
-	EXPECT_EQ(result.at(0).literal(), expected_literal);
-	std::cout << "[Single token Test][" << input << "]" << token_to_string(result.at(0)) << std::endl;
+	auto exp_result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	if (!exp_result.valid()) {
+		std::cout << "Error: " << exp_result.error_message() << std::endl;
+	}
+	else {
+		auto result = exp_result.expected();
+		EXPECT_EQ(result.size(), 1);
+		EXPECT_EQ(result.at(0).type(), expected_type);
+		EXPECT_EQ(result.at(0).literal(), expected_literal);
+		std::cout << "[Single token Test][" << input << "]" << token_to_string(result.at(0)) << std::endl;
+	}
 }
 
 auto node_debug_string(const caoco::astnode& node) {
