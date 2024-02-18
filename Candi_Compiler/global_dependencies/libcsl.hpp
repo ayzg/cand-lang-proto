@@ -7,7 +7,7 @@ namespace caoco {
 	// A cool trick which allows for strings to be passed as template parameters using C++20 lambdas
 	#define LAMBDA_STRING(str) []() consteval { return #str; }
 
-	// Expected
+	// Partial Expected
 	template <typename ExpectedT, typename AlwaysT>
 	class sl_partial_expected {
 		AlwaysT always_;
@@ -15,10 +15,10 @@ namespace caoco {
 		sl_string error_message_{ "" };
 
 		template <typename ExpectedT, typename AlwaysT>
-		sl_partial_expected(AlwaysT always, ExpectedT expected) : always_(always), expected_(expected) {}
+		constexpr sl_partial_expected(AlwaysT always, ExpectedT expected) : always_(always), expected_(expected) {}
 
 		template <typename AlwaysT>
-		sl_partial_expected(AlwaysT always) : always_(always) {}
+		constexpr sl_partial_expected(AlwaysT always) : always_(always) {}
 
 	public:
 
@@ -57,6 +57,71 @@ namespace caoco {
 
 		constexpr auto chain_failure(AlwaysT always, sl_string error_message) {
 			return sl_partial_expected::make_failure_chain(*this, always, error_message);
+		}
+	};
+
+	// Expected
+	template <typename ExpectedT>
+	class sl_expected {
+		sl_opt<ExpectedT> expected_{ sl::nullopt };
+		sl_string error_message_{ "" };
+
+		constexpr sl_expected(ExpectedT expected) : expected_(expected) {}
+		template <typename ExpectedT>
+		constexpr sl_expected(ExpectedT&& expected) : expected_(expected) {}
+		template <typename ExpectedT>
+		constexpr sl_expected(const ExpectedT& expected) : expected_(expected) {}
+
+		constexpr sl_expected(const sl_nullopt& none,sl_string error_message) : expected_(sl::nullopt) , error_message_(error_message) {}
+
+		public:
+
+		SL_CX bool valid() const {
+			return expected_.has_value();
+		}
+
+		SL_CX ExpectedT extract() {
+			ExpectedT val = std::move(expected_.value());
+			expected_.reset();
+			return val;
+		}
+
+		SL_CX auto & expected() {
+			return expected_.value();
+		}
+
+		SL_CX const auto& expected() const {
+			return expected_.value();
+		}
+
+		SL_CX const auto & error_message() const {
+			return error_message_;
+		}
+
+		SL_CXSA make_success(ExpectedT expected) {
+			return sl_expected(expected);
+		}
+
+		SL_CXSA make_failure(sl_string error_message) {
+			return sl_expected(sl::nullopt, error_message);
+		}
+	};
+
+	class sl_boolerror {
+		bool value_;
+		sl_string error_message_;
+	public:
+		sl_boolerror(sl_string error_message) : value_(false), error_message_(error_message) {}
+		sl_boolerror(const char * error_message) : value_(false), error_message_(error_message) {}
+		sl_boolerror() : value_(true), error_message_("") {}
+		sl_boolerror(bool value) : value_(value), error_message_("") {}
+
+		SL_CX bool valid() const {
+			return value_;
+		}
+
+		SL_CX const auto& error_message() const {
+			return error_message_;
 		}
 	};
 

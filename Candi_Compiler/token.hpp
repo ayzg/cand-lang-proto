@@ -32,10 +32,11 @@ namespace caoco {
 			// Special
 			eos_, comma_, period_, ellipsis_,
 			// Special Tokens
-			atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_,
-			abit_, aarray_, apointer_, amemory_, afunction_,
+			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
+			abit_, astr_,aarray_, apointer_, amemory_, afunction_,
 			// Directive Tokens
 			enter_, start_, include_,type_, var_, class_, func_, print_, none_literal_,
+			obj_,private_,macro_,
 			// Modifier Tokens
 			public_, const_, static_, ref_,
 			// Control Flow Tokens
@@ -68,7 +69,7 @@ namespace caoco {
 		SL_CX sl_size size() const { return std::distance(beg_, end_); }
 		SL_CX sl_size line() const noexcept { return line_; }
 		SL_CX sl_size col() const noexcept { return col_; }
-		SL_CX sl_u8string literal() const {
+		SL_CX const sl_u8string & literal() const {
 			// WARNING: Attempting to check or dereference the end or begin of a token with no literal will result in an exception.
 			return literal_;
 			//return sl_u8string(beg_, end_);
@@ -87,6 +88,60 @@ namespace caoco {
 		SL_CX bool operator!=(const tk& rhs) const {
 			return !(*this == rhs);
 		};
+
+
+		// Fast type queries.
+		SL_CX bool is_directive() const noexcept {
+			//atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
+			//	abit_, astr_, aarray_, apointer_, amemory_, afunction_,
+			//	enter_, start_, include_, type_, var_, class_, func_, print_, none_literal_,
+			//	obj_, private_, macro_,
+			//	public_, const_, static_, ref_,
+			//	if_, else_, elif_, while_, for_, switch_, case_, default_, break_,
+			//	continue_, return_, into_, on_
+			return type_ == e_type::atype_ ||
+				type_ == e_type::aidentity_ ||
+				type_ == e_type::avalue_ ||
+				type_ == e_type::aint_ ||
+				type_ == e_type::auint_ ||
+				type_ == e_type::areal_ ||
+				type_ == e_type::abyte_ ||
+				type_ == e_type::abit_ ||
+				type_ == e_type::astr_ ||
+				type_ == e_type::aarray_ ||
+				type_ == e_type::apointer_ ||
+				type_ == e_type::amemory_ ||
+				type_ == e_type::afunction_ ||
+				type_ == e_type::enter_ ||
+				type_ == e_type::start_ ||
+				type_ == e_type::include_ ||
+				type_ == e_type::type_ ||
+				type_ == e_type::var_ ||
+				type_ == e_type::class_ ||
+				type_ == e_type::func_ ||
+				type_ == e_type::print_ ||
+				type_ == e_type::none_literal_ ||
+				type_ == e_type::obj_ ||
+				type_ == e_type::private_ ||
+				type_ == e_type::macro_ ||
+				type_ == e_type::public_ ||
+				type_ == e_type::const_ ||
+				type_ == e_type::static_ ||
+				type_ == e_type::ref_ ||
+				type_ == e_type::if_ ||
+				type_ == e_type::else_ ||
+				type_ == e_type::elif_ ||
+				type_ == e_type::while_ ||
+				type_ == e_type::for_ ||
+				type_ == e_type::switch_ ||
+				type_ == e_type::case_ ||
+				type_ == e_type::default_ ||
+				type_ == e_type::break_ ||
+				type_ == e_type::continue_ ||
+				type_ == e_type::return_ ||
+				type_ == e_type::into_ ||
+				type_ == e_type::on_;
+		}
 
 
 		// debug only
@@ -154,7 +209,7 @@ namespace caoco {
 			case(e_type::auint_): return "auint_";
 			case(e_type::areal_): return "areal_";
 				//case(e_type::aureal_): return "aureal_";
-			case(e_type::aoctet_): return "aoctet_";
+			case(e_type::abyte_): return "abyte_";
 			case(e_type::abit_): return "abit_";
 			case(e_type::aarray_): return "aarray_";
 			case(e_type::apointer_): return "apointer_";
@@ -187,8 +242,17 @@ namespace caoco {
 			case(e_type::bit_literal_): return "bit_literal";
 			case(e_type::octet_literal_): return "octet_literal";
 			case(e_type::unsigned_literal_): return "unsigned_literal";
+			case(e_type::obj_): return "obj_";
+			case(e_type::private_): return "private_";
+			case(e_type::macro_): return "macro_";
+			case(e_type::on_): return "on_";
+			case(e_type::include_): return "include_";
+			case(e_type::astr_): return "astr_";
 			default: return "This token type is not string-convertible. Please implement a string conversion for this token type in the token_type_to_string function in test.cpp.";
 			}
+		}
+		SL_CX caoco::sl_string type_to_string() const {
+			return tk::type_to_string(type_);
 		}
 	};
 

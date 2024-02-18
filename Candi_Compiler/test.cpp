@@ -1,549 +1,600 @@
 #include "pch.h"
 #include "unit_test_util.hpp"
 
-#define CAOCO_TEST_ALL 0
-#define CAOCO_TEST_NONE 1
+#define CAOCO_TEST_ALL 1
+#define CAOCO_TEST_NONE 0
+#define CAOCO_TEST_TOKENIZER 1
 
 #if CAOCO_TEST_ALL
 #define CAOCO_UT_V2Parser_SingleNodes 1
 #define CAOCO_UT_V2Parser_ValueExpressions 1
-#define CAOCO_UT_V2Parser_ValueStatements 1
 #define CAOCO_UT_V2Parser_ValueStatementREPL 0
 
-#define CAOCO_UT_V2Parser_BasicScopeFinder 1
-#define CAOCO_UT_V2Parser_ListScopeFinder 1
-#define CAOCO_UT_V2Parser_StatementScopeFinder 1
 
-#define CAOCO_UT_V2Parser_TypeAlias 1
-#define CAOCO_UT_V2Parser_VariableDeclaration 1
-#define CAOCO_UT_V2Parser_Functions 1
-#define CAOCO_UT_V2Parser_Classes 1
-#define CAOCO_UT_V2Parser_PragmaticBlock 1
-#define CAOCO_UT_V2Parser_FunctionalBlock 1
-#define CAOCO_UT_V2Parser_ConditionalStatements 1
-#define CAOCO_UT_V2Parser_SwitchStatement 1
-#define CAOCO_UT_V2Parser_WhileLoop 1
-#define CAOCO_UT_V2Parser_ForLoop 1
+#define CAOCO_UT_V2Parser_ValueStatements 1
+#define CAOCO_UT_V2Parser_BasicScopeFinder 0
+#define CAOCO_UT_V2Parser_ListScopeFinder 0
+#define CAOCO_UT_V2Parser_StatementScopeFinder 0
 
-#define CAOCO_UT_V2Parser_ReturnStatement 1
+#define CAOCO_UT_V2Parser_TypeAlias 0
+#define CAOCO_UT_V2Parser_VariableDeclaration 0
+#define CAOCO_UT_V2Parser_Functions 0
+#define CAOCO_UT_V2Parser_Classes 0
+#define CAOCO_UT_V2Parser_PragmaticBlock 0
+#define CAOCO_UT_V2Parser_FunctionalBlock 0
+#define CAOCO_UT_V2Parser_ConditionalStatements 0
+#define CAOCO_UT_V2Parser_SwitchStatement 0
+#define CAOCO_UT_V2Parser_WhileLoop 0
+#define CAOCO_UT_V2Parser_ForLoop 0
 
-#define CAOCO_UT_V2Parser_MinimumProgram 1
-#define CAOCO_UT_V2Parser_BasicProgram 1
+#define CAOCO_UT_V2Parser_ReturnStatement 0
 
-#define CAOCO_UT_V2ParserUtils_SeperatedList 1
+#define CAOCO_UT_V2Parser_MinimumProgram 0
+#define CAOCO_UT_V2Parser_BasicProgram 0
 
-#define CAOCO_UT_Preprocessor_Include 1
+#define CAOCO_UT_V2ParserUtils_SeperatedList 0
+
+#define CAOCO_UT_Preprocessor_Include 0
 #endif
+
 
 #if CAOCO_TEST_NONE
 #define CAOCO_UT_Preprocessor_Include 1
 #endif
 
+#if CAOCO_TEST_TOKENIZER 
+#define CAOCO_TEST_TOKENIZER_Keywords 1
+#define CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow 1
+#define CAOCO_TEST_TOKENIZER_KeywordsDirectiveReportEarlyMisspell 1
+#endif
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if CAOCO_TEST_TOKENIZER_Keywords
+TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
+	// non-directive keywords
+	auto input_vec1 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
+ public func const static if else elif while for on break continue return print none int uint real\
+ byte bit str\0");
+	auto expected_result1 = caoco::tk_vector({
+		{caoco::tk_enum::include_},
+		{caoco::tk_enum::macro_},
+		{caoco::tk_enum::enter_},
+		{caoco::tk_enum::start_},
+		{caoco::tk_enum::type_},
+		{caoco::tk_enum::var_},
+		{caoco::tk_enum::class_},
+		{caoco::tk_enum::obj_},
+		{caoco::tk_enum::private_},
+		{caoco::tk_enum::public_},
+		{caoco::tk_enum::func_},
+		{caoco::tk_enum::const_},
+		{caoco::tk_enum::static_},
+		{caoco::tk_enum::if_},
+		{caoco::tk_enum::else_},
+		{caoco::tk_enum::elif_},
+		{caoco::tk_enum::while_},
+		{caoco::tk_enum::for_},
+		{caoco::tk_enum::on_},
+		{caoco::tk_enum::break_},
+		{caoco::tk_enum::continue_},
+		{caoco::tk_enum::return_},
+		{caoco::tk_enum::print_},
+		{caoco::tk_enum::none_literal_},
+		{caoco::tk_enum::aint_},
+		{caoco::tk_enum::auint_},
+		{caoco::tk_enum::areal_},
+		{caoco::tk_enum::abyte_},
+		{caoco::tk_enum::abit_},
+		{caoco::tk_enum::astr_}
+		});
+	auto exp_result1 = caoco::tokenizer(input_vec1.cbegin(), input_vec1.cend())();
+	if(!exp_result1.valid()){
+		std::cout << exp_result1.error_message() << std::endl;
+	}
+	auto result1 = exp_result1.extract();
+	for (auto& tk : result1) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < result1.size(); ++i) {
+		EXPECT_EQ(result1[i].type(), expected_result1[i].type());
+		if (result1[i].type() != expected_result1[i].type()) {
+			std::cout << "Tokenization result expected keyword token: " << expected_result1[i].type_to_string()
+				<< " Got: " << result1[i].type_to_string() << std::endl;
+		}
+	}
 
+
+	// directive keywords
+	auto input_vec2 = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj \
+#private #public #func #const #static #if #else #elif #while #for #on #break #continue #return \
+#print #none #int #uint #real #byte #bit #str\0");
+	auto expected_result2 = caoco::tk_vector({
+		{caoco::tk_enum::include_},
+		{caoco::tk_enum::macro_},
+		{caoco::tk_enum::enter_},
+		{caoco::tk_enum::start_},
+		{caoco::tk_enum::type_},
+		{caoco::tk_enum::var_},
+		{caoco::tk_enum::class_},
+		{caoco::tk_enum::obj_},
+		{caoco::tk_enum::private_},
+		{caoco::tk_enum::public_},
+		{caoco::tk_enum::func_},
+		{caoco::tk_enum::const_},
+		{caoco::tk_enum::static_},
+		{caoco::tk_enum::if_},
+		{caoco::tk_enum::else_},
+		{caoco::tk_enum::elif_},
+		{caoco::tk_enum::while_},
+		{caoco::tk_enum::for_},
+		{caoco::tk_enum::on_},
+		{caoco::tk_enum::break_},
+		{caoco::tk_enum::continue_},
+		{caoco::tk_enum::return_},
+		{caoco::tk_enum::print_},
+		{caoco::tk_enum::none_literal_},
+		{caoco::tk_enum::aint_},
+		{caoco::tk_enum::auint_},
+		{caoco::tk_enum::areal_},
+		{caoco::tk_enum::abyte_},
+		{caoco::tk_enum::abit_},
+		{caoco::tk_enum::astr_}
+		});
+	auto exp_result2 = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+
+	if (!exp_result2.valid()) {
+		std::cout << exp_result2.error_message() << std::endl;
+	}
+	auto result2 = exp_result2.extract();
+	for (auto& tk : result2) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	for (auto& tk : result2) {
+		std::cout << tk.type_to_string() << " ";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < result2.size(); ++i) {
+		EXPECT_EQ(result2[i].type(), expected_result2[i].type());
+		if (result2[i].type() != expected_result2[i].type()) {
+			std::cout << "Tokenization result expected keyword token: " << expected_result2[i].type_to_string()
+				<< " Got: " << result2[i].type_to_string() << std::endl;
+		}
+	}
+}
+#endif
+
+#if CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow
+TEST(ut_Tokenizer_KeywordsMixedShouldThrow, ut_Tokenizer) {
+	auto input_vec = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj #private\
+ public #func #const #static #if #else #elif #while #for #on #break #continue #return #print #none #int #uint #real\
+ #byte #bit #str");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	EXPECT_FALSE(result.valid());
+	if(!result.valid()){
+		std::cout << result.error_message() << std::endl;
+	}
+
+
+	auto input_vec2 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
+ #public func const static if else elif while for on break continue return print none int uint real\
+ byte bit str\0");
+
+	result = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+	EXPECT_FALSE(result.valid());
+	if (!result.valid()) {
+		std::cout << result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_TOKENIZER_KeywordsDirectiveReportEarlyMisspell 
+TEST(ut_Tokenizer_KeywordsDirectiveReportEarlyMisspell, ut_Tokenizer) {
+	auto input_vec = caoco::sl::to_u8vec(u8"#inclde");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	EXPECT_FALSE(result.valid());
+	if (!result.valid()) {
+		std::cout << result.error_message() << std::endl;
+	}
+}
+#endif
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if CAOCO_UT_V2Parser_ValueExpressions
-TEST(ut_Parser_Expression_SingleOperand_LiteralInt, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::number_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralInt) {
+	using namespace caoco;
+
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralInt",
+		astnode(astnode_enum::number_literal_, u8"1"),
+		u8"1\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralReal, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1.1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::real_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralReal) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralReal",
+		astnode(astnode_enum::real_literal_, u8"1.1"),
+		u8"1.1\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralUint, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1u\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::unsigned_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralUint) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralUint",
+		astnode(astnode_enum::unsigned_literal_, u8"1u"),
+		u8"1u\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralBit, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1b\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::bit_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralBit) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralBit",
+		astnode(astnode_enum::bit_literal_, u8"1b"),
+		u8"1b\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralString, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"'hello'\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::string_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralString) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralString",
+		astnode(astnode_enum::string_literal_, u8"'hello'"),
+		u8"'hello'\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralOctet, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1c\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::octet_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralByte) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralByte",
+		astnode(astnode_enum::octet_literal_, u8"1c"),
+		u8"1c\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_LiteralNone, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"#none\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::none_literal_);
+TEST(ut_Parser_Expression_SingleOperand, LiteralNone) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_LiteralNone",
+		astnode(astnode_enum::none_literal_, u8"#none"),
+		u8"#none\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperand_ValueInBrackets, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"(1)\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	EXPECT_EQ(parse_result.expected().type(), caoco::astnode_enum::expression_);
-	EXPECT_EQ(parse_result.expected().children().size(), 1);
-	EXPECT_EQ(parse_result.expected()[0].type(), caoco::astnode_enum::number_literal_);
+TEST(ut_Parser_Expression_SingleOperand, ValueInBrackets) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperand_ValueInBrackets",
+		astnode(astnode_enum::number_literal_, u8"1"),
+		u8"(1)\0"
+	));
 }
 
-TEST(ut_Parser_Expression_SingleOperation_Binary, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1 + 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::number_literal_);
-	}
+TEST(ut_Parser_Expression_SingleOperation, Binary) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperation_BinaryAddition",
+		astnode(astnode_enum::addition_, u8"+",
+			astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::number_literal_, u8"1")
+		),
+		u8"1 + 1\0"
+	));
 }
 
-TEST(ut_Parser_Expression_ChainOperation_BinaryDiffPriority, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1 + 1 * 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::multiplication_);
-		EXPECT_EQ(result_node[1].children().size(), 2);
-		if (result_node[1].children().size() == 2) {
-			EXPECT_EQ(result_node[1][0].type(), caoco::astnode_enum::number_literal_);
-			EXPECT_EQ(result_node[1][1].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_LogicalOperators) {
-	auto input_vec = caoco::sl::to_u8vec(u8"a || b && c \0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-
-	auto result_node = parse_result.expected();
-
-	// (a || b) && (b || c)
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::logical_AND_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::logical_OR_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::alnumus_);
-	}
-}
-
-
-TEST(ut_Parser_Expression_ChainOperation_Scopes, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"(1 + 1) * 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[multiplication_] * |
-	//	[addition_] + |
-	//	[number_literal_] 1 |
-	//	[number_literal_] 1 |
-	//	[number_literal_] 1 |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::multiplication_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::expression_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[0][0].children().size(), 2);
-		if (result_node[0][0].children().size() == 2) {
-			EXPECT_EQ(result_node[0][0][0].type(), caoco::astnode_enum::number_literal_);
-			EXPECT_EQ(result_node[0][0][1].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_AssingmentIsRightAssoc, ut_Parser) {
-	//a = b = c is parsed as a = (b = c), and not as (a = b) = c because of right-to-left associativity of assignment
-	auto input_vec = caoco::sl::to_u8vec(u8"a = b = c\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::simple_assignment_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::alnumus_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::simple_assignment_);
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_SumIsLeftAssoc, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"a + b - c\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//a + b - c is parsed (a + b) - c and not a + (b - c) because of left-to-right associativity of addition and subtraction.
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::subtraction_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::addition_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::alnumus_);
-		EXPECT_EQ(result_node[0].children().size(), 2);
-		if (result_node[0].children().size() == 2) {
-			EXPECT_EQ(result_node[0][0].type(), caoco::astnode_enum::alnumus_);
-			EXPECT_EQ(result_node[0][1].type(), caoco::astnode_enum::alnumus_);
-		}
-	}
-}
-TEST(ut_Parser_Expression_ChainOperation_MemberAccessIsLeftAssoc, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"a.b.c\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-
-	auto result_node = parse_result.expected();
-
-	// a.b.c is parsed as (a.b).c and not as a.(b.c) because of left-to-right associativity of member access.
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::period_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::period_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::alnumus_);
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_BinaryAfterUnaryIsAnError, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"!+1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-
-	EXPECT_FALSE(parse_result.valid());
-}
-
-
-TEST(ut_Parser_Expression_SingleOperation_Unary, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"!1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::negation_);
-	EXPECT_EQ(result_node.children().size(), 1);
-	if (result_node.children().size() == 1) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::number_literal_);
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_UnaryRepeated, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"++!1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::increment_);
-	EXPECT_EQ(result_node.children().size(), 1);
-	if (result_node.children().size() == 1) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::negation_);
-		EXPECT_EQ(result_node[0].children().size(), 1);
-		if (result_node[0].children().size() == 1) {
-			EXPECT_EQ(result_node[0][0].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_UnaryThenBinary, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"!1 + 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::negation_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[0].children().size(), 1);
-		if (result_node[0].children().size() == 1) {
-			EXPECT_EQ(result_node[0][0].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_UnaryThenHigherPriority) {
-	auto input_vec = caoco::sl::to_u8vec(u8"!a.b\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::negation_);
-	EXPECT_EQ(result_node.children().size(), 1);
-	if (result_node.children().size() == 1) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::period_);
-	}
-	EXPECT_EQ(result_node[0].children().size(), 2);
-	if(result_node[0].children().size() == 2) {
-		EXPECT_EQ(result_node[0][0].type(), caoco::astnode_enum::alnumus_);
-		EXPECT_EQ(result_node[0][1].type(), caoco::astnode_enum::alnumus_);
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_UnaryAfterBinary, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1 + !1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::negation_);
-		EXPECT_EQ(result_node[1].children().size(), 1);
-		if (result_node[1].children().size() == 1) {
-			EXPECT_EQ(result_node[1][0].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_SingleOperation_EmptyScopeIsAnError, ut_Parser) {
+TEST(ut_Parser_Expression_SingleOperation, EmptyScopeIsAnError) {
 	auto input_vec = caoco::sl::to_u8vec(u8"()\0");
 	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
+	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.expected().cbegin(), result.expected().cend()));
 	EXPECT_FALSE(parse_result.valid());
 }
 
-
-TEST(ut_Parser_Expression_SingleOperation_FunctionCall, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"foo()\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[function_call_] () |
-	//	[alnumus_] foo |
-	//	[arguments_] |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::function_call_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::alnumus_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::arguments_);
-	}
+TEST(ut_Parser_Expression_SingleOperation, FunctionCall) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperation_FunctionCall",
+		astnode(astnode_enum::function_call_, u8"()",
+			{ astnode(astnode_enum::alnumus_, u8"foo"),
+			astnode(astnode_enum::arguments_,u8"()") }),
+		u8"foo()\0"
+	));
 }
 
-TEST(ut_Parser_Expression_ChainOperation_UnaryThenFunctionCall, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"!foo()\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[negation_] !|
-	//	[function_call_]() |
-	//	[alnumus_] foo |
-	//	[arguments_] |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::negation_);
-	EXPECT_EQ(result_node.children().size(), 1);
-	if (result_node.children().size() == 1) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::function_call_);
-	}
+TEST(ut_Parser_Expression_SingleOperation, Unary) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"SingleOperation_UnaryNegation",
+		astnode(astnode_enum::negation_, u8"!",
+			{ astnode(astnode_enum::number_literal_, u8"1") }),
+		u8"!1\0"
+	));
 }
 
-TEST(ut_Parser_Expression_ChainOperation_FunctionCallThenBinary, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"foo() + 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[addition_] + |
-	//	[function_call_]() |
-	//	[alnumus_] foo |
-	//	[arguments_] |
-	//	[number_literal_] 1 |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::function_call_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::number_literal_);
-	}
+TEST(ut_Parser_Expression_ChainOperation, BinaryDiffPriority) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_BinaryDiffPriority",
+		astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::multiplication_, u8"*",
+				{ astnode(astnode_enum::number_literal_, u8"1"),
+				astnode(astnode_enum::number_literal_, u8"1") }) }),
+		u8"1 + 1 * 1\0"
+	));
 }
 
-
-TEST(ut_Parser_Expression_ChainOperation_BinaryDotOperatorThenFunctionCall, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"foo.bar()\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[function_call_] () |
-	//	[period_] . |
-	//	[alnumus_] foo |
-	//	[alnumus_] bar |
-	//	[arguments_] |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::function_call_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::period_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::arguments_);
-	}
+TEST(ut_Parser_Expression_ChainOperation,LogicalOperators) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_LogicalOperators",
+		astnode(astnode_enum::logical_AND_, u8"&&",
+			{ astnode(astnode_enum::logical_OR_, u8"||",
+				{ astnode(astnode_enum::alnumus_, u8"a"),
+				astnode(astnode_enum::alnumus_, u8"b") }),
+			astnode(astnode_enum::alnumus_, u8"c") }),
+		u8"a || b && c\0"
+	));
 }
 
-TEST(ut_Parser_Expression_ChainOperation_BinaryThenFunctionCall, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"1 + foo()\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[addition_] + |
-	//	[number_literal_] 1 |
-	//	[function_call_]() |
-	//	[alnumus_] foo |
-	//	[arguments_] |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::function_call_);
-	}
-}
-
-TEST(ut_Parser_Expression_ChainOperation_MemberAccessWithFunctionCall, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"a.b().c\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-
-	auto result_node = parse_result.expected();
-
-	// a.b().c is parsed as (a.b()).c and not as a.(b().c) because of left-to-right associativity of member access.
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::period_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::function_call_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::alnumus_);
-	}
-}
-
-
-TEST(ut_Parser_Expression_ComplexOperation, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"foo.bar() + 1 * 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.cbegin(), result.cend()));
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-	//[addition_] + |
-	//	[function_call_] () |
-	//	[period_] . |
-	//	[alnumus_] foo |
-	//	[alnumus_] bar |
-	//	[arguments_] |
-	//	[multiplication_] * |
-	//	[number_literal_] 1 |
-	//	[number_literal_] 1 |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::addition_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::function_call_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::multiplication_);
-		EXPECT_EQ(result_node[1].children().size(), 2);
-		if (result_node[1].children().size() == 2) {
-			EXPECT_EQ(result_node[1][0].type(), caoco::astnode_enum::number_literal_);
-			EXPECT_EQ(result_node[1][1].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
-}
-
-TEST(ut_Parser_Expression_ComplexOperationWithScopes, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"(foo.bar() + 1) * 1\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::expression_split_and_simplify(result.cbegin(), result.cend());
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
-
-
+TEST(ut_Parser_Expression_ChainOperation,Scopes) {
 	//[multiplication_] * |
 	//	[addition_] + |
-	//	[function_call_] () |
-	//	[period_] . |
-	//	[alnumus_] foo |
-	//	[alnumus_] bar |
-	//	[arguments_] |
 	//	[number_literal_] 1 |
 	//	[number_literal_] 1 |
-	auto result_node = parse_result.expected();
-	EXPECT_EQ(result_node.type(), caoco::astnode_enum::multiplication_);
-	EXPECT_EQ(result_node.children().size(), 2);
-	if (result_node.children().size() == 2) {
-		EXPECT_EQ(result_node[0].type(), caoco::astnode_enum::addition_);
-		EXPECT_EQ(result_node[1].type(), caoco::astnode_enum::number_literal_);
-		EXPECT_EQ(result_node[0].children().size(), 2);
-		if (result_node[0].children().size() == 2) {
-			EXPECT_EQ(result_node[0][0].type(), caoco::astnode_enum::function_call_);
-			EXPECT_EQ(result_node[0][1].type(), caoco::astnode_enum::number_literal_);
-		}
-	}
+	//	[number_literal_] 1 |
+	using namespace caoco;
+	auto expected = astnode(astnode_enum::multiplication_, u8"*",
+		{ astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::number_literal_, u8"1") }),
+		astnode(astnode_enum::number_literal_, u8"1") });
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_Scopes",
+		expected,
+		u8"(1 + 1) * 1\0"
+	));
 }
 
-TEST(ut_Parser_Arguments, ut_Parser) {
-	auto input_vec = caoco::sl::to_u8vec(u8"(1, 1, 3)\0");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-	auto parse_result = caoco::parse_arguments(result.cbegin(), result.cend());
-	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-	else print_ast(parse_result.expected());
+TEST(ut_Parser_Expression_ChainOperation,AssingmentIsRightAssoc) {
+	//a = b = c is parsed as a = (b = c), and not as (a = b) = c because of right-to-left associativity of assignment
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_AssingmentIsRightAssoc",
+		astnode(astnode_enum::simple_assignment_, u8"=",
+			{ astnode(astnode_enum::alnumus_, u8"a"),
+			astnode(astnode_enum::simple_assignment_, u8"=",
+				{ astnode(astnode_enum::alnumus_, u8"b"),
+				astnode(astnode_enum::alnumus_, u8"c") }) }),
+		u8"a = b = c\0"
+	));
 }
+
+TEST(ut_Parser_Expression_ChainOperation,SumIsLeftAssoc) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_SumIsLeftAssoc",
+		astnode(astnode_enum::subtraction_, u8"-",
+			{ astnode(astnode_enum::addition_, u8"+",
+				{ astnode(astnode_enum::alnumus_, u8"a"),
+				astnode(astnode_enum::alnumus_, u8"b") }),
+			astnode(astnode_enum::alnumus_, u8"c") }),
+		u8"a + b - c\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,MemberAccessIsLeftAssoc) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_MemberAccessIsLeftAssoc",
+		astnode(astnode_enum::period_, u8".",
+			{ astnode(astnode_enum::period_, u8".",
+				{ astnode(astnode_enum::alnumus_, u8"a"),
+				astnode(astnode_enum::alnumus_, u8"b") }),
+			astnode(astnode_enum::alnumus_, u8"c") }),
+		u8"a.b.c\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,BinaryAfterUnaryIsAnError) {
+
+	auto input_vec = caoco::sl::to_u8vec(u8"!+1\0");
+	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	auto parse_result = caoco::expression_split_parse(caoco::tk_cursor(result.expected().cbegin(), result.expected().cend()));
+
+	EXPECT_FALSE(parse_result.valid());
+}
+
+TEST(ut_Parser_Expression_ChainOperation,UnaryRepeated) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_UnaryRepeated",
+		astnode(astnode_enum::negation_, u8"!",
+			{ astnode(astnode_enum::negation_, u8"!",
+				{ astnode(astnode_enum::number_literal_, u8"1") }) }),
+		u8"!!1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,UnaryThenBinary) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_UnaryThenBinary",
+		astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::negation_, u8"!",
+				{ astnode(astnode_enum::number_literal_, u8"1") }),
+			astnode(astnode_enum::number_literal_, u8"1") }),
+		u8"!1 + 1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,UnaryThenHigherPriority) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_UnaryThenHigherPriority",
+		astnode(astnode_enum::multiplication_, u8"*",
+			{ astnode(astnode_enum::negation_, u8"!",
+				{ astnode(astnode_enum::number_literal_, u8"1") }),
+			astnode(astnode_enum::number_literal_, u8"1") }),
+		u8"!1 * 1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,UnaryAfterBinary) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_UnaryAfterBinary",
+		astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::negation_, u8"!",
+				{ astnode(astnode_enum::number_literal_, u8"1") }) }),
+		u8"1 + !1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,UnaryThenFunctionCall) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_UnaryThenFunctionCall",
+		astnode(astnode_enum::negation_, u8"!",
+			{ astnode(astnode_enum::function_call_, u8"()",
+				{ astnode(astnode_enum::alnumus_, u8"foo"),
+				astnode(astnode_enum::arguments_, u8"()") }) }),
+		u8"!foo()\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,FunctionCallThenBinary) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_FunctionCallThenBinary",
+		astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::function_call_, u8"()",
+				{ astnode(astnode_enum::alnumus_, u8"foo"),
+				astnode(astnode_enum::arguments_, u8"()") }),
+			astnode(astnode_enum::number_literal_, u8"1") }),
+		u8"foo() + 1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,BinaryDotOperatorThenFunctionCall) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_BinaryDotOperatorThenFunctionCall",
+		astnode(astnode_enum::function_call_, u8"()",
+			{ astnode(astnode_enum::period_, u8".",
+				{ astnode(astnode_enum::alnumus_, u8"foo"),
+				astnode(astnode_enum::alnumus_, u8"bar") }),
+			astnode(astnode_enum::arguments_, u8"()") }),
+		u8"foo.bar()\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,BinaryThenFunctionCall) {
+	//[addition_] + |
+	//	[number_literal_] 1 |
+	//	[function_call_]() |
+	//		[alnumus_] foo |
+	//		[arguments_] |
+	using namespace caoco;
+	auto expected = astnode(astnode_enum::addition_, u8"+",
+		{ astnode(astnode_enum::number_literal_, u8"1"),
+		astnode(astnode_enum::function_call_, u8"()",
+			{ astnode(astnode_enum::alnumus_, u8"foo"),
+			astnode(astnode_enum::arguments_, u8"()") }) });
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_BinaryThenFunctionCall",
+		expected,
+		u8"1 + foo()\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ChainOperation,MemberAccessWithFunctionCall) {
+	// a.b().c is parsed as (a.b()).c and not as a.(b().c) because of left-to-right associativity of member access.
+	using namespace caoco;
+	// create ast for a.b().c
+	//[period_] .|
+	//[function_call_] () |
+	//	[period_] . |
+	//	[alnumus_] a |
+	//	[alnumus_] b |
+	//	[arguments_]().c |
+	//	[alnumus_] c |
+	astnode expected = astnode(astnode_enum::period_, u8".",
+		{ astnode(astnode_enum::function_call_, u8"()",
+			{ astnode(astnode_enum::period_, u8".",
+				{ astnode(astnode_enum::alnumus_, u8"a"),
+				astnode(astnode_enum::alnumus_, u8"b") }),
+			astnode(astnode_enum::arguments_, u8"()") }),
+		astnode(astnode_enum::alnumus_, u8"c") });
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ChainOperation_MemberAccessWithFunctionCall",
+		expected,
+		u8"a.b().c\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ComplexOperation, Operation) {
+	//addition_] + |
+	//[function_call_]() |
+	//	  [period_] . |
+	//		[alnumus_] foo |
+	//		[alnumus_] bar |
+	//	  [arguments_]() |
+	//	[multiplication_] * |
+	//	  [number_literal_] 1 |
+	//	  [number_literal_] 1 |
+	using namespace caoco;
+	auto expected = astnode(astnode_enum::addition_, u8"+",
+		{ astnode(astnode_enum::function_call_, u8"()",
+			{ astnode(astnode_enum::period_, u8".",
+				{ astnode(astnode_enum::alnumus_, u8"foo"),
+				astnode(astnode_enum::alnumus_, u8"bar") }),
+			astnode(astnode_enum::arguments_, u8"()") }),
+		astnode(astnode_enum::multiplication_, u8"*",
+			{ astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::number_literal_, u8"1") }) });
+
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ComplexOperation",
+		expected,
+		u8"foo.bar() + 1 * 1\0"
+	));
+}
+
+TEST(ut_Parser_Expression_ComplexOperation, OperationWithScopes) {
+	//[multiplication_] * |
+	//	[addition_] + |
+	//		[function_call_]() |
+	//			[period_] . |
+	//				[alnumus_] foo |
+	//				[alnumus_] bar |
+	//			[arguments_]() |
+	//		[number_literal_] 1 |
+	//	[number_literal_] 1 |
+	using namespace caoco;
+	auto expected = astnode(astnode_enum::multiplication_, u8"*",
+		{ astnode(astnode_enum::addition_, u8"+",
+			{ astnode(astnode_enum::function_call_, u8"()",
+				{ astnode(astnode_enum::period_, u8".",
+					{ astnode(astnode_enum::alnumus_, u8"foo"),
+					astnode(astnode_enum::alnumus_, u8"bar") }),
+				astnode(astnode_enum::arguments_, u8"()") }),
+			astnode(astnode_enum::number_literal_, u8"1") }),
+		astnode(astnode_enum::number_literal_, u8"1") });
+
+
+	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
+		"ComplexOperationWithScopes",
+		expected,
+		u8"(foo.bar() + 1) * 1\0"
+	));
+}
+#endif
 
 #if CAOCO_UT_V2Parser_ValueStatementREPL
 TEST(ut_repl, ut_Parser) {
@@ -556,48 +607,130 @@ TEST(ut_repl, ut_Parser) {
 		else {
 			auto input_vec = caoco::sl::to_u8vec(input.c_str());
 			auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-			auto parse_result = caoco::parse_value_statement(result.cbegin(), result.cend());
-			if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-			else print_ast(parse_result.expected());
+			if(!result.valid()){
+				std::cout << result.error_message() << std::endl;
+			}
+			else {
+				auto exp_result = result.expected();
+				auto parse_result = caoco::parse_value_statement(exp_result.cbegin(), exp_result.cend());
+				if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
+				else print_ast(parse_result.expected());
+			}
 		}
 	}
 }
 #endif
 
+#if CAOCO_UT_V2Parser_ValueStatements
+TEST(ut_Parser_ValueStatements, ut_Parser) {
+
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"PrimaryExpr",
+		&caoco::parse_value_statement,
+		caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+		u8"foo;"
+	));
+
+	// foo + 2
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"BinaryExpr",
+		&caoco::parse_value_statement,
+		caoco::astnode(caoco::astnode_enum::addition_, u8"+",
+			{ caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+			caoco::astnode(caoco::astnode_enum::number_literal_, u8"2") }),
+		u8"foo + 2;"
+	));
+
+	// foo = 1 + 2;
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"AssignmentExpr",
+		&caoco::parse_value_statement,
+		caoco::astnode(caoco::astnode_enum::simple_assignment_, u8"=",
+			{ caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+			caoco::astnode(caoco::astnode_enum::addition_, u8"+",
+				{ caoco::astnode(caoco::astnode_enum::number_literal_, u8"1"),
+				caoco::astnode(caoco::astnode_enum::number_literal_, u8"2") }) }),
+		u8"foo = 1 + 2;"
+	));
+
+	// Testing period(member access) operator
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"PeriodOperator",
+		&caoco::parse_value_statement,
+		caoco::astnode(caoco::astnode_enum::period_, u8".",
+			{ caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+			caoco::astnode(caoco::astnode_enum::alnumus_, u8"bar") }),
+		u8"foo.bar;"
+	));
+
+	// Testing function call operator ()
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"FunctionCallOperator",
+		&caoco::parse_value_statement,
+		caoco::astnode(caoco::astnode_enum::function_call_, u8"()",
+			{ caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+			caoco::astnode(caoco::astnode_enum::arguments_, u8"()") }),
+		u8"foo();"
+	));
+
+	// Statement with no following binary operator should be invalid and throw an exception.
+	std::cout << "Testing foo=; Result should be invalid." << std::endl;
+	EXPECT_FALSE(test_and_compare_parsing_function_from_u8(
+	"InvalidStatement",
+	&caoco::parse_value_statement,
+	caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
+	u8"foo=;"
+	));
+
+}
 #endif
 
 #if CAOCO_UT_V2Parser_SingleNodes
+//TEST(ut_Parser_Arguments, ut_Parser) {
+//	auto input_vec = caoco::sl::to_u8vec(u8"(1, 1, 3)\0");
+//	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+//	auto parse_result = caoco::parse_arguments(result.cbegin(), result.cend());
+//	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
+//	else print_ast(parse_result.expected());
+//}
+
 TEST(ut_Parser_SinguleNodes, ut_Parser) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_singular_nodes.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto lex_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	if (!lex_result.valid()) {
+		std::cout << lex_result.error_message() << std::endl;
+	}
+	else {
+		auto result = lex_result.expected();
 
-	// C& Special Objects
-	auto atype_end = test_parsing_function("&type:", &caoco::parse_cso_type, result.cbegin(), result.cend());
-	auto avalue_end = test_parsing_function("&value:", &caoco::parse_cso_value, atype_end, result.cend());
-	auto aidentity_end = test_parsing_function("&identity:", &caoco::parse_cso_identity, avalue_end, result.cend());
-	auto aint_end = test_parsing_function("&int:", &caoco::parse_cso_int, aidentity_end, result.cend());
-	auto aint_positive_range_end = test_parsing_function("&int[positive_range]:", &caoco::parse_cso_int, aint_end, result.cend());
-	auto aint_negative_range_end = test_parsing_function("&int[negative_range]:", &caoco::parse_cso_int, aint_positive_range_end, result.cend());
-	auto aint_lhs_negative_range_end = test_parsing_function("&int[lhs_negative_range]:", &caoco::parse_cso_int, aint_negative_range_end, result.cend());
-	auto aint_rhs_negative_range_end = test_parsing_function("&int[rhs_negative_range]:", &caoco::parse_cso_int, aint_lhs_negative_range_end, result.cend());
-	auto auint_end = test_parsing_function("&uint:", &caoco::parse_cso_uint, aint_rhs_negative_range_end, result.cend());
-	auto auint_positive_range_end = test_parsing_function("&uint[positive_range]:", &caoco::parse_cso_uint, auint_end, result.cend());
-	auto areal_end = test_parsing_function("&real:", &caoco::parse_cso_real, auint_positive_range_end, result.cend());
-	auto aoctet_end = test_parsing_function("&octet:", &caoco::parse_cso_octet, areal_end, result.cend());
-	auto abit_end = test_parsing_function("&bit:", &caoco::parse_cso_bit, aoctet_end, result.cend());
-	//auto apointer_end = test_parsing_function("&pointer[mytype]:", caoco::ParseCsoPointer(), abit_end, result.cend());
-	//auto apointer_int_end = test_parsing_function("&pointer[&int]:", caoco::ParseCsoPointer(), apointer_end, result.cend());
-	//auto aarray_end = test_parsing_function("&array[mytype, 42]:", caoco::ParseCsoArray(), apointer_int_end, result.cend());
-	//auto aarray_int_end = test_parsing_function("&array[&int, 42]:", caoco::ParseCsoArray(), aarray_end, result.cend());
-	//auto aarray_int_range_end = test_parsing_function("&array[&int[1 ...42], 42]:", caoco::ParseCsoArray(), aarray_int_end, result.cend());
-	
-	// Literals and Operands.
-	auto string_literal_end = test_parsing_function("'string literal':", &caoco::parse_string_literal, abit_end, result.cend());
-	auto string_literal_with_escape_end = test_parsing_function("'string literal with \\'':", &caoco::parse_string_literal, string_literal_end, result.cend());
-	auto number_literal_end = test_parsing_function("number literal:", &caoco::parse_number_literal, string_literal_with_escape_end, result.cend());
-	auto real_literal_end = test_parsing_function("real literal:", &caoco::parse_real_literal, number_literal_end, result.cend());
-	auto alnumus_end = test_parsing_function("alnumus:", &caoco::parse_alnumus_literal, real_literal_end, result.cend());
-	// TODO: test bit, octet and unsigned literals
+		// C& Special Objects
+		auto atype_end = test_parsing_function("&type:", &caoco::parse_cso_type, result.cbegin(), result.cend());
+		auto avalue_end = test_parsing_function("&value:", &caoco::parse_cso_value, atype_end, result.cend());
+		auto aidentity_end = test_parsing_function("&identity:", &caoco::parse_cso_identity, avalue_end, result.cend());
+		auto aint_end = test_parsing_function("&int:", &caoco::parse_cso_int, aidentity_end, result.cend());
+		auto aint_positive_range_end = test_parsing_function("&int[positive_range]:", &caoco::parse_cso_int, aint_end, result.cend());
+		auto aint_negative_range_end = test_parsing_function("&int[negative_range]:", &caoco::parse_cso_int, aint_positive_range_end, result.cend());
+		auto aint_lhs_negative_range_end = test_parsing_function("&int[lhs_negative_range]:", &caoco::parse_cso_int, aint_negative_range_end, result.cend());
+		auto aint_rhs_negative_range_end = test_parsing_function("&int[rhs_negative_range]:", &caoco::parse_cso_int, aint_lhs_negative_range_end, result.cend());
+		auto auint_end = test_parsing_function("&uint:", &caoco::parse_cso_uint, aint_rhs_negative_range_end, result.cend());
+		auto auint_positive_range_end = test_parsing_function("&uint[positive_range]:", &caoco::parse_cso_uint, auint_end, result.cend());
+		auto areal_end = test_parsing_function("&real:", &caoco::parse_cso_real, auint_positive_range_end, result.cend());
+		auto aoctet_end = test_parsing_function("&octet:", &caoco::parse_cso_octet, areal_end, result.cend());
+		auto abit_end = test_parsing_function("&bit:", &caoco::parse_cso_bit, aoctet_end, result.cend());
+		//auto apointer_end = test_parsing_function("&pointer[mytype]:", caoco::ParseCsoPointer(), abit_end, result.cend());
+		//auto apointer_int_end = test_parsing_function("&pointer[&int]:", caoco::ParseCsoPointer(), apointer_end, result.cend());
+		//auto aarray_end = test_parsing_function("&array[mytype, 42]:", caoco::ParseCsoArray(), apointer_int_end, result.cend());
+		//auto aarray_int_end = test_parsing_function("&array[&int, 42]:", caoco::ParseCsoArray(), aarray_end, result.cend());
+		//auto aarray_int_range_end = test_parsing_function("&array[&int[1 ...42], 42]:", caoco::ParseCsoArray(), aarray_int_end, result.cend());
+
+		// Literals and Operands.
+		auto string_literal_end = test_parsing_function("'string literal':", &caoco::parse_string_literal, abit_end, result.cend());
+		auto string_literal_with_escape_end = test_parsing_function("'string literal with \\'':", &caoco::parse_string_literal, string_literal_end, result.cend());
+		auto number_literal_end = test_parsing_function("number literal:", &caoco::parse_number_literal, string_literal_with_escape_end, result.cend());
+		auto real_literal_end = test_parsing_function("real literal:", &caoco::parse_real_literal, number_literal_end, result.cend());
+		auto alnumus_end = test_parsing_function("alnumus:", &caoco::parse_alnumus_literal, real_literal_end, result.cend());
+		// TODO: test bit, octet and unsigned literals
+	}
 }
 #endif
 
@@ -708,48 +841,6 @@ TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 }
 #endif
 
-#if CAOCO_UT_V2Parser_ValueStatements
-TEST(ut_Parser_ValueStatements, ut_Parser) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_primaryexpr.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	// Test parsing a primary expression using build statement method
-	std::cout << "Testing foo;" << std::endl;
-	auto px1 = caoco::parse_value_statement(result.cbegin(), result.cend());
-	EXPECT_TRUE(px1.valid());
-	if(px1.valid()) print_ast(px1.expected());
-
-
-	// foo + 2
-	std::cout << "Testing foo + 2;" << std::endl;
-	auto px2 = caoco::parse_value_statement(px1.always(), result.cend());
-	EXPECT_TRUE(px2.valid());
-	if (px2.valid()) print_ast(px2.expected());
-
-	// foo = 1 + 2;
-	std::cout << "Testing foo = 1 + 2;" << std::endl;
-	auto px3 = caoco::parse_value_statement(px2.always(), result.cend());
-	EXPECT_TRUE(px3.valid());
-	if (px3.valid()) print_ast(px3.expected());
-
-	// Testing period(member access) operator
-	std::cout << "Testing foo.bar;" << std::endl;
-	auto px4 = caoco::parse_value_statement(px3.always(), result.cend());
-	EXPECT_TRUE(px4.valid());
-	if (px4.valid()) print_ast(px4.expected());
-
-	// Testing function call operator ()
-	std::cout << "Testing foo.bar();" << std::endl;
-	auto px5 = caoco::parse_value_statement(px4.always(), result.cend());
-	EXPECT_TRUE(px5.valid());
-	if (px5.valid()) print_ast(px5.expected());
-
-	// Statement with no following binary operator should be invalid and throw an exception.
-	std::cout << "Testing foo=; Result should be invalid." << std::endl;
-	EXPECT_FALSE(caoco::parse_value_statement(px5.always(), result.cend()).valid());
-
-}
-#endif
 
 #if CAOCO_UT_V2Parser_TypeAlias
 TEST(ut_Parser_TypeAlias, ut_Parser) {

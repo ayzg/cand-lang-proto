@@ -26,7 +26,7 @@ namespace caoco {
 			equal_, not_equal_, less_than_, greater_than_, 
 			less_than_or_equal_, greater_than_or_equal_, three_way_comparison_, 
 			
-			atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_, 
+			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_, 
 			abit_, aarray_, apointer_, amemory_, afunction_, cso_,
 
 			aint_constrained_, auint_constrained_,
@@ -74,7 +74,33 @@ namespace caoco {
 				literal_ += it->literal();
 			}
 		}
-		
+		astnode(e_type type, const sl_u8string & literal,const sl_vector<astnode> & children) : type_(type), literal_(literal){
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+		astnode(e_type type, const char8_t * literal, const sl_vector<astnode>& children) : type_(type), literal_(literal) {
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+		template<sl_size LIT_SIZE>
+		astnode(e_type type, const char8_t literal[LIT_SIZE], const sl_vector<astnode>& children) : type_(type), literal_(literal) {
+			for (const auto& child : children) {
+				body_.push_back(child);
+			}
+		}
+
+		template<typename...  ChildTs> requires (std::is_same_v<astnode, ChildTs> && ...)
+		astnode(e_type type, const sl_u8string& literal, ChildTs... children) : type_(type), literal_(literal) {
+			(body_.push_back(children), ...);
+		}
+
+		astnode(e_type type, const sl_u8string& literal) : type_(type), literal_(literal) {}
+		astnode(e_type type, const char8_t* literal) : type_(type), literal_(literal) {}
+		template<sl_size LIT_SIZE>
+		astnode(e_type type, const char8_t literal[LIT_SIZE]) : type_(type), literal_(literal) {}
+
 		e_type type() const { return type_; }
 		const sl_list<astnode>& children() const { return body_; }
 		sl_list<astnode>& children_unsafe() { return body_; }
@@ -149,7 +175,7 @@ namespace caoco {
 			case e_type::auint_: debug_string += "auint_"; break;
 			case e_type::areal_: debug_string += "areal_"; break;
 				//case e_type::aureal_: debug_string += "aureal_"; break;
-			case e_type::aoctet_: debug_string += "aoctet_"; break;
+			case e_type::abyte_: debug_string += "abyte_"; break;
 			case e_type::abit_: debug_string += "abit_"; break;
 			case e_type::aarray_: debug_string += "aarray_"; break;
 			case e_type::apointer_: debug_string += "apointer_"; break;

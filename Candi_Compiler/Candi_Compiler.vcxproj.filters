@@ -18,10 +18,14 @@
     <ClInclude Include="unit_test_util.hpp" />
     <ClInclude Include="cand_errors.hpp" />
     <ClInclude Include="preprocessor.hpp" />
+    <ClInclude Include="cand_constants.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">
       <UniqueIdentifier>{d3bded1e-9076-412c-b976-59c00b713152}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depreceated_scripts">
+      <UniqueIdentifier>{afccad54-0f02-4f60-a022-420e013a76e0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -32,9 +36,6 @@
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="ut_parser_statementscope.candi">
-      <Filter>candi_test_scripts</Filter>
-    </None>
-    <None Include="ut_parser_primaryexpr.candi">
       <Filter>candi_test_scripts</Filter>
     </None>
     <None Include="ut_parser_simplestatements.candi">
@@ -103,6 +104,9 @@
     </None>
     <None Include="ut_preprocessor_include.candi">
       <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_primaryexpr.candi">
+      <Filter>depreceated_scripts</Filter>
     </None>
   </ItemGroup>
 </Project>

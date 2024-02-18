@@ -308,7 +308,7 @@ expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
 }
 
 expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end) {
-	return generic_parse_single_token<tk_enum::aoctet_, astnode_enum::aoctet_, LAMBDA_STRING(cso_octet : begin is not aoctet_ token.)>(begin, end);
+	return generic_parse_single_token<tk_enum::abyte_, astnode_enum::abyte_, LAMBDA_STRING(cso_octet : begin is not abyte_ token.)>(begin, end);
 }
 
 expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
@@ -328,7 +328,7 @@ expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
 		return parse_cso_real(begin, end);
 	case tk_enum::abit_:
 		return parse_cso_bit(begin, end);
-	case tk_enum::aoctet_:
+	case tk_enum::abyte_:
 		return parse_cso_octet(begin, end);
 	default:
 		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
@@ -338,24 +338,29 @@ expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
 }
 
 astnode expression_simplify(astnode node) {
-	if (node.children().empty()) return node;
-
-	if (node.front().type() == astnode_enum::expression_) {
-		auto expr = node.front().front();
-		node.front() = expr;
+	if(node.type() == astnode_enum::expression_){
+		auto expr = node.front();
+		return expression_simplify(expr);
 	}
+	else{
+		if (node.children().empty()) return node;
 
-	if (node.back().type() == astnode_enum::expression_) {
-		auto expr = node.back().front();
-		node.back() = expr;
+		if (node.front().type() == astnode_enum::expression_) {
+			auto expr = node.front().front();
+			node.front() = expr;
+		}
+
+		if (node.back().type() == astnode_enum::expression_) {
+			auto expr = node.back().front();
+			node.back() = expr;
+		}
+
+		auto new_front = expression_simplify(node.front());
+		auto new_back = expression_simplify(node.back());
+
+		node.front() = new_front;
+		node.back() = new_back;
 	}
-
-	auto new_front = expression_simplify(node.front());
-	auto new_back = expression_simplify(node.back());
-
-	node.front() = new_front;
-	node.back() = new_back;
-
 	return node;
 }
 
@@ -818,8 +823,10 @@ expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
 			begin, "parse_arguments : Invalid arguments scope."));
 	}
 
+	// Early Return, if arugments scope is empty.
 	if (scope.is_empty()) {
-		return expected_parse_result::make_success(begin, astnode(astnode_enum::arguments_, begin, end));
+		return expected_parse_result::make_success(scope.scope_end(),
+			astnode(astnode_enum::arguments_, scope.scope_begin(), scope.scope_end()));
 	}
 
 	// Get each argument out of the scope.
@@ -1447,24 +1454,24 @@ expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit e
 			else if (it->type() == tk_enum::func_) {
 				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
 			}
-			else if (it->type() == tk_enum::include_) {
-				it++;
-				auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
-				auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-				auto included_code = parse_pragmatic_block(result.begin(), result.end());
+			//else if (it->type() == tk_enum::include_) {
+			//	it++;
+			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
+			//	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+			//	auto included_code = parse_pragmatic_block(result.begin(), result.end());
 
-				if (included_code.valid()) {
-					for (const auto & n : included_code.expected().children()){
-						node.push_back(n);
-					}
-					it = it + 2;//past name and eos
-				}
-				else {
-					return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
-						it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
-				}
+			//	if (included_code.valid()) {
+			//		for (const auto & n : included_code.expected().children()){
+			//			node.push_back(n);
+			//		}
+			//		it = it + 2;//past name and eos
+			//	}
+			//	else {
+			//		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
+			//			it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
+			//	}
 
-			}
+			//}
 			else {
 				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
 			}
