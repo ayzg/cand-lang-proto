@@ -488,7 +488,7 @@ namespace caoco {
 			else if (find_forward(beg, u8::directives::REAL))
 				return make_result(tk_enum::areal_, beg, it);
 			else if (find_forward(beg, u8::directives::BYTE))
-				return make_result(tk_enum::aoctet_, beg, it); // TODO: make byte
+				return make_result(tk_enum::abyte_, beg, it); // TODO: make byte
 			else if (find_forward(beg, u8::directives::BIT))
 				return make_result(tk_enum::abit_, beg, it);
 			else if (find_forward(beg, u8::directives::STR))
@@ -560,7 +560,7 @@ namespace caoco {
 			else if (find_forward(beg, u8::keywords::REAL))
 				return make_result(tk_enum::areal_, beg, it);
 			else if (find_forward(beg, u8::keywords::BYTE))
-				return make_result(tk_enum::aoctet_, beg, it); // TODO: make byte
+				return make_result(tk_enum::abyte_, beg, it); // TODO: make byte
 			else if (find_forward(beg, u8::keywords::BIT))
 				return make_result(tk_enum::abit_, beg, it);
 			else if (find_forward(beg, u8::keywords::STR))
@@ -830,7 +830,7 @@ namespace caoco {
 			//	return make_result(tk_enum::aureal_, begin, it);
 			//}
 			else if (find_forward(keyword_begin, u8"octet")) {
-				return make_result(tk_enum::aoctet_, begin, it);
+				return make_result(tk_enum::abyte_, begin, it);
 			}
 			else if (find_forward(keyword_begin, u8"bit")) {
 				return make_result(tk_enum::abit_, begin, it);

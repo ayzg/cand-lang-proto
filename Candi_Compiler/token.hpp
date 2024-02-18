@@ -32,7 +32,7 @@ namespace caoco {
 			// Special
 			eos_, comma_, period_, ellipsis_,
 			// Special Tokens
-			atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_,
+			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
 			abit_, astr_,aarray_, apointer_, amemory_, afunction_,
 			// Directive Tokens
 			enter_, start_, include_,type_, var_, class_, func_, print_, none_literal_,
@@ -92,7 +92,7 @@ namespace caoco {
 
 		// Fast type queries.
 		SL_CX bool is_directive() const noexcept {
-			//atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_,
+			//atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
 			//	abit_, astr_, aarray_, apointer_, amemory_, afunction_,
 			//	enter_, start_, include_, type_, var_, class_, func_, print_, none_literal_,
 			//	obj_, private_, macro_,
@@ -105,7 +105,7 @@ namespace caoco {
 				type_ == e_type::aint_ ||
 				type_ == e_type::auint_ ||
 				type_ == e_type::areal_ ||
-				type_ == e_type::aoctet_ ||
+				type_ == e_type::abyte_ ||
 				type_ == e_type::abit_ ||
 				type_ == e_type::astr_ ||
 				type_ == e_type::aarray_ ||
@@ -209,7 +209,7 @@ namespace caoco {
 			case(e_type::auint_): return "auint_";
 			case(e_type::areal_): return "areal_";
 				//case(e_type::aureal_): return "aureal_";
-			case(e_type::aoctet_): return "aoctet_";
+			case(e_type::abyte_): return "abyte_";
 			case(e_type::abit_): return "abit_";
 			case(e_type::aarray_): return "aarray_";
 			case(e_type::apointer_): return "apointer_";

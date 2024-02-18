@@ -83,7 +83,7 @@ TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
 		{caoco::tk_enum::aint_},
 		{caoco::tk_enum::auint_},
 		{caoco::tk_enum::areal_},
-		{caoco::tk_enum::aoctet_},
+		{caoco::tk_enum::abyte_},
 		{caoco::tk_enum::abit_},
 		{caoco::tk_enum::astr_}
 		});
@@ -137,7 +137,7 @@ TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
 		{caoco::tk_enum::aint_},
 		{caoco::tk_enum::auint_},
 		{caoco::tk_enum::areal_},
-		{caoco::tk_enum::aoctet_},
+		{caoco::tk_enum::abyte_},
 		{caoco::tk_enum::abit_},
 		{caoco::tk_enum::astr_}
 		});

@@ -88,7 +88,7 @@ caoco::sl_string token_type_to_string(caoco::tk_enum type) {
 	case(caoco::tk_enum::auint_): return "auint_";
 	case(caoco::tk_enum::areal_): return "areal_";
 		//case(caoco::tk_enum::aureal_): return "aureal_";
-	case(caoco::tk_enum::aoctet_): return "aoctet_";
+	case(caoco::tk_enum::abyte_): return "abyte_";
 	case(caoco::tk_enum::abit_): return "abit_";
 	case(caoco::tk_enum::aarray_): return "aarray_";
 	case(caoco::tk_enum::apointer_): return "apointer_";
@@ -194,7 +194,7 @@ auto node_debug_string(const caoco::astnode& node) {
 	case caoco::astnode_enum::auint_: debug_string += "auint_"; break;
 	case caoco::astnode_enum::areal_: debug_string += "areal_"; break;
 		//case caoco::astnode_enum::aureal_: debug_string += "aureal_"; break;
-	case caoco::astnode_enum::aoctet_: debug_string += "aoctet_"; break;
+	case caoco::astnode_enum::abyte_: debug_string += "abyte_"; break;
 	case caoco::astnode_enum::abit_: debug_string += "abit_"; break;
 	case caoco::astnode_enum::aarray_: debug_string += "aarray_"; break;
 	case caoco::astnode_enum::apointer_: debug_string += "apointer_"; break;

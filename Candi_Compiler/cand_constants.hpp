@@ -24,7 +24,7 @@ namespace caoco {
 				SL_CXA MACRO = u8"macro";
 				SL_CXA ENTER = u8"enter";
 				SL_CXA START = u8"start";
-				SL_CXA TYPE = u8"type";
+				SL_CXA USE = u8"use";
 				SL_CXA VAR = u8"var";
 				SL_CXA CLASS = u8"class";
 				SL_CXA OBJECT = u8"obj";
@@ -46,6 +46,9 @@ namespace caoco {
 				SL_CXA PRINT = u8"print";
 				SL_CXA NONE = u8"none";
 
+				SL_CXA VALUE = u8"value";
+				SL_CXA TYPE = u8"type";
+				SL_CXA IDENTITY = u8"identity";
 				SL_CXA INT = u8"int";
 				SL_CXA UINT = u8"uint";
 				SL_CXA REAL = u8"real";
@@ -62,7 +65,7 @@ namespace caoco {
 				SL_CXA MACRO = u8"#macro";
 				SL_CXA ENTER = u8"#enter";
 				SL_CXA START = u8"#start";
-				SL_CXA TYPE = u8"#type";
+				SL_CXA USE = u8"#use";
 				SL_CXA VAR = u8"#var";
 				SL_CXA CLASS = u8"#class";
 				SL_CXA OBJECT = u8"#obj";
@@ -84,6 +87,9 @@ namespace caoco {
 				SL_CXA PRINT = u8"#print";
 				SL_CXA NONE = u8"#none";
 
+				SL_CXA VALUE = u8"#value";
+				SL_CXA TYPE = u8"#type";
+				SL_CXA IDENTITY = u8"#identity";
 				SL_CXA INT = u8"#int";
 				SL_CXA UINT = u8"#uint";
 				SL_CXA REAL = u8"#real";

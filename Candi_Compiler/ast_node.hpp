@@ -26,7 +26,7 @@ namespace caoco {
 			equal_, not_equal_, less_than_, greater_than_, 
 			less_than_or_equal_, greater_than_or_equal_, three_way_comparison_, 
 			
-			atype_, aidentity_, avalue_, aint_, auint_, areal_, aoctet_, 
+			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_, 
 			abit_, aarray_, apointer_, amemory_, afunction_, cso_,
 
 			aint_constrained_, auint_constrained_,
@@ -175,7 +175,7 @@ namespace caoco {
 			case e_type::auint_: debug_string += "auint_"; break;
 			case e_type::areal_: debug_string += "areal_"; break;
 				//case e_type::aureal_: debug_string += "aureal_"; break;
-			case e_type::aoctet_: debug_string += "aoctet_"; break;
+			case e_type::abyte_: debug_string += "abyte_"; break;
 			case e_type::abit_: debug_string += "abit_"; break;
 			case e_type::aarray_: debug_string += "aarray_"; break;
 			case e_type::apointer_: debug_string += "apointer_"; break;

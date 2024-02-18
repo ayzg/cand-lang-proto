@@ -308,7 +308,7 @@ expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
 }
 
 expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end) {
-	return generic_parse_single_token<tk_enum::aoctet_, astnode_enum::aoctet_, LAMBDA_STRING(cso_octet : begin is not aoctet_ token.)>(begin, end);
+	return generic_parse_single_token<tk_enum::abyte_, astnode_enum::abyte_, LAMBDA_STRING(cso_octet : begin is not abyte_ token.)>(begin, end);
 }
 
 expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
@@ -328,7 +328,7 @@ expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
 		return parse_cso_real(begin, end);
 	case tk_enum::abit_:
 		return parse_cso_bit(begin, end);
-	case tk_enum::aoctet_:
+	case tk_enum::abyte_:
 		return parse_cso_octet(begin, end);
 	default:
 		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
