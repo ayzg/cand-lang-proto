@@ -49,7 +49,7 @@ namespace caoco {
 			class_definition_, 
 
 			conditional_statement_,conditional_block_,on_block_,
-			
+			capture_list_,generic_list_,
 			open_scope_, close_scope_, open_list_, close_list_, open_frame_, close_frame_, eof_,
 		};
 	private:

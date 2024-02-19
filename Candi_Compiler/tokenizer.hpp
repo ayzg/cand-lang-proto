@@ -61,30 +61,6 @@ namespace caoco {
 		}
 	};
 
-	//// Internal classes
-	//class tokenizer::lex_result {
-	//	tk token_;
-	//	sl_char8_vector_cit end_it_;
-	//	sl_string error_;
-	//public:
-	//	SL_CX lex_result(tk token, sl_char8_vector_cit end_it, sl_string error = "")
-	//		: token_(token), end_it_(end_it), error_(error) {}
-	//	SL_CX const tk& token() const { return token_; }
-	//	SL_CX const sl_string& error() const { return error_; }
-	//	SL_CX sl_char8_vector_cit end_it() const { return end_it_; }
-	//};
-
-	//struct tokenizer::lex_error : public std::logic_error {
-	//	auto make_error(sl_size line, sl_size col, sl_string error) {
-	//		return "Error at line: " + std::to_string(line)
-	//			+ ", column: " + std::to_string(col)
-	//			+ " Details: " + error + "\n";
-
-	//	}
-	//	lex_error(sl_size line, sl_size col, sl_string error)
-	//		: std::logic_error(make_error(line, col, error)) {}
-	//};
-
 	// Main tokenizer method
 	constexpr tokenizer::tokenizer_result tokenizer::tokenize() {
 		enum keyword_syntax_switch{

@@ -196,6 +196,24 @@ expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
 			return expected_parse_result::make_success(scope.scope_end(),nd);
 		}
 	}
+	case tk_enum::open_list_: // generic list operand
+	{
+		auto seperated_list = caoco::find_seperated_list_scopes(begin, end, caoco::tk_enum::comma_);
+		if (seperated_list.empty()) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid list operand."));
+		}
+		else {
+			auto list = astnode(astnode_enum::generic_list_, seperated_list.front().scope_begin(), seperated_list.back().scope_end());
+			for (auto& scope : seperated_list) {
+				auto expr = parse_primary_expression(scope.contained_begin(), scope.contained_end());
+				if (!expr.valid())
+					return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in list operand."));
+
+				list.push_back(expr.expected());
+			}
+			return expected_parse_result::make_success(seperated_list.back().scope_end(), list);
+		}
+	}
 	case tk_enum::aint_:
 		return parse_cso_int(begin, end);
 	default:
@@ -907,52 +925,6 @@ expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit en
 	);
 
 	return expected_parse_result::make_success(cursor.get_it(), node);
-
-	//// next is a primary expression resolving to a type.
-
-
-
-	//// next is an alnumus or a cso type.
-	//if (cursor.next(2).type_is(tk_enum::alnumus_)) {
-	//	// type expr is an alnumus
-	//	auto alnumus_literal_type = parse_alnumus_literal(*cursor.next(2), end);
-	//	if (!alnumus_literal_type.valid()) {
-	//		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2), 
-	//			"parse_directive_type: Expected an alnumus." + alnumus_literal_type.error_message()));
-	//	}
-
-	//	// next should be an eos
-	//	if (cursor.next(3).type() != tk_enum::eos_) {
-	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3), 
-	//			"parse_directive_type: Expected an eos."));
-	//	}
-
-	//	astnode node{ astnode_enum::type_alias_, begin, *cursor.next(3) };
-	//	node.push_back(alnumus_literal_type_name.expected());
-	//	node.push_back(alnumus_literal_type.expected());
-	//	// skip eos
-	//	return expected_parse_result::make_success(alnumus_literal_type.always() + 1,node);
-	//}
-	//else { // Try to parse a cso
-	//	auto cso = parse_cso(*cursor.next(2), end);
-	//	if (!cso.valid()) {
-	//		// Could not parse a cso, not a valid type expr
-	//		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2),
-	//			"parse_directive_type: Expected an alnumus or cso in type expression assignment."));
-	//	}
-
-	//	// next should be an eos
-	//	if (cso.always()->type() != tk_enum::eos_) {
-	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
-	//			"ParseIdentifierStatement: Expected an eos after cso in type expression."));
-	//	}
-
-	//	astnode node{ astnode_enum::type_definition_, begin, cso.always() + 1 };
-	//	node.push_back(alnumus_literal_type_name.expected());
-	//	node.push_back(cso.expected());
-	//	// skip eos
-	//	return expected_parse_result::make_success(cso.always() + 1, node);
-	//}
 };
 
 expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end) {
@@ -1057,95 +1029,6 @@ expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end
 		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
 			"parse_directive_var: Invalid var statement format. Expected an eos or an assingment or a type or a type constraint scope."));
 	}
-
-
-	//// Anonymous Var Decl
-	//// Build the assingment expression
-	//auto expr = parse_value_statement(*cursor.next(), end);
-	//if (!expr.valid()) {
-	//	return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
-	//		"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
-	//}
-	//// Create the node, omit the eos token.
-	//astnode node{ astnode_enum::anon_variable_definition_assingment_, *cursor, expr.always() };
-	//node.push_back(expr.expected());
-	//return expected_parse_result::make_success(expr.always(), node);
-
-
-	//if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::eos_ })) {	// Anon Var Decl
-	//	// Get the alnumus
-	//	auto variable_name = parse_alnumus_literal(*cursor.next(), end);
-	//	if (!variable_name.valid()) {
-	//		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
-	//			"parse_directive_var: Invalid var statement format. Anon var decl must be followed by an identity."));
-	//	}
-	//	// Create the node, omit the eos token.
-	//	astnode node{ astnode_enum::anon_variable_definition_, begin, *cursor.next(3) };
-	//	node.push_back(variable_name.expected());
-	//	return expected_parse_result::make_success(*cursor.next(3),node);// 1 past eos token
-	//}
-	//else if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::simple_assignment_ })) // Anon Var Decl Assign
-	//{
-	//	// Build the assingment expression
-	//	auto expr = parse_value_statement(*cursor.next(), end);
-	//	if (!expr.valid()) {
-	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
-	//			"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
-	//	}
-	//	// Create the node, omit the eos token.
-	//	astnode node{ astnode_enum::anon_variable_definition_assingment_, *cursor, expr.always() };
-	//	node.push_back(expr.expected());
-	//	return expected_parse_result::make_success(expr.always(), node); // 1 past eos token
-	//}
-	//else if (find_forward(begin, { tk_enum::var_,tk_enum::open_frame_ })) { // Constrained Variable Def
-	//	// Find the scope of the frame.
-	//	parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
-
-	//	// After the frame scope must be an alnumus.
-	//	if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_ })) {
-
-	//		if ((frame_scope.scope_end() + 1)->type_is(tk_enum::eos_)) {
-	//			// Create the node, omit the eos token.
-	//			astnode node{ astnode_enum::constrained_variable_definition_, *cursor, frame_scope.scope_end() + 1 };
-	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() }); // Todo: parse type constraints
-	//			// get the identifier
-	//			auto variable_name = parse_alnumus_literal(frame_scope.scope_end(), end);
-	//			if (!variable_name.valid()) {
-	//				return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
-	//					"parse_directive_var: Invalid var statement format. No identifier following type contraints."));
-	//			}
-	//			node.push_back(variable_name.expected());
-	//			return expected_parse_result::make_success(variable_name.always() + 1, node); // 1 past eos token
-	//		}
-	//		else if ((frame_scope.scope_end() + 1)->type_is(tk_enum::simple_assignment_)) {
-	//			// Build the assingment expression
-	//			auto expr = parse_value_statement(frame_scope.scope_end(), end);
-	//			if (!expr.valid()) {
-	//				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
-	//					"parse_directive_var: Invalid var statement format."));
-	//			}
-
-	//			// Create the node, omit the eos token.
-	//			astnode node{ astnode_enum::constrained_variable_definition_assingment_, *cursor, expr.always() - 1 };
-	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
-	//			node.push_back(expr.expected());
-	//			return expected_parse_result::make_success(expr.always(),node); // 1 past eos token
-	//		}
-	//		else {
-	//			return expected_parse_result::make_failure(frame_scope.scope_end(), 
-	//				ca_error::parser::invalid_expression(frame_scope.scope_end(), "parse_directive_var: Invalid var statement format."));
-	//		}
-	//	}
-	//	else {
-	//		return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
-	//			"parse_directive_var: No identifier following type contraints."));
-	//	}
-	//}
-	//else {
-	//	return expected_parse_result::make_failure((begin + 1), 
-	//		ca_error::parser::invalid_expression((begin + 1), 
-	//			"parse_directive_var: Invalid var statement format. #var directive was not followed by an identity or type constraint."));
-	//}
 };
 
 expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end) {
@@ -1274,178 +1157,252 @@ expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end)
 
 expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit end) {
 	tk_cursor cursor(begin, end);
-
-	auto get_and_push_function_name = [](astnode& nd, tk_cursor cs)->std::pair<bool, std::string> {
-		// get the identifier
-		auto vn = parse_alnumus_literal(cs.get_it(), cs.end());
-		if (!vn.valid()) {
-			return { false, "parse_directive_func: Invalid func statement format. Expected an alnumus." };
-		}
-		nd.push_back(vn.expected());
-		return { true, "" };
-	};
-
-	auto get_and_push_functional_block = [](parser_scope_result& func_body_scope, astnode& nd)->std::pair<bool, std::string> {
-		// get the functional block
-		if (func_body_scope.is_empty()) {
-			return { false, "parse_directive_func: Empty function definition, function must have a statement." };
+	// <open_frame> <capture_list> <close_frame> <alnumus> <arguments> <type_constraints> <functional_block> 
+	if (cursor.type_is(tk_enum::open_frame_)) {
+		parser_scope_result capture_list_scope = find_frame_scope(cursor.get_it(), cursor.end());
+		if (!capture_list_scope.valid) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid capture list scope."));
 		}
 
-		auto functional_block = parse_functional_block(func_body_scope.scope_begin(), func_body_scope.scope_end());
+		auto capture_list = astnode(astnode_enum::capture_list_, capture_list_scope.scope_begin(), capture_list_scope.scope_end());
+		cursor.advance_to(capture_list_scope.scope_end());
+
+		auto func_name = parse_alnumus_literal(cursor.get_it(), end);
+		if (!func_name.valid()) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid func statement format. Expected an alnumus."));
+		}
+		cursor.advance();
+
+		astnode argscope = {astnode_enum::none_};
+		if (cursor.type_is(tk_enum::open_scope_)) {
+			parser_scope_result arguments_scope = find_paren_scope(cursor.get_it(), cursor.end());
+			if (!arguments_scope.valid) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid arguments scope."));
+			}
+
+			auto arguments = astnode(astnode_enum::arguments_, arguments_scope.scope_begin(), arguments_scope.scope_end());
+			argscope = arguments;
+			cursor.advance_to(arguments_scope.scope_end());
+		}
+
+		astnode type_constraint = {astnode_enum::none_};
+		if(cursor.type_is(tk_enum::alnumus_) or cursor.is_keyword_type()) {
+			auto type_constraints = parse_operand(cursor.get_it(), cursor.end());
+			if (!type_constraints.valid()) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid type constraints."));
+			}
+			type_constraint = type_constraints.expected();
+			cursor.advance_to(type_constraints.always());
+		}
+		else if(cursor.type_is(tk_enum::open_frame_)) {
+			parser_scope_result type_constraints_scope = find_frame_scope(cursor.get_it(), cursor.end());
+			if (!type_constraints_scope.valid) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid type constraints scope."));
+			}
+
+			auto type_constraints = astnode(astnode_enum::type_constraints_, type_constraints_scope.scope_begin(), type_constraints_scope.scope_end());
+			type_constraint = type_constraints;
+			cursor.advance_to(type_constraints_scope.scope_end());
+		}
+
+		auto functional_block = parse_functional_block(cursor.get_it(), cursor.end());
 		if (!functional_block.valid()) {
-			return {false, "directive_func:functional_block: Could not parse functional block." };
-		}
-		nd.push_back(functional_block.expected());
-		return { true, "" };
-	};
-
-	// Shorthand Void Arg Method Definition <#func> <alnumus> <functional_block>
-	if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_list_ })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
-		parser_scope_result method_def_body_scope = find_list_scope( *cursor.next(2), cursor.end());
-
-		// After list scope must be an eos.
-		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
-			// Create the node, omit the eos token.
-			astnode node{ astnode_enum::shorthand_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
-
-			// get the identifier
-			auto variable_name = parse_alnumus_literal(*cursor.next(), end);
-			if (!variable_name.valid()) {
-				return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
-					"parse_directive_func: Invalid func statement format. Expected an alnumus."));
-			}
-			node.push_back(variable_name.expected());
-			// get the functional block
-			auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
-			if (!func_block_success) {
-				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-					method_def_body_scope.scope_end(), func_block_error));
-			}
-			return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
-		}
-		else {
-			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(method_def_body_scope.scope_end(),
-				"[ParseDirectiveFunc]: Invalid func statement format. Expected an eos token ';' after functional block in function definition. Function name:"
-				+ sl::to_str(cursor.next().lit())));
-		}
-	}
-	// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
-	else if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_scope_ })) {
-		parser_scope_result method_arguments_scope = find_scope(*cursor.next(2), cursor.end());
-
-		if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
-			parser_scope_result method_def_body_scope = find_list_scope(method_arguments_scope.scope_end(), cursor.end());
-			// After list scope must be an eos.
-			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
-				// Create the node, omit the eos token.
-				astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
-				// get the identifier
-				auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.next());
-				if (!var_name_success)
-					return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(), var_name_error));
-
-				node.push_back({ astnode_enum::arguments_, method_arguments_scope.contained_begin(), method_arguments_scope.contained_end() });
-
-				// get the functional block
-				auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
-				if (!func_block_success) {
-					return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-						method_def_body_scope.scope_end(), func_block_error));
-				}
-				return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
-			}
-			else {
-				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-					method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
-			}
-
-		}
-		else {
-			return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
-				method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid functional block."));
 		}
 
-	}
-	// Shorthand Void Constrained Method Def or Constrained Method Def
-	else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame_ })) {
-		// Find the scope of the frame.
-		parser_scope_result frame_scope = find_list_scope(*cursor.next(), cursor.end());
-
-		// After the frame scope must be an alnumus and an open list -> Shorthand Void Constrained Function Def
-		if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_list_ })) {
-			parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, frame_scope.scope_end() + 1, cursor.end());
-			// After list scope must be an eos.
-			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
-				// Create the node, omit the eos token.
-				astnode node{ astnode_enum::shorthand_constrained_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
-				node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
-				// get the identifier
-				auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
-				if (!var_name_success)
-					return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()), 
-						ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
-
-				// get the functional block
-				auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
-				if (!func_block_success) {
-				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-					method_def_body_scope.scope_end(), func_block_error));
-				}
-
-				return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
-			}
-			else {
-				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-					method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
-			}
-		}
-		// Or an alnumus and an open scope -> Constrained Method Def
-		else if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_scope_ })) {
-			parser_scope_result method_arguments_scope = find_scope(frame_scope.scope_end() + 1, cursor.end());
-
-			if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
-				parser_scope_result method_def_body_scope = find_list_scope( method_arguments_scope.scope_end(), cursor.end());
-				// After list scope must be an eos.
-				if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
-					// Create the node, omit the eos token.
-					astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
-					node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
-					node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
-
-					// get the identifier
-					auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
-					if (!var_name_success)
-						return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()),
-							ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
-
-					// get the functional block
-					auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
-					if (!func_block_success) {
-						return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-							method_def_body_scope.scope_end(), func_block_error));
-					}
-
-					return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
-				}
-				else {
-					return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
-						method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
-				}
-
-			}
-			else {
-				return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
-					method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
-			}
-		}
-		else {
-			return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(
-				frame_scope.scope_end(), "ParseDirectiveVar: Invalid var statement format."));
-		}
+		astnode node{ astnode_enum::func_, begin, functional_block.always() };
+		node.push_back(capture_list);
+		node.push_back(func_name.expected());
+		if(argscope.type() != astnode_enum::none_)
+			node.push_back(argscope);
+		if(type_constraint.type() != astnode_enum::none_)
+			node.push_back(type_constraint);
+		node.push_back(functional_block.expected());
+		return expected_parse_result::make_success(functional_block.always(), node);
 	}
 	else {
-		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "ParseDirectiveFunc: Invalid func statement format."));
+		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+			cursor.get_it(), "parse_directive_func: Invalid func statement format."));
 	}
+
+
+	//auto get_and_push_function_name = [](astnode& nd, tk_cursor cs)->std::pair<bool, std::string> {
+	//	// get the identifier
+	//	auto vn = parse_alnumus_literal(cs.get_it(), cs.end());
+	//	if (!vn.valid()) {
+	//		return { false, "parse_directive_func: Invalid func statement format. Expected an alnumus." };
+	//	}
+	//	nd.push_back(vn.expected());
+	//	return { true, "" };
+	//};
+
+	//auto get_and_push_functional_block = [](parser_scope_result& func_body_scope, astnode& nd)->std::pair<bool, std::string> {
+	//	// get the functional block
+	//	if (func_body_scope.is_empty()) {
+	//		return { false, "parse_directive_func: Empty function definition, function must have a statement." };
+	//	}
+
+	//	auto functional_block = parse_functional_block(func_body_scope.scope_begin(), func_body_scope.scope_end());
+	//	if (!functional_block.valid()) {
+	//		return {false, "directive_func:functional_block: Could not parse functional block." };
+	//	}
+	//	nd.push_back(functional_block.expected());
+	//	return { true, "" };
+	//};
+
+	//// Shorthand Void Arg Method Definition <#func> <alnumus> <functional_block>
+	//if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_list_ })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
+	//	parser_scope_result method_def_body_scope = find_list_scope( *cursor.next(2), cursor.end());
+
+	//	// After list scope must be an eos.
+	//	if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//		// Create the node, omit the eos token.
+	//		astnode node{ astnode_enum::shorthand_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+
+	//		// get the identifier
+	//		auto variable_name = parse_alnumus_literal(*cursor.next(), end);
+	//		if (!variable_name.valid()) {
+	//			return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+	//				"parse_directive_func: Invalid func statement format. Expected an alnumus."));
+	//		}
+	//		node.push_back(variable_name.expected());
+	//		// get the functional block
+	//		auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//		if (!func_block_success) {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), func_block_error));
+	//		}
+	//		return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(method_def_body_scope.scope_end(),
+	//			"[ParseDirectiveFunc]: Invalid func statement format. Expected an eos token ';' after functional block in function definition. Function name:"
+	//			+ sl::to_str(cursor.next().lit())));
+	//	}
+	//}
+	//// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
+	//else if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_scope_ })) {
+	//	parser_scope_result method_arguments_scope = find_scope(*cursor.next(2), cursor.end());
+
+	//	if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+	//		parser_scope_result method_def_body_scope = find_list_scope(method_arguments_scope.scope_end(), cursor.end());
+	//		// After list scope must be an eos.
+	//		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+	//			// get the identifier
+	//			auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.next());
+	//			if (!var_name_success)
+	//				return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(), var_name_error));
+
+	//			node.push_back({ astnode_enum::arguments_, method_arguments_scope.contained_begin(), method_arguments_scope.contained_end() });
+
+	//			// get the functional block
+	//			auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//			if (!func_block_success) {
+	//				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//					method_def_body_scope.scope_end(), func_block_error));
+	//			}
+	//			return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
+	//			method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//	}
+
+	//}
+	//// Shorthand Void Constrained Method Def or Constrained Method Def
+	//else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame_ })) {
+	//	// Find the scope of the frame.
+	//	parser_scope_result frame_scope = find_list_scope(*cursor.next(), cursor.end());
+
+	//	// After the frame scope must be an alnumus and an open list -> Shorthand Void Constrained Function Def
+	//	if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_list_ })) {
+	//		parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, frame_scope.scope_end() + 1, cursor.end());
+	//		// After list scope must be an eos.
+	//		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::shorthand_constrained_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
+	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
+	//			// get the identifier
+	//			auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
+	//			if (!var_name_success)
+	//				return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()), 
+	//					ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
+
+	//			// get the functional block
+	//			auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//			if (!func_block_success) {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), func_block_error));
+	//			}
+
+	//			return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+	//	}
+	//	// Or an alnumus and an open scope -> Constrained Method Def
+	//	else if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_scope_ })) {
+	//		parser_scope_result method_arguments_scope = find_scope(frame_scope.scope_end() + 1, cursor.end());
+
+	//		if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+	//			parser_scope_result method_def_body_scope = find_list_scope( method_arguments_scope.scope_end(), cursor.end());
+	//			// After list scope must be an eos.
+	//			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//				// Create the node, omit the eos token.
+	//				astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+	//				node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
+	//				node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
+
+	//				// get the identifier
+	//				auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
+	//				if (!var_name_success)
+	//					return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()),
+	//						ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
+
+	//				// get the functional block
+	//				auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//				if (!func_block_success) {
+	//					return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//						method_def_body_scope.scope_end(), func_block_error));
+	//				}
+
+	//				return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//			}
+	//			else {
+	//				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//					method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//			}
+
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(
+	//			frame_scope.scope_end(), "ParseDirectiveVar: Invalid var statement format."));
+	//	}
+	//}
+	//else {
+	//	return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "ParseDirectiveFunc: Invalid func statement format."));
+	//}
 }
 
 expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit end) {
@@ -1538,76 +1495,45 @@ expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit e
 		// Get the scope of the statement stating from the first token to the last matching semicolon.
 		parser_scope_result statement_scope;
 
-		auto parse_statement = [&it, &statement_scope, &end, &node](auto&& parsing_process, tk_enum open, tk_enum close)->void {
-			statement_scope = find_statement(open, close, it, end);
-			// If the statement is empty, skip it.
-			if (statement_scope.is_empty()) {
-				std::cout << "WARNING ParsePragmaticBlock: Empty statement." << std::endl;
+		if (it->type_is(tk_enum::alnumus_)) { // Var Declaration
+			auto var_def = parse_directive_var(it, end);
+			if (!var_def.valid()) {
+				return expected_parse_result::make_failure(var_def.always(), ca_error::parser::invalid_expression(
+					var_def.always(), "ParsePragmaticBlock: Invalid var definition." + var_def.error_message()));
 			}
-			if (!statement_scope.valid) {
-				throw std::runtime_error("ParsePragmaticBlock: Invalid statement scope.");
+			node.push_back(var_def.expected());
+			it = var_def.always();
+		}
+		else if (it->type_is(tk_enum::open_frame_)) { // Function declaration.
+			auto func_def = parse_directive_func(it, end);
+			if (!func_def.valid()) {
+				return expected_parse_result::make_failure(func_def.always(), ca_error::parser::invalid_expression(
+					func_def.always(), "ParsePragmaticBlock: Invalid function definition." + func_def.error_message()));
 			}
-			auto parse_result = parsing_process(statement_scope.scope_begin(), statement_scope.scope_end());
-			if (!parse_result.valid()) {
-				throw std::runtime_error("ParsePragmaticBlock: Invalid statement." + parse_result.error_message());
+			node.push_back(func_def.expected());
+			it = func_def.always();
+		}
+		else if (it->type_is(tk_enum::use_)) {
+			auto type_alias = parse_directive_type(it, end);
+			if (!type_alias.valid()) {
+				return expected_parse_result::make_failure(type_alias.always(), ca_error::parser::invalid_expression(
+					type_alias.always(), "ParsePragmaticBlock: Invalid type alias." + type_alias.error_message()));
 			}
-			node.push_back(parse_result.expected());
-			it = parse_result.always();
-		};
-		auto parse_open_statement = [&it, &statement_scope, &end, &node](auto&& parsing_process, tk_enum open, tk_enum close)->void {
-			statement_scope = find_open_statement(open, close, it, end);
-			// If the statement is empty, skip it.
-			if (statement_scope.is_empty()) {
-				std::cout << "WARNING ParsePragmaticBlock: Empty statement." << std::endl;
+			node.push_back(type_alias.expected());
+			it = type_alias.always();
+		
+		}
+		else if (it->type_is(tk_enum::class_)) { // Class declaration
+			auto class_decl = parse_directive_class(it, end);
+			if (!class_decl.valid()) {
+				return expected_parse_result::make_failure(class_decl.always(), ca_error::parser::invalid_expression(
+					class_decl.always(), "ParsePragmaticBlock: Invalid class declaration." + class_decl.error_message()));
 			}
-			if (!statement_scope.valid) {
-				throw std::runtime_error("ParsePragmaticBlock: Invalid statement scope.");
-			}
-			auto parse_result = parsing_process(statement_scope.scope_begin(), statement_scope.scope_end());
-			if (!parse_result.valid()) {
-				throw std::runtime_error("ParsePragmaticBlock: Invalid statement.");
-			}
-			node.push_back(parse_result.expected());
-			it = parse_result.always();
-		};
-
-		if (it->type_is(tk_enum::alnumus_)) {
-			parse_open_statement(&parse_value_statement, tk_enum::alnumus_, tk_enum::eos_);
+			node.push_back(class_decl.expected());
+			it = class_decl.always();
 		}
 		else {
-			if (it->type() == tk_enum::type_) {
-				parse_statement(&parse_directive_type, tk_enum::type_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::var_) {
-				parse_statement(&parse_directive_var, tk_enum::var_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::class_) {
-				parse_statement(&parse_directive_class, tk_enum::class_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::func_) {
-				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
-			}
-			//else if (it->type() == tk_enum::include_) {
-			//	it++;
-			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
-			//	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-			//	auto included_code = parse_pragmatic_block(result.begin(), result.end());
-
-			//	if (included_code.valid()) {
-			//		for (const auto & n : included_code.expected().children()){
-			//			node.push_back(n);
-			//		}
-			//		it = it + 2;//past name and eos
-			//	}
-			//	else {
-			//		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(
-			//			it, "ParsePragmaticBlock: Invalid include directive." + included_code.error_message()));
-			//	}
-
-			//}
-			else {
-				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
-			}
+			return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
 		}
 	}
 
@@ -1677,23 +1603,45 @@ expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit 
 			it = parse_result.always();
 		};
 
-		if (it->type_is(tk_enum::alnumus_)) {
-			parse_open_statement(&parse_value_statement, tk_enum::alnumus_, tk_enum::eos_);
+		if (it->type_is(tk_enum::alnumus_)) { // Var Declaration
+			auto var_def = parse_directive_var(it, end);
+			if (!var_def.valid()) {
+				return expected_parse_result::make_failure(var_def.always(), ca_error::parser::invalid_expression(
+					var_def.always(), "ParsePragmaticBlock: Invalid var definition." + var_def.error_message()));
+			}
+			node.push_back(var_def.expected());
+			it = var_def.always();
+		}
+		else if (it->type_is(tk_enum::open_frame_)) { // Function declaration.
+			auto func_def = parse_directive_func(it, end);
+			if (!func_def.valid()) {
+				return expected_parse_result::make_failure(func_def.always(), ca_error::parser::invalid_expression(
+					func_def.always(), "ParsePragmaticBlock: Invalid function definition." + func_def.error_message()));
+			}
+			node.push_back(func_def.expected());
+			it = func_def.always();
+		}
+		else if (it->type_is(tk_enum::use_)) {
+			auto type_alias = parse_directive_type(it, end);
+			if (!type_alias.valid()) {
+				return expected_parse_result::make_failure(type_alias.always(), ca_error::parser::invalid_expression(
+					type_alias.always(), "ParsePragmaticBlock: Invalid type alias." + type_alias.error_message()));
+			}
+			node.push_back(type_alias.expected());
+			it = type_alias.always();
+
+		}
+		else if (it->type_is(tk_enum::class_)) { // Class declaration
+			auto class_decl = parse_directive_class(it, end);
+			if (!class_decl.valid()) {
+				return expected_parse_result::make_failure(class_decl.always(), ca_error::parser::invalid_expression(
+					class_decl.always(), "ParsePragmaticBlock: Invalid class declaration." + class_decl.error_message()));
+			}
+			node.push_back(class_decl.expected());
+			it = class_decl.always();
 		}
 		else {
-			if (it->type() == tk_enum::type_) {
-				parse_statement(&parse_directive_type, tk_enum::type_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::var_) {
-				parse_statement(&parse_directive_var, tk_enum::var_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::class_) {
-				parse_statement(&parse_directive_class, tk_enum::class_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::func_) {
-				parse_statement(&parse_directive_func, tk_enum::func_, tk_enum::eos_);
-			}
-			else if (it->type() == tk_enum::if_) {
+			if (it->type() == tk_enum::if_) {
 				parse_statement(&parse_directive_if, tk_enum::if_, tk_enum::eos_);
 			}
 			else if (it->type() == tk_enum::while_) {
@@ -1708,28 +1656,13 @@ expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit 
 			else if (it->type() == tk_enum::return_){
 				parse_statement(&parse_directive_return, tk_enum::return_, tk_enum::eos_);
 			}
-			//else if (it->type() == tk_enum::include_) {
-			//	it++;
-			//	auto source_file = caoco::sl::load_file_to_char8_vector(sl::to_str(it->literal()) + ".candi");
-			//	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-			//	auto included_code = ParsePragmaticBlock()(result.begin(), result.end());
-
-			//	if (included_code.valid()) {
-			//		node.push_back(included_code.node());
-			//		it = it + 2;//past name and eos
-			//	}
-			//	else {
-			//		throw std::runtime_error("ParsePragmaticBlock: Invalid include statement.");
-			//	}
-
-			//}
 			else {
 				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
 			}
 		}
 	}
 
-	return expected_parse_result::make_success(it, node);
+	return expected_parse_result::make_success(block_scope.scope_end(), node);
 }
 	
 expected_parse_result parse_directive_on(tk_vector_cit begin, tk_vector_cit end) {

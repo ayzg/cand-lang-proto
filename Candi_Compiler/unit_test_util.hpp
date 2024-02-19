@@ -256,6 +256,8 @@ auto node_debug_string(const caoco::astnode& node) {
 	case caoco::astnode_enum::constrained_variable_definition_assingment_: debug_string += "constrained_variable_definition_assingment_"; break;
 	case caoco::astnode_enum::on_: debug_string += "on_"; break;
 	case caoco::astnode_enum::on_block_: debug_string += "on_block_"; break;
+		case caoco::astnode_enum::capture_list_: debug_string += "capture_list_"; break;
+case caoco::astnode_enum::generic_list_: debug_string += "generic_list_"; break;
 	default: debug_string += "This node type is not string-convertible. Please implement a string conversion for this node type in the node_debug_string function in test.cpp.";
 	}
 
