@@ -5,7 +5,7 @@
 #include "token.hpp"
 #include "tokenizer.hpp"
 #include "ast_node.hpp"
-//#include "preprocessor.hpp"
+#include "preprocessor.hpp"
 #include "parser.hpp"
 #include "constant_evaluator.hpp"
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//

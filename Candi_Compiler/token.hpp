@@ -36,7 +36,7 @@ namespace caoco {
 			abit_, astr_,aarray_, apointer_, amemory_, afunction_,
 			// Directive Tokens
 			enter_, start_, include_,type_,use_, var_, class_, func_, print_, none_literal_,
-			obj_,private_,macro_,
+			obj_,private_,macro_,endmacro_,
 			// Modifier Tokens
 			public_, const_, static_, ref_,
 			// Control Flow Tokens

@@ -198,20 +198,31 @@ expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
 	}
 	case tk_enum::open_list_: // generic list operand
 	{
-		auto seperated_list = caoco::find_seperated_list_scopes(begin, end, caoco::tk_enum::comma_);
-		if (seperated_list.empty()) {
-			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid list operand."));
+		auto found_list_scope = find_list_scope(begin, end);
+		if(!found_list_scope.valid){
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Mismatched list in operand."));
+		}
+		else if (found_list_scope.is_empty()) {
+			return expected_parse_result::make_success(found_list_scope.scope_end(),
+				astnode(astnode_enum::generic_list_, found_list_scope.scope_begin(), found_list_scope.scope_end()));
 		}
 		else {
-			auto list = astnode(astnode_enum::generic_list_, seperated_list.front().scope_begin(), seperated_list.back().scope_end());
-			for (auto& scope : seperated_list) {
-				auto expr = parse_primary_expression(scope.contained_begin(), scope.contained_end());
-				if (!expr.valid())
-					return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in list operand."));
 
-				list.push_back(expr.expected());
+			auto seperated_list = caoco::find_seperated_list_scopes(begin, end, caoco::tk_enum::comma_);
+			if (seperated_list.empty()) {
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid list operand."));
 			}
-			return expected_parse_result::make_success(seperated_list.back().scope_end(), list);
+			else {
+				auto list = astnode(astnode_enum::generic_list_, seperated_list.front().scope_begin(), seperated_list.back().scope_end());
+				for (auto& scope : seperated_list) {
+					auto expr = parse_primary_expression(scope.contained_begin(), scope.contained_end());
+					if (!expr.valid())
+						return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in list operand."));
+
+					list.push_back(expr.expected());
+				}
+				return expected_parse_result::make_success(seperated_list.back().scope_end(), list);
+			}
 		}
 	}
 	case tk_enum::aint_:

@@ -147,6 +147,7 @@
     <None Include="ut_parser_typealias.candi" />
     <None Include="ut_parser_variabledecl.candi" />
     <None Include="ut_preprocessor_include.candi" />
+    <None Include="ut_preprocessor_macros.candi" />
     <None Include="ut_program_basic.candi" />
     <None Include="ut_program_shortform.candi" />
   </ItemGroup>

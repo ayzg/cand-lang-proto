@@ -1,68 +1,98 @@
 #enter{
-	#var x = 0;
+	 x = 0;
 
-	#func foo {
-		#var x = 0;
+	[] foo {
+		 x = 0;
 
 		#if(x+1){
-			#var x;
+			 x;
 		}
 		#elif(x+2){
-			#var x;
+			 x;
 		}
 		#else{
-			#var x;
+			 x;
 		};
-		#var x = 0;
+		 x = 0;
 
 		#while(x+1){
-			#var x;
+			 x;
 		};
 
 		#for(a;b;c){
-			#var a;
+			 a;
 		};
 	
 		#on(x){
-			#if(1){#var a;}
-			#elif(2){#var b;}
-			#else{#var c;};
+			#if(1){ a;}
+			#elif(2){ b;}
+			#else{ c;};
 		};
-	};
+	}
 
 	#class Foo {
-		#var bar;
-		#func foobar {
-			#var x = 0;
-		};
+		 bar;
+		[] foobar {
+			 x = 0;
+		}
 	};
 }
 #start{
-	#var x = 0;
+	x = 0;
+
+	[] foo {
+		x = 0;
+
+		#if(x+1){
+				x;
+		}
+		#elif(x+2){
+				x;
+		}
+		#else{
+				x;
+		};
+			x = 0;
+
+		#while(x+1){
+				x;
+		};
+
+		#for(a;b;c){
+				a;
+		};
+	
+		#on(x){
+			#if(1){ a;}
+			#elif(2){ b;}
+			#else{ c;};
+		};
+	}
+
 
 	#if(x+1){
-		#var x;
+		 x;
 	}
 	#elif(x+2){
-		#var x;
+		 x;
 	}
 	#else{
-		#var x;
+		 x;
 	};
-	#var x = 0;
+	 x = 0;
 
 	#while(x+1){
-		#var x;
+		 x;
 	};
 
 	#for(a;b;c){
-		#var a;
+		 a;
 	};
 	
 	#on(x){
-		#if(1){#var a;}
-		#elif(2){#var b;}
-		#else{#var c;};
+		#if(1){ a;}
+		#elif(2){ b;}
+		#else{ c;};
 	};
 	
 }
