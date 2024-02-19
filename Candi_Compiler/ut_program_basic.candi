@@ -1,33 +1,33 @@
 #enter {
-	#include standard;
+	//#include standard;
 
 	#class Wolf {
-		#var name;
-		#func make_sound(){
+		name;
+		[] make_sound(){
 			#return 'howl';
-		};
+		}
 	};
 
 
 	#class Dog {
-		#var name;
-		#func make_sound(){
+		name;
+		[] make_sound(){
 			#return 'bark';
-		};
+		}
 	};
 
-	#var wolf = Wolf();
-	#var dog = Dog();
+	wolf = Wolf();
+	dog = Dog();
 
-	//#var animals = {wolf, dog}; implement list operand.
+	animals = {wolf, dog}; 
 
-	#func make_sounds{
-		//#var sounds = {};
+	[]make_sounds{
+		sounds = {}; 
 		#for (animals) {
-			sounds += animal.make_sound();
+			sounds = animal.make_sound(); // += animal.make_sound(); other assignment ops.
 		};
 		#return sounds;
-	};
+	}
 }
 #start {
 	#return make_sounds();

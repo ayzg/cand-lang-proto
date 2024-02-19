@@ -22,6 +22,7 @@ namespace caoco {
 			namespace keywords {
 				SL_CXA INCLUDE = u8"include";
 				SL_CXA MACRO = u8"macro";
+				SL_CXA ENDMACRO = u8"endmacro";
 				SL_CXA ENTER = u8"enter";
 				SL_CXA START = u8"start";
 				SL_CXA USE = u8"use";
@@ -63,6 +64,7 @@ namespace caoco {
 			namespace directives {
 				SL_CXA INCLUDE = u8"#include";
 				SL_CXA MACRO = u8"#macro";
+				SL_CXA ENDMACRO = u8"#endmacro";
 				SL_CXA ENTER = u8"#enter";
 				SL_CXA START = u8"#start";
 				SL_CXA USE = u8"#use";

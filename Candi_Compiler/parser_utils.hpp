@@ -935,8 +935,24 @@ namespace caoco {
 		if (begin->type() != open) {
 			throw sl_runtime_error("find_statement: begin iterator not on an open token.");
 		}
+
 		if (std::next(begin)->type() == close)
 			return parser_scope_result{ true, begin, begin + 2 }; // Empty statement
+
+		// SPECIAL CASE: if the open token is a list,paren or frame-> set scope_type_history and scope depth of the list,paren or frame.
+		if (begin->type() == tk_enum::open_scope_) {
+			paren_scope_depth++;
+			scope_type_history.push(tk_enum::open_scope_);
+		}
+		else if (begin->type() == tk_enum::open_frame_) {
+			frame_scope_depth++;
+			scope_type_history.push(tk_enum::open_frame_);
+		}
+		else if (begin->type() == tk_enum::open_list_) {
+			list_scope_depth++;
+			scope_type_history.push(tk_enum::open_list_);
+		}
+
 
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto it = begin + 1; it < end; it++) {

@@ -7,6 +7,8 @@
 #define CAOCO_TEST_PARSER_BASIC 1
 #define CAOCO_TEST_PARSER_UTILS 1
 #define CAOCO_TEST_PARSER_STATEMENTS 1
+#define CAOCO_TEST_PARSER_PROGRAM 1
+#define CAOCO_TEST_PREPROCESSOR 1
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tokenizer Tests
@@ -1296,6 +1298,40 @@ TEST(CaocoParserUtils_ListOperand, CaocoParser_Test) {
 		std::cout << exp_result.error_message() << std::endl;
 	}
 }
+
+TEST(CaocoParserUtils_ListOperand2, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("{a={wolf,dog};}\0");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		test_parsing_function(
+			"List Operand", &caoco::parse_pragmatic_block, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+
+TEST(CaocoParserUtils_ListOperand3, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("{a={};}\0");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		test_parsing_function(
+			"List Operand", &caoco::parse_pragmatic_block, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_ListOperand
+
 #endif
 
 #if CAOCO_TEST_PARSER_STATEMENTS_PragmaticBlock
@@ -1335,48 +1371,115 @@ TEST(CaocoParser_BasicNode_FunctionalBlock, CaocoParser_Test) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Parser Program Tests
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-#if CAOCO_UT_V2Parser_MinimumProgram 
+#if CAOCO_TEST_PARSER_PROGRAM
+#define CAOCO_TEST_PARSER_PROGRAM_MinimumProgram 1
+#define CAOCO_TEST_PARSER_PROGRAM_BasicProgram 1
+#endif
+
+#if CAOCO_TEST_PARSER_PROGRAM_MinimumProgram 
 TEST(CaocoParser_MinimumProgram, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_minimum_program.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-	try {
-		auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
-		print_ast(parse_result);
-	}catch(std::exception e){
-		std::cout << e.what() << std::endl;
-	}
-}
-#endif
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
-
-#if CAOCO_UT_V2Parser_BasicProgram
-TEST(CaocoParser_BasicProgram, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_program_basic.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-	try {
-		auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
-		print_ast(parse_result);
-	}catch(std::exception e){
-		std::cout << e.what() << std::endl;
-	}
-}
-#endif
-
-#if CAOCO_UT_Preprocessor_Include 
-TEST(CaocoPreprocessor_Include, CaocoPreprocessor_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_preprocessor_include.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-	auto preprocessed = caoco::preprocess(result, "ut_preprocessor_include.candi");
-
-	if(!std::get<1>(preprocessed)){
-		std::cout << "Preprocessing Error: " << std::get<2>(preprocessed) << std::endl;
-	}
-	else {
-		for (auto& token : std::get<0>(preprocessed)) {
-			std::cout << token.literal_str();
+		try {
+			auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
+			print_ast(parse_result);
+		}
+		catch (std::exception e) {
+			std::cout << e.what() << std::endl;
 		}
 	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
+
+
+#if CAOCO_TEST_PARSER_PROGRAM_BasicProgram
+TEST(CaocoParser_BasicProgram, CaocoParser_Test) {
+
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_program_basic.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		try {
+			auto parse_result = caoco::parse_program(result.cbegin(), result.cend());
+			print_ast(parse_result);
+		}
+		catch (std::exception e) {
+			std::cout << e.what() << std::endl;
+		}
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Preprocessor Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if CAOCO_TEST_PREPROCESSOR
+#define CAOCO_TEST_PREPROCESSOR_Include  1
+#define CAOCO_TEST_PREPROCESSOR_Macro 1
+#endif
+
+#if CAOCO_TEST_PREPROCESSOR_Include 
+TEST(CaocoPreprocessor_Include, CaocoPreprocessor_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_preprocessor_include.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		auto preprocessed = caoco::preprocess(result, "ut_preprocessor_include.candi");
+
+		if (!std::get<1>(preprocessed)) {
+			std::cout << "Preprocessing Error: " << std::get<2>(preprocessed) << std::endl;
+		}
+		else {
+			for (auto& token : std::get<0>(preprocessed)) {
+				std::cout << token.literal_str();
+			}
+		}
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PREPROCESSOR_Macro
+TEST(CaocoPreprocessor_Macro, CaocoPreprocessor_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_preprocessor_macros.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		auto expanded = caoco::macro_expand(result, "ut_preprocessor_macros.candi");
+
+		if(!std::get<1>(expanded)) {
+			std::cout << "Macro Expansion Error: " << std::get<2>(expanded) << std::endl;
+		}
+		else {
+			for (auto& token : std::get<0>(expanded)) {
+				std::cout << token.literal_str();
+			}
+		}
+
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif

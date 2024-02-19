@@ -157,6 +157,7 @@ namespace caoco {
 		CAOCO_AST_TRAIT(expression_, priority::max, left_, none_), // expression
 
 		CAOCO_AST_TRAIT(aint_,priority::max, left_, none_), // aint
+		CAOCO_AST_TRAIT(generic_list_,priority::max, left_, none_), // generic list
 
 		CAOCO_AST_TRAIT(eos_,priority::max, left_, none_), // end of statement
 		};

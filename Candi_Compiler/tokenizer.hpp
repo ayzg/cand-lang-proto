@@ -418,6 +418,8 @@ namespace caoco {
 				return make_result(tk_enum::include_, beg, it);
 			else if (find_forward(beg, u8::directives::MACRO))
 				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::directives::ENDMACRO))
+				return make_result(tk_enum::endmacro_, beg, it);
 			else if (find_forward(beg, u8::directives::USE))
 				return make_result(tk_enum::use_, beg, it);
 			else if (find_forward(beg, u8::directives::TYPE))
@@ -492,6 +494,8 @@ namespace caoco {
 				return make_result(tk_enum::include_, beg, it);
 			else if (find_forward(beg, u8::keywords::MACRO))
 				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::keywords::ENDMACRO))
+				return make_result(tk_enum::endmacro_, beg, it);
 			else if (find_forward(beg, u8::keywords::USE))
 				return make_result(tk_enum::use_, beg, it);
 			else if (find_forward(beg, u8::keywords::TYPE))
