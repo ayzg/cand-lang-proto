@@ -7,7 +7,7 @@
 #include <tuple>
 #include <stack>
 #include <ranges>
-
+#include <string>
 #include "char_traits.hpp"
 #include "token.hpp"
 #include "tokenizer.hpp"
@@ -55,6 +55,10 @@ namespace caoco {
 				// Acces the tuple and go to next element
 				if (std::tuple_element_t<I, std::tuple<MaskT...>>::type() == it->type()) {
 					is_found = true;
+				}
+				else {
+					is_found = false;
+					return;
 				}
 			}
 			else if ((std::tuple_element<I, std::tuple<MaskT...>>::type::policy() == mask_policy::optional)) {
@@ -211,6 +215,19 @@ namespace caoco {
 
 
 		const auto& operator*() const { return it_; }
+		
+
+		// utils
+		// True if it is one of the keywords which represent a type: aint_ auint_ areal_ abyte_ abit_ astr_
+		bool is_keyword_type() const {
+			return get().type_is(tk_enum::aint_) 
+				|| get().type_is(tk_enum::auint_) 
+				|| get().type_is(tk_enum::areal_) 
+				|| get().type_is(tk_enum::abyte_) 
+				|| get().type_is(tk_enum::abit_) 
+				|| get().type_is(tk_enum::astr_);
+		
+		}
 
 	};
 
@@ -399,10 +416,253 @@ namespace caoco {
 
 	} // end find_scope
 
+	// Methods for determining the start and end of a scope.
+	parser_scope_result find_paren_scope(tk_vector_cit begin, tk_vector_cit end) {
+		auto paren_scope_depth = 0;
+		auto frame_scope_depth = 0;
+		auto list_scope_depth = 0;
+		sl_stack<tk_enum> scope_type_history;
+		tk_cursor last_open = { begin, end };
+		tk_vector_cit last_closed = begin;
+		tk_vector_cit error_last_closed = begin;
 
-	// 1. Specific Method for detemining start and end of a list scope. {}
-	// 2. Any list scope contained within the list scope will be ignored.
-	// 3. If the list scope is not closed, result will be invalid. Result will point to the first passed token.
+		if (last_open.at_end()) { // Open is at end therefore cannot be closed.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_paren_scope: Open token is at end of token vector.";
+			return failure;
+		}
+
+		if (!last_open.type_is(tk_enum::open_scope_)) { // No open list token to start with.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_paren_scope: Open token is not an open scope token.";
+			return failure;
+		}
+
+		if (last_open.next().at_end()) { // End right after open, cannot be closed.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_paren_scope: Open token is at end of token vector.";
+			return failure;
+		}
+
+		if (last_open.next().type_is(tk_enum::close_scope_)) { // Empty list
+			return parser_scope_result{ true, begin, last_open.next(2).get_it() };
+		}
+	
+		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
+		for (auto tk_it = (begin + 1); tk_it != end; tk_it++) {
+			if (tk_it->type_is(tk_enum::open_scope_)) {
+				paren_scope_depth++;
+				scope_type_history.push(tk_enum::open_scope_);
+			}
+			else if (tk_it->type_is(tk_enum::close_scope_)) {
+				if (scope_type_history.empty()) {
+					// This is the end of the scope
+					last_closed = tk_it;
+					break;
+				}
+
+				if (scope_type_history.top() != tk_enum::open_scope_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_paren_scope: Close token ')' without open token '('.";
+					return failure;
+				}
+				scope_type_history.pop();
+				paren_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_frame_)) {
+
+				frame_scope_depth++;
+				scope_type_history.push(tk_enum::open_frame_);
+			}
+			else if (tk_it->type_is(tk_enum::close_frame_)) {
+				if (scope_type_history.empty()) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_paren_scope: Close token ']' without open token '['.";
+					return failure;
+				}
+
+				if (scope_type_history.top() != tk_enum::open_frame_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_paren_scope: Close token ']' without open token '['.";
+					return failure;
+				}
+				scope_type_history.pop();
+				frame_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_list_)) {
+				list_scope_depth++;
+				scope_type_history.push(tk_enum::open_list_);
+			}
+			else if (tk_it->type_is(tk_enum::close_list_)) {
+					if (scope_type_history.empty()) {
+						auto failure = parser_scope_result{ false, begin, end };
+						failure.error_message = "find_paren_scope: Close token '}' without open token '{'.";
+						return failure;
+					}
+
+					if (scope_type_history.top() != tk_enum::open_list_) {
+						auto failure = parser_scope_result{ false, begin, end };
+						failure.error_message = "find_paren_scope: Close token '}' without open token '{'.";
+						return failure;
+					}
+					scope_type_history.pop();
+					list_scope_depth--;
+			} // end if
+			error_last_closed = tk_it;
+		}// end for
+
+		if (paren_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_paren_scope: Parentheses scope contains mismatched parentheses.";
+			return failure;
+		}
+		if (frame_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_paren_scope: Parentheses scope contains mismatched frames.";
+			return failure;
+		}
+		if (list_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_paren_scope: Parentheses scope contains mismatched list scopes.";
+			return failure;
+		}
+		if (last_closed == begin) {
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_paren_scope: Parentheses scope at line:" + std::to_string(last_open.line())
+				+ " column:" + std::to_string(last_open.column()) + " was never closed.\n"
+				+ "Expected a close token ')' at line:" + std::to_string(error_last_closed->line()) + " column:" + std::to_string(error_last_closed->col());
+			return failure;
+		}
+
+		return parser_scope_result{ true, begin, last_closed + 1 };
+	} // end find_paren_scope
+	parser_scope_result find_paren_scope(tk_cursor crsr) {
+		return find_paren_scope(crsr.get_it(), crsr.end());
+	}
+
+	parser_scope_result find_frame_scope(tk_vector_cit begin, tk_vector_cit end) {
+		auto paren_scope_depth = 0;
+		auto frame_scope_depth = 0;
+		auto list_scope_depth = 0;
+		sl_stack<tk_enum> scope_type_history;
+		tk_cursor last_open = { begin, end };
+		tk_vector_cit last_closed = begin;
+		tk_vector_cit error_last_closed = begin;
+
+		if (last_open.at_end()) { // Open is at end therefore cannot be closed.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_frame_scope: Open token is at end of token vector.";
+		}
+
+		if (!last_open.type_is(tk_enum::open_frame_)) { // No open list token to start with.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_frame_scope: Open token is not an open frame token.";
+			return failure;
+		}
+
+		if (last_open.next().at_end()) { // End right after open, cannot be closed.
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_frame_scope: Open token is at end of token vector.";
+			return failure;
+		}
+
+		if (last_open.next().type_is(tk_enum::close_frame_)) { // Empty list
+			return parser_scope_result{ true, begin, last_open.next(2).get_it() };
+		}
+
+		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
+				// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
+		for (auto tk_it = (begin + 1); tk_it != end; tk_it++) {
+			if (tk_it->type_is(tk_enum::open_frame_)) {
+				frame_scope_depth++;
+				scope_type_history.push(tk_enum::open_frame_);
+			}
+			else if (tk_it->type_is(tk_enum::close_frame_)) {
+				if (scope_type_history.empty()) {
+					// This is the end of the scope
+					last_closed = tk_it;
+					break;
+				}
+
+				if (scope_type_history.top() != tk_enum::open_frame_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_frame_scope: Close token ']' without open token '['.";
+					return failure;
+				}
+				scope_type_history.pop();
+				frame_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_scope_)) {
+				paren_scope_depth++;
+				scope_type_history.push(tk_enum::open_scope_);
+			}
+			else if (tk_it->type_is(tk_enum::close_scope_)) {
+				if (scope_type_history.empty()) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_frame_scope: Close token ')' without open token '('.";
+					return failure;
+				}
+
+				if (scope_type_history.top() != tk_enum::open_scope_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_frame_scope: Close token ')' without open token '('.";
+					return failure;
+				}
+				scope_type_history.pop();
+				paren_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_list_)) {
+				list_scope_depth++;
+				scope_type_history.push(tk_enum::open_list_);
+			}
+			else if (tk_it->type_is(tk_enum::close_list_)) {
+				if (scope_type_history.empty()) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_frame_scope: Close token '}' without open token '{'.";
+					return failure;
+				}
+
+				if (scope_type_history.top() != tk_enum::open_list_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_frame_scope: Close token '}' without open token '{'.";
+					return failure;
+				}
+				scope_type_history.pop();
+				list_scope_depth--;
+			} // end switch
+
+			error_last_closed = tk_it;
+		}
+
+		if (paren_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_frame_scope: Frame scope contains mismatched parentheses.";
+			return failure;
+		}
+		if (frame_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_frame_scope: Frame scope contains mismatched frames.";
+			return failure;
+		}
+		if (list_scope_depth != 0) {
+			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
+			failure.error_message = "find_frame_scope: Frame scope contains mismatched list scopes.";
+			return failure;
+		}
+		if (last_closed == begin) {
+			auto failure = parser_scope_result{ false, begin, end };
+			failure.error_message = "find_frame_scope: Frame scope at line:" + std::to_string(last_open.line())
+				+ " column:" + std::to_string(last_open.column()) + " was never closed.\n"
+				+ "Expected a close token ']' at line:" + std::to_string(error_last_closed->line()) + " column:" + std::to_string(error_last_closed->col());
+			return failure;
+		}
+
+		return parser_scope_result{ true, begin, last_closed + 1 };
+	}
+	parser_scope_result find_frame_scope(tk_cursor crsr) {
+		return find_frame_scope(crsr.get_it(), crsr.end());
+	}
+
 	parser_scope_result find_list_scope(tk_vector_cit begin, tk_vector_cit end) {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
@@ -410,7 +670,7 @@ namespace caoco {
 		sl_stack<tk_enum> scope_type_history;
 		tk_cursor last_open = { begin, end };
 		tk_vector_cit last_closed = begin;
-
+		tk_vector_cit error_last_closed = begin;
 		if (last_open.at_end()) { // Open is at end therefore cannot be closed.
 			auto failure = parser_scope_result{ false, begin, end };
 			failure.error_message = "find_list_scope: Open token is at end of token vector.";
@@ -423,150 +683,112 @@ namespace caoco {
 			return failure;
 		}
 
-		if(last_open.next().at_end()) { // End right after open, cannot be closed.
+		if (last_open.next().at_end()) { // End right after open, cannot be closed.
 			auto failure = parser_scope_result{ false, begin, end };
 			failure.error_message = "find_list_scope: Open token is at end of token vector.";
 			return failure;
 		}
 
 		if (last_open.next().type_is(tk_enum::close_list_)) { // Empty list
-			return parser_scope_result{ true, begin, last_open.next(2).get_it()};
+			return parser_scope_result{ true, begin, last_open.next(2).get_it() };
 		}
 
 		// find the last matching close token that is not within a () [] or {} scope, if there is no matching close token, return false
 		for (auto tk_it = (begin + 1); tk_it < end; tk_it++) {
-			switch (tk_it->type()) {
-				case tk_enum::open_scope_:
-					paren_scope_depth++;
-					scope_type_history.push(tk_enum::open_scope_);
-					break;
-				case tk_enum::close_scope_:
-					if (scope_type_history.empty()) {
-						auto failure = parser_scope_result{ false, begin, end };
-						failure.error_message = "find_list_scope: Close token ')' without open token '('.";
-						return parser_scope_result{ false, begin, end }; 
-					}
+			if (tk_it->type_is(tk_enum::open_scope_)) {
+				paren_scope_depth++;
+				scope_type_history.push(tk_enum::open_scope_);
+			}
+			else if (tk_it->type_is(tk_enum::close_scope_))
+			{
+				if (scope_type_history.empty()) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_list_scope: Close token ')' without open token '('.";
+					return failure;
+				}
 
-					if (scope_type_history.top() != tk_enum::open_scope_) {
-						auto failure = parser_scope_result{ false, begin, end };
-						failure.error_message = "find_list_scope: Close token ')' without open token '('.";
-						return parser_scope_result{ false, begin, end }; 
-					}
-					scope_type_history.pop();
-					paren_scope_depth--;
-					break;
-				case tk_enum::open_frame_:
-					frame_scope_depth++;
-					scope_type_history.push(tk_enum::open_frame_);
-					break;
-				case tk_enum::close_frame_:
-					if (scope_type_history.empty()) {
-						auto failure = parser_scope_result{ false, begin, end };
-						failure.error_message = "find_list_scope: Close token ']' without open token '['.";
-						return parser_scope_result{ false, begin, end }; 
-					}
+				if (scope_type_history.top() != tk_enum::open_scope_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_list_scope: Close token ')' without open token '('.";
+					return failure;
+				}
+				scope_type_history.pop();
+				paren_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_frame_))
+			{
+				frame_scope_depth++;
+				scope_type_history.push(tk_enum::open_frame_);
+			}
+			else if (tk_it->type_is(tk_enum::close_frame_))
+			{
+				if (scope_type_history.empty()) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_list_scope: Close token ']' without open token '['.";
+					return failure;
+				}
 
-					if (scope_type_history.top() != tk_enum::open_frame_) {
-						auto failure = parser_scope_result{ false, begin, end };
-						failure.error_message = "find_list_scope: Close token ']' without open token '['.";
-						return parser_scope_result{ false, begin, end }; 
-					}
-					scope_type_history.pop();
-					frame_scope_depth--;
-					break;
-				case tk_enum::open_list_:
-					list_scope_depth++;
-					scope_type_history.push(tk_enum::open_list_);
-					break;
-				case tk_enum::close_list_:
-					if (scope_type_history.empty()) {
-						// This is the end of the scope
-						last_closed = tk_it;
-						break;
-					}
+				if (scope_type_history.top() != tk_enum::open_frame_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_list_scope: Close token ']' without open token '['.";
+					return failure;
+				}
+				scope_type_history.pop();
+				frame_scope_depth--;
+			}
+			else if (tk_it->type_is(tk_enum::open_list_))
+			{
+				list_scope_depth++;
+				scope_type_history.push(tk_enum::open_list_);
+			}
+			else if (tk_it->type_is(tk_enum::close_list_)) {
+				if (scope_type_history.empty()) {
+					last_closed = tk_it;
+					break; 					// This is the end of the scope
+				}
 
-					if (scope_type_history.top() != tk_enum::open_list_) {
-						auto failure = parser_scope_result{ false, begin, end };
-						failure.error_message = "find_list_scope: Close token '}' without open token '{'.";
-						return parser_scope_result{ false, begin, end };
-					}
-					scope_type_history.pop();
-					list_scope_depth--;
-					break;
-			} // end switch
+				if (scope_type_history.top() != tk_enum::open_list_) {
+					auto failure = parser_scope_result{ false, begin, end };
+					failure.error_message = "find_list_scope: Close token '}' without open token '{'.";
+					return failure;
+				}
+				scope_type_history.pop();
+				list_scope_depth--;
+			}
+
+			error_last_closed = tk_it;
 		}
 
 		if (paren_scope_depth != 0) {
 			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
 			failure.error_message = "find_list_scope: List scope contains mismatched parentheses.";
-			return parser_scope_result{ false, begin, last_closed + 1 };
+			return failure;
 		}
 		if (frame_scope_depth != 0) {
 			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
 			failure.error_message = "find_list_scope: List scope contains mismatched frames.";
-			return parser_scope_result{ false, begin, last_closed + 1 };
+			return failure;
 		}
 		if (list_scope_depth != 0) {
 			auto failure = parser_scope_result{ false, begin, last_closed + 1 };
 			failure.error_message = "find_list_scope: List scope contains mismatched list scopes.";
-			return parser_scope_result{ false, begin, last_closed + 1 };
+			return failure;
 		}
 		if (last_closed == begin) {
 			auto failure = parser_scope_result{ false, begin, end };
-			failure.error_message = "find_list_scope: List scope was never closed.";
-			return parser_scope_result{ false, begin, end };
+			failure.error_message = "find_list_scope: List scope at line:" + std::to_string(last_open.line())
+				+ " column:" + std::to_string(last_open.column()) + " was never closed.\n"
+				+ "Expected a close token ']' at line:" + std::to_string(error_last_closed->line()) + " column:" + std::to_string(error_last_closed->col());
+			return failure;
 		}
 
 		return parser_scope_result{ true, begin, last_closed + 1 };
-	} // end find_list_scope
+	}
 	parser_scope_result find_list_scope(tk_cursor crsr) {
 		return find_list_scope(crsr.get_it(), crsr.end());
 	}
 
-	// 1. Specific Method for extracting a seperated list scope. {<separator>}
-	sl_vector<parser_scope_result> find_seperated_list_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
-		sl_vector< parser_scope_result> scopes;
-		if (begin->type() != tk_enum::open_list_) {
-			scopes.push_back(parser_scope_result{ false, begin, end });
-			return scopes;
-		}
-		sl_stack<tk_enum> scope_type_history;
-		tk_vector_cit last_closed = begin;
-		begin++; // Skip the open list token
-		for (auto i = begin; i < end;) {
-			if (i->type_is(separator) && scope_type_history.empty()) {
-				scopes.push_back(parser_scope_result{ true, last_closed, i+1 });
-				last_closed = i;
-			}
-			else if(syntax::is_opening_scope(*i)){
-				scope_type_history.push(i->type());
-			}
-			else if(syntax::is_closing_scope(*i) && !scope_type_history.empty()) {
-				if (syntax::is_closing_scope_of(scope_type_history.top(), i->type())) {
-					scope_type_history.pop();
-				}
-				else {
-					scopes.push_back(parser_scope_result{ false, i, end }); // Wrong closing scope
-					return scopes;
-				}
-			}
-			else if(i->type_is(tk_enum::close_list_) && scope_type_history.empty()) {
-				// end of list
-				scopes.push_back(parser_scope_result{ true, last_closed, i+1});
-				return scopes;
-			}
-			else if(i->type_is(tk_enum::eof_)) {
-				scopes.push_back(parser_scope_result{ false, i, end }); // End of file
-				return scopes;
-			}
-			sl::advance(i,1);
-		}
-	}
-	sl_vector<parser_scope_result> find_seperated_list_scopes(parser_scope_result ls, tk_enum separator) {
-		return find_seperated_list_scopes(ls.scope_begin(), ls.scope_end(), separator);
-	}
-
-	// 1. Specific Method for extracting a seperated parentheses scope. (<separator>)
+	// Method for extracting a seperated parentheses scope. (<separator>)
 	sl_vector<parser_scope_result> find_seperated_paren_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
 		sl_vector< parser_scope_result> scopes;
 		if (begin->type() != tk_enum::open_scope_) {
@@ -609,7 +831,50 @@ namespace caoco {
 		return find_seperated_paren_scopes(ls.scope_begin(), ls.scope_end(), separator);
 	}
 
-	// 1. Specific Method for extracting a seperated frame scope. [<separator>]
+	// Method for extracting a seperated list scope. {<separator>}
+	sl_vector<parser_scope_result> find_seperated_list_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
+		sl_vector< parser_scope_result> scopes;
+		if (begin->type() != tk_enum::open_list_) {
+			scopes.push_back(parser_scope_result{ false, begin, end });
+			return scopes;
+		}
+		sl_stack<tk_enum> scope_type_history;
+		tk_vector_cit last_closed = begin;
+		begin++; // Skip the open list token
+		for (auto i = begin; i < end;) {
+			if (i->type_is(separator) && scope_type_history.empty()) {
+				scopes.push_back(parser_scope_result{ true, last_closed, i+1 });
+				last_closed = i;
+			}
+			else if(syntax::is_opening_scope(*i)){
+				scope_type_history.push(i->type());
+			}
+			else if(syntax::is_closing_scope(*i) && !scope_type_history.empty()) {
+				if (syntax::is_closing_scope_of(scope_type_history.top(), i->type())) {
+					scope_type_history.pop();
+				}
+				else {
+					scopes.push_back(parser_scope_result{ false, i, end }); // Wrong closing scope
+					return scopes;
+				}
+			}
+			else if(i->type_is(tk_enum::close_list_) && scope_type_history.empty()) {
+				// end of list
+				scopes.push_back(parser_scope_result{ true, last_closed, i+1});
+				return scopes;
+			}
+			else if(i->type_is(tk_enum::eof_)) {
+				scopes.push_back(parser_scope_result{ false, i, end }); // End of file
+				return scopes;
+			}
+			sl::advance(i,1);
+		}
+	}
+	sl_vector<parser_scope_result> find_seperated_list_scopes(parser_scope_result ls, tk_enum separator) {
+		return find_seperated_list_scopes(ls.scope_begin(), ls.scope_end(), separator);
+	}
+
+	// Method for extracting a seperated frame scope. [<separator>]
 	sl_vector<parser_scope_result> find_seperated_frame_scopes(tk_vector_cit begin, tk_vector_cit end, tk_enum separator) {
 		sl_vector< parser_scope_result> scopes;
 		if (begin->type() != tk_enum::open_frame_) {
@@ -651,6 +916,9 @@ namespace caoco {
 	sl_vector<parser_scope_result> find_seperated_frame_scopes(parser_scope_result ls, tk_enum separator) {
 		return find_seperated_frame_scopes(ls.scope_begin(), ls.scope_end(), separator);
 	}
+
+
+
 
 	parser_scope_result find_open_statement(tk_enum open, tk_enum close, tk_vector_cit begin, tk_vector_cit end) {
 		auto paren_scope_depth = 0;

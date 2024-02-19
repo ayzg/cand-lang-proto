@@ -639,7 +639,7 @@ caoco_impl_env_eval_process(CLiteralEval) {
 		return CBitEval{}(node, env);
 	case astnode_enum::unsigned_literal_:
 		return CUnsignedEval{}(node, env);
-	case astnode_enum::octet_literal_:
+	case astnode_enum::byte_literal_:
 		return COctetEval{}(node, env);
 	case astnode_enum::none_literal_:
 		return CNoneEval{}(node, env);

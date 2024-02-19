@@ -136,8 +136,8 @@ expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit 
 
 expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end) {
 	return generic_parse_single_token<
-		tk_enum::octet_literal_,
-		astnode_enum::octet_literal_,
+		tk_enum::byte_literal_,
+		astnode_enum::byte_literal_,
 		LAMBDA_STRING(parse_octet_literal : begin is not octet_literal token.)
 	>(begin, end);
 }
@@ -173,7 +173,7 @@ expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
 		return parse_directive_none(begin, end);
 	case tk_enum::unsigned_literal_:
 		return parse_unsigned_literal(begin, end);
-	case tk_enum::octet_literal_:
+	case tk_enum::byte_literal_:
 		return parse_octet_literal(begin, end);
 	case tk_enum::bit_literal_:
 		return parse_bit_literal(begin, end);
@@ -196,6 +196,8 @@ expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
 			return expected_parse_result::make_success(scope.scope_end(),nd);
 		}
 	}
+	case tk_enum::aint_:
+		return parse_cso_int(begin, end);
 	default:
 		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
 			astnode_enum::operand_, begin, "parse_operand : Invalid operand, not a literal or an identifier.")
@@ -528,7 +530,7 @@ expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pas
 			if (!(cursor.operation() == syntax::e_operation::binary_)) {
 				// Has to be a function call or else it is an error.
 				if (cursor.type_is(tk_enum::open_scope_)) {
-					auto arg_scope = find_scope(cursor.get_it(), cursor.end());
+					auto arg_scope = find_paren_scope(cursor.get_it(), cursor.end());
 					if (!arg_scope.valid) {
 						return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
 							cursor.get_it(), "expression_split_parse : Invalid function call scope."));
@@ -817,7 +819,7 @@ expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit e
 }
 
 expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
-	parser_scope_result scope = find_scope(begin, end);
+	parser_scope_result scope = find_paren_scope(begin, end);
 	if (!scope.valid) {
 		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
 			begin, "parse_arguments : Invalid arguments scope."));
@@ -837,14 +839,14 @@ expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
 			
 		if(!arg_expr_scope.valid) {
 			// Try finding the last argument.
-			auto last_arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::close_scope_, scope_cursor.get_it(), scope_cursor.end());
-			if (!last_arg_expr_scope.valid) {
-				return expected_parse_result::make_failure(scope_cursor.get_it(), ca_error::parser::invalid_expression(
-					scope_cursor.get_it(), "parse_arguments : Invalid argument scope."));
-			}
+			//auto last_arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::close_scope_, scope_cursor.get_it(), scope_cursor.end());
+			//if (!last_arg_expr_scope.valid) {
+			//	return expected_parse_result::make_failure(scope_cursor.get_it(), ca_error::parser::invalid_expression(
+			//		scope_cursor.get_it(), "parse_arguments : Invalid argument scope."));
+			//}
 
 			// Get the last argument.
-			auto arg = parse_primary_expression(last_arg_expr_scope.scope_begin(), last_arg_expr_scope.contained_end());
+			auto arg = parse_primary_expression(scope_cursor.get_it(), scope.contained_end());
 			if (!arg.valid()) return arg;
 			arguments.push_back(arg.expected());
 			break;
@@ -865,14 +867,15 @@ expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
 }
 
 expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit end) {
+	// <alnumus> <assingment> <primary_expr> <eos>
 	tk_cursor cursor(begin, end);
-	// #type <alnumus> = <alnumus> <eos>
-	if (begin->type() != tk_enum::type_) {
+
+	if (!cursor.type_is(tk_enum::use_)) {
 		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin,
 			"parse_directive_type: Expected a type directive."));
 	}
-
 	cursor.advance();
+
 
 	if (!cursor.type_is(tk_enum::alnumus_)) {
 		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor,
@@ -884,135 +887,265 @@ expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit en
 		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2),
 			"parse_directive_type: Expected an alnumus." + alnumus_literal_type_name.error_message()));
 	}
-	// For now the only format of identifier statement is a 
-	// 1. variable assingment: <alnumus> <assingment> <cso|alnumus> <eos>
+	cursor.advance();
 
-	// next should be an assignment token
-	if (cursor.next().type() != tk_enum::simple_assignment_) {
+	if (!cursor.type_is(tk_enum::simple_assignment_)) {
 		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
 			"parse_directive_type: Expected a simple assignment token."));
 	}
+	cursor.advance();
 
-	// next is an alnumus or a cso type.
-	if (cursor.next(2).type_is(tk_enum::alnumus_)) {
-		// type expr is an alnumus
-		auto alnumus_literal_type = parse_alnumus_literal(*cursor.next(2), end);
-		if (!alnumus_literal_type.valid()) {
-			return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2), 
-				"parse_directive_type: Expected an alnumus." + alnumus_literal_type.error_message()));
-		}
-
-		// next should be an eos
-		if (cursor.next(3).type() != tk_enum::eos_) {
-			return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3), 
-				"parse_directive_type: Expected an eos."));
-		}
-
-		astnode node{ astnode_enum::type_alias_, begin, *cursor.next(3) };
-		node.push_back(alnumus_literal_type_name.expected());
-		node.push_back(alnumus_literal_type.expected());
-		// skip eos
-		return expected_parse_result::make_success(alnumus_literal_type.always() + 1,node);
+	auto statement = parse_value_statement(cursor.get_it(), end);
+	if (!statement.valid()) {
+		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+			"parse_directive_type: Invalid type expression assignment." + statement.error_message()));
 	}
-	else { // Try to parse a cso
-		auto cso = parse_cso(*cursor.next(2), end);
-		if (!cso.valid()) {
-			// Could not parse a cso, not a valid type expr
-			return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2),
-				"parse_directive_type: Expected an alnumus or cso in type expression assignment."));
-		}
+	cursor.advance_to(statement.always());
 
-		// next should be an eos
-		if (cso.always()->type() != tk_enum::eos_) {
-			return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
-				"ParseIdentifierStatement: Expected an eos after cso in type expression."));
-		}
+	astnode node(astnode_enum::type_alias_, cursor.begin(), cursor.get_it(),
+		alnumus_literal_type_name.expected(), statement.expected()
+	);
 
-		astnode node{ astnode_enum::type_definition_, begin, cso.always() + 1 };
-		node.push_back(alnumus_literal_type_name.expected());
-		node.push_back(cso.expected());
-		// skip eos
-		return expected_parse_result::make_success(cso.always() + 1, node);
-	}
+	return expected_parse_result::make_success(cursor.get_it(), node);
+
+	//// next is a primary expression resolving to a type.
+
+
+
+	//// next is an alnumus or a cso type.
+	//if (cursor.next(2).type_is(tk_enum::alnumus_)) {
+	//	// type expr is an alnumus
+	//	auto alnumus_literal_type = parse_alnumus_literal(*cursor.next(2), end);
+	//	if (!alnumus_literal_type.valid()) {
+	//		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2), 
+	//			"parse_directive_type: Expected an alnumus." + alnumus_literal_type.error_message()));
+	//	}
+
+	//	// next should be an eos
+	//	if (cursor.next(3).type() != tk_enum::eos_) {
+	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3), 
+	//			"parse_directive_type: Expected an eos."));
+	//	}
+
+	//	astnode node{ astnode_enum::type_alias_, begin, *cursor.next(3) };
+	//	node.push_back(alnumus_literal_type_name.expected());
+	//	node.push_back(alnumus_literal_type.expected());
+	//	// skip eos
+	//	return expected_parse_result::make_success(alnumus_literal_type.always() + 1,node);
+	//}
+	//else { // Try to parse a cso
+	//	auto cso = parse_cso(*cursor.next(2), end);
+	//	if (!cso.valid()) {
+	//		// Could not parse a cso, not a valid type expr
+	//		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2),
+	//			"parse_directive_type: Expected an alnumus or cso in type expression assignment."));
+	//	}
+
+	//	// next should be an eos
+	//	if (cso.always()->type() != tk_enum::eos_) {
+	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
+	//			"ParseIdentifierStatement: Expected an eos after cso in type expression."));
+	//	}
+
+	//	astnode node{ astnode_enum::type_definition_, begin, cso.always() + 1 };
+	//	node.push_back(alnumus_literal_type_name.expected());
+	//	node.push_back(cso.expected());
+	//	// skip eos
+	//	return expected_parse_result::make_success(cso.always() + 1, node);
+	//}
 };
 
 expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end) {
 	tk_cursor cursor(begin, end);
 
-	if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::eos_ })) {	// Anon Var Decl
-		// Get the alnumus
-		auto variable_name = parse_alnumus_literal(*cursor.next(), end);
-		if (!variable_name.valid()) {
-			return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
-				"parse_directive_var: Invalid var statement format. Anon var decl must be followed by an identity."));
-		}
-		// Create the node, omit the eos token.
-		astnode node{ astnode_enum::anon_variable_definition_, begin, *cursor.next(3) };
-		node.push_back(variable_name.expected());
-		return expected_parse_result::make_success(*cursor.next(3),node);// 1 past eos token
+	if (!cursor.type_is(tk_enum::alnumus_)) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin,
+			"parse_directive_var: Expected an alnumus."));
 	}
-	else if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::simple_assignment_ })) // Anon Var Decl Assign
-	{
-		// Build the assingment expression
-		auto expr = parse_value_statement(*cursor.next(), end);
+	auto variable_name = parse_alnumus_literal(*cursor, end);
+	if(!variable_name.valid()){
+		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor,
+			"parse_directive_var: Expected an alnumus." + variable_name.error_message()));
+	}
+	cursor.advance();
+
+	if(cursor.type_is(tk_enum::eos_)) { // Anon Var Decl
+		astnode node{ astnode_enum::anon_variable_definition_, begin, cursor.get_it() ,variable_name.expected()};
+		return expected_parse_result::make_success(cursor.next().get_it(), node);
+	}
+	else if (cursor.type_is(tk_enum::simple_assignment_)) { // Anon Var Decl Assignment
+		cursor.advance();
+		auto expr = parse_value_statement(cursor.get_it(), end);
 		if (!expr.valid()) {
-			return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
+			return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
 				"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
 		}
-		// Create the node, omit the eos token.
-		astnode node{ astnode_enum::anon_variable_definition_assingment_, *cursor, expr.always() };
-		node.push_back(expr.expected());
-		return expected_parse_result::make_success(expr.always(), node); // 1 past eos token
+		astnode node{ astnode_enum::anon_variable_definition_assingment_, begin, expr.always() ,
+			variable_name.expected(),
+			expr.expected() };
+		return expected_parse_result::make_success(expr.always(), node);
 	}
-	else if (find_forward(begin, { tk_enum::var_,tk_enum::open_frame_ })) { // Constrained Variable Def
-		// Find the scope of the frame.
-		parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
+	else if (cursor.type_is(tk_enum::alnumus_) or cursor.is_keyword_type()) { // Single Type Contrained Var Decl
+		auto type_operand = parse_operand(cursor.get_it(), end);
+		if(!type_operand.valid()){
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Type contraint is invalid:" + type_operand.error_message()));
+		}
+		cursor.advance_to(type_operand.always());
 
-		// After the frame scope must be an alnumus.
-		if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_ })) {
-
-			if ((frame_scope.scope_end() + 1)->type_is(tk_enum::eos_)) {
-				// Create the node, omit the eos token.
-				astnode node{ astnode_enum::constrained_variable_definition_, *cursor, frame_scope.scope_end() + 1 };
-				node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() }); // Todo: parse type constraints
-				// get the identifier
-				auto variable_name = parse_alnumus_literal(frame_scope.scope_end(), end);
-				if (!variable_name.valid()) {
-					return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
-						"parse_directive_var: Invalid var statement format. No identifier following type contraints."));
-				}
-				node.push_back(variable_name.expected());
-				return expected_parse_result::make_success(variable_name.always() + 1, node); // 1 past eos token
+		if(cursor.type_is(tk_enum::eos_)) {
+			astnode node{ astnode_enum::constrained_variable_definition_, begin, cursor.get_it() ,
+				variable_name.expected(),
+				type_operand.expected() };
+			return expected_parse_result::make_success(cursor.next().get_it(), node);
+		}
+		else if (cursor.type_is(tk_enum::simple_assignment_)) {
+			cursor.advance();
+			auto expr = parse_value_statement(cursor.get_it(), end);
+			if (!expr.valid()) {
+				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+					"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
 			}
-			else if ((frame_scope.scope_end() + 1)->type_is(tk_enum::simple_assignment_)) {
-				// Build the assingment expression
-				auto expr = parse_value_statement(frame_scope.scope_end(), end);
-				if (!expr.valid()) {
-					return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
-						"parse_directive_var: Invalid var statement format."));
-				}
-
-				// Create the node, omit the eos token.
-				astnode node{ astnode_enum::constrained_variable_definition_assingment_, *cursor, expr.always() - 1 };
-				node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
-				node.push_back(expr.expected());
-				return expected_parse_result::make_success(expr.always(),node); // 1 past eos token
-			}
-			else {
-				return expected_parse_result::make_failure(frame_scope.scope_end(), 
-					ca_error::parser::invalid_expression(frame_scope.scope_end(), "parse_directive_var: Invalid var statement format."));
-			}
+			astnode node{ astnode_enum::constrained_variable_definition_assingment_, begin, expr.always() ,
+				variable_name.expected(),
+				type_operand.expected(),
+				expr.expected() };
+			return expected_parse_result::make_success(expr.always(), node);
 		}
 		else {
-			return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
-				"parse_directive_var: No identifier following type contraints."));
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Expected an eos or an assingment token."));
 		}
 	}
-	else {
-		return expected_parse_result::make_failure((begin + 1), 
-			ca_error::parser::invalid_expression((begin + 1), 
-				"parse_directive_var: Invalid var statement format. #var directive was not followed by an identity or type constraint."));
+	else if (cursor.type_is(tk_enum::open_frame_)) { // Type Expression Constrained Var Decl
+		// Everything between the [] is a type expression.
+		auto frame_scope = find_frame_scope(cursor.get_it(), end);
+
+		if (!frame_scope.valid) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Type contraints are invalid."));
+		}
+		cursor.advance_to(frame_scope.scope_end());
+
+		// Expecting and eos or an assingment token.
+		if(cursor.type_is(tk_enum::eos_)) {
+			astnode node( astnode_enum::constrained_variable_definition_, begin, cursor.get_it() ,
+				variable_name.expected(),
+				astnode( astnode_enum::type_constraints_, frame_scope.scope_begin(), frame_scope.scope_end() ) );
+			return expected_parse_result::make_success(cursor.next().get_it(), node);
+		}
+		else if (cursor.type_is(tk_enum::simple_assignment_)) {
+			cursor.advance();
+			auto expr = parse_value_statement(cursor.get_it(), end);
+			if (!expr.valid()) {
+				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+					"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+			}
+			astnode node( astnode_enum::constrained_variable_definition_assingment_, begin, expr.always() ,
+				variable_name.expected(),
+				astnode( astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() ),
+				expr.expected() );
+			return expected_parse_result::make_success(expr.always(), node);
+		}
+		else {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Expected an eos or an assingment token."));
+		}
+
 	}
+	else {
+		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+			"parse_directive_var: Invalid var statement format. Expected an eos or an assingment or a type or a type constraint scope."));
+	}
+
+
+	//// Anonymous Var Decl
+	//// Build the assingment expression
+	//auto expr = parse_value_statement(*cursor.next(), end);
+	//if (!expr.valid()) {
+	//	return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
+	//		"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+	//}
+	//// Create the node, omit the eos token.
+	//astnode node{ astnode_enum::anon_variable_definition_assingment_, *cursor, expr.always() };
+	//node.push_back(expr.expected());
+	//return expected_parse_result::make_success(expr.always(), node);
+
+
+	//if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::eos_ })) {	// Anon Var Decl
+	//	// Get the alnumus
+	//	auto variable_name = parse_alnumus_literal(*cursor.next(), end);
+	//	if (!variable_name.valid()) {
+	//		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+	//			"parse_directive_var: Invalid var statement format. Anon var decl must be followed by an identity."));
+	//	}
+	//	// Create the node, omit the eos token.
+	//	astnode node{ astnode_enum::anon_variable_definition_, begin, *cursor.next(3) };
+	//	node.push_back(variable_name.expected());
+	//	return expected_parse_result::make_success(*cursor.next(3),node);// 1 past eos token
+	//}
+	//else if (find_forward(*cursor, { tk_enum::var_,tk_enum::alnumus_,tk_enum::simple_assignment_ })) // Anon Var Decl Assign
+	//{
+	//	// Build the assingment expression
+	//	auto expr = parse_value_statement(*cursor.next(), end);
+	//	if (!expr.valid()) {
+	//		return expected_parse_result::make_failure(*cursor.next(3), ca_error::parser::invalid_expression(*cursor.next(3),
+	//			"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+	//	}
+	//	// Create the node, omit the eos token.
+	//	astnode node{ astnode_enum::anon_variable_definition_assingment_, *cursor, expr.always() };
+	//	node.push_back(expr.expected());
+	//	return expected_parse_result::make_success(expr.always(), node); // 1 past eos token
+	//}
+	//else if (find_forward(begin, { tk_enum::var_,tk_enum::open_frame_ })) { // Constrained Variable Def
+	//	// Find the scope of the frame.
+	//	parser_scope_result frame_scope = find_statement(tk_enum::open_frame_, tk_enum::close_frame_, *cursor.next(), cursor.end());
+
+	//	// After the frame scope must be an alnumus.
+	//	if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_ })) {
+
+	//		if ((frame_scope.scope_end() + 1)->type_is(tk_enum::eos_)) {
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::constrained_variable_definition_, *cursor, frame_scope.scope_end() + 1 };
+	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() }); // Todo: parse type constraints
+	//			// get the identifier
+	//			auto variable_name = parse_alnumus_literal(frame_scope.scope_end(), end);
+	//			if (!variable_name.valid()) {
+	//				return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
+	//					"parse_directive_var: Invalid var statement format. No identifier following type contraints."));
+	//			}
+	//			node.push_back(variable_name.expected());
+	//			return expected_parse_result::make_success(variable_name.always() + 1, node); // 1 past eos token
+	//		}
+	//		else if ((frame_scope.scope_end() + 1)->type_is(tk_enum::simple_assignment_)) {
+	//			// Build the assingment expression
+	//			auto expr = parse_value_statement(frame_scope.scope_end(), end);
+	//			if (!expr.valid()) {
+	//				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+	//					"parse_directive_var: Invalid var statement format."));
+	//			}
+
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::constrained_variable_definition_assingment_, *cursor, expr.always() - 1 };
+	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
+	//			node.push_back(expr.expected());
+	//			return expected_parse_result::make_success(expr.always(),node); // 1 past eos token
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(frame_scope.scope_end(), 
+	//				ca_error::parser::invalid_expression(frame_scope.scope_end(), "parse_directive_var: Invalid var statement format."));
+	//		}
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(frame_scope.scope_end(),
+	//			"parse_directive_var: No identifier following type contraints."));
+	//	}
+	//}
+	//else {
+	//	return expected_parse_result::make_failure((begin + 1), 
+	//		ca_error::parser::invalid_expression((begin + 1), 
+	//			"parse_directive_var: Invalid var statement format. #var directive was not followed by an identity or type constraint."));
+	//}
 };
 
 expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end) {
