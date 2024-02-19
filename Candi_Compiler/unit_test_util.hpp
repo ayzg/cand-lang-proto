@@ -6,6 +6,7 @@
 #include "tokenizer.hpp"
 #include "ast_node.hpp"
 #include "preprocessor.hpp"
+#include "macro_expander.hpp"
 #include "parser.hpp"
 #include "constant_evaluator.hpp"
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -119,7 +120,7 @@ caoco::sl_string token_type_to_string(caoco::tk_enum type) {
 	case(caoco::tk_enum::into_): return "into_";
 	case(caoco::tk_enum::none_literal_): return "none_literal_";
 	case(caoco::tk_enum::bit_literal_): return "bit_literal";
-	case(caoco::tk_enum::byte_literal_): return "octet_literal";
+	case(caoco::tk_enum::byte_literal_): return "byte_literal";
 	case(caoco::tk_enum::unsigned_literal_): return "unsigned_literal";
 	default: return "This token type is not string-convertible. Please implement a string conversion for this token type in the token_type_to_string function in test.cpp.";
 	}

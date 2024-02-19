@@ -10,7 +10,7 @@
 &uint
 &uint[1 ...10]
 &real
-&octet
+&byte
 &bit
 //&pointer[type]
 //&pointer[&int]

@@ -9,6 +9,7 @@
 #define CAOCO_TEST_PARSER_STATEMENTS 1
 #define CAOCO_TEST_PARSER_PROGRAM 1
 #define CAOCO_TEST_PREPROCESSOR 1
+#define CAOCO_TEST_CONST_EVALUATOR 1
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tokenizer Tests
@@ -1481,5 +1482,226 @@ TEST(CaocoPreprocessor_Macro, CaocoPreprocessor_Test) {
 	else {
 		std::cout << exp_result.error_message() << std::endl;
 	}
+}
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Const Evaluator Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if CAOCO_TEST_CONST_EVALUATOR
+#define CAOCO_TEST_CONST_EVALUATOR_Literals 1
+#define CAOCO_TEST_CONST_EVALUATOR_MathOperators 1
+#define CAOCO_TEST_CONST_EVALUATOR_VariableDeclaration 1
+#define CAOCO_TEST_CONST_EVALUATOR_Structs 1
+#define CAOCO_TEST_CONST_EVALUATOR_FreeFunctions 1
+#endif
+
+#if CAOCO_TEST_CONST_EVALUATOR_Literals
+TEST(CaocoConstantEvaluator_Literals, CaocoConstantEvaluator_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_literals.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		// Create the runtime namespace/scope/environment.
+		// For clarity: - All three have the same meaning in this context,but we will use the term "environment".
+		//              - Namespace would clash with C++ namespace, and scope is already used in the parser.
+		//              - Each environment has a parent environment, which is nullptr for the root environment(global scope).
+		//              - Each environment also has a list of sub-environments, which are the child scopes.
+		auto runtime_env = caoco::rtenv("global");
+
+
+		// Test the constant evaluator on literals
+		auto int_literal = caoco::parse_operand(result.cbegin(), result.cend());
+		auto eval_result = caoco::CNumberEval()(int_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 42);
+
+		// real literal
+		auto real_literal = caoco::parse_operand(int_literal.always(), result.cend());
+		eval_result = caoco::CRealEval()(real_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::REAL);
+		EXPECT_EQ(std::get<double>(eval_result.value), 42.42);
+
+		// string literal
+		auto string_literal = caoco::parse_operand(real_literal.always(), result.cend());
+		eval_result = caoco::CStringEval()(string_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::STRING);
+		EXPECT_EQ(std::get<caoco::sl_string>(eval_result.value), "Hello'World");
+
+		// bit literal
+		auto bit_literal = caoco::parse_operand(string_literal.always(), result.cend());
+		eval_result = caoco::CBitEval()(bit_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::BIT);
+		EXPECT_EQ(std::get<bool>(eval_result.value), true);
+
+		// unsigned int literal
+		auto uint_literal = parse_operand(bit_literal.always(), result.cend());
+		eval_result = caoco::CUnsignedEval()(uint_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::UNSIGNED);
+		EXPECT_EQ(std::get<unsigned int>(eval_result.value), 42u);
+
+		// octet literal
+		auto octet_literal = parse_operand(uint_literal.always(), result.cend());
+		eval_result = caoco::COctetEval()(octet_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::BYTE);
+		EXPECT_EQ(std::get<unsigned char>(eval_result.value), (unsigned char)42);
+
+		// octet  from char
+		auto octet_from_char = parse_operand(octet_literal.always(), result.cend());
+		eval_result = caoco::COctetEval()(octet_from_char.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::BYTE);
+		EXPECT_EQ(std::get<unsigned char>(eval_result.value), (unsigned char)'a');
+
+		// none
+		auto none_literal = parse_operand(octet_from_char.always(), result.cend());
+		eval_result = caoco::CNoneEval()(none_literal.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NONE);
+		EXPECT_EQ(std::get<caoco::none_t>(eval_result.value), caoco::none_t{});
+
+	}
+	else
+	{
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_CONST_EVALUATOR_MathOperators
+TEST(CaocoConstantEvaluator_Operators, CaocoConstantEvaluator_Operators) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_operators.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		auto runtime_env = caoco::rtenv("global");
+
+		// operator <numlit><+><numlit> 1+1
+		auto expr = caoco::parse_value_statement(result.cbegin(), result.cend());
+		auto eval_result = caoco::CAddOpEval()(expr.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 2);
+
+		// multiple operators <numlit><+><numlit><+><numlit> 1+1+1
+		expr = caoco::parse_value_statement(expr.always(), result.cend());
+		eval_result = caoco::CBinopEval()(expr.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 5);
+
+
+		// operator -        1 + 1 - 1
+		expr = caoco::parse_value_statement(expr.always(), result.cend());
+		eval_result = caoco::CBinopEval()(expr.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 1);
+
+		//// operators + - * / %
+		//// 1 + 1 - 1 * 1 / 1 % 1 (== 2)
+		//expr = caoco::parse_value_statement(expr.always(), result.cend());
+		//eval_result = caoco::CBinopEval()(expr.expected(), runtime_env);
+		//EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		//EXPECT_EQ(std::get<int>(eval_result.value), 2);
+
+		// variable in expression
+		//1 + a;
+		runtime_env.create_variable("a", caoco::RTValue(caoco::RTValue::eType::NUMBER, 42));
+		expr = caoco::parse_value_statement(expr.always(), result.cend());
+		eval_result = caoco::CBinopEval()(expr.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 43);
+
+	}
+	else
+	{
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_CONST_EVALUATOR_VariableDeclaration
+TEST(CaocoConstantEvaluator_VariableDeclaration, CaocoConstantEvaluator_VariableDeclaration) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_vardecl.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		auto runtime_env = caoco::rtenv("global");
+
+		// #var a = 1;
+		auto var_decl = caoco::parse_directive_var(result.cbegin(), result.cend());
+		//print_ast(var_decl.node());
+		EXPECT_TRUE(var_decl.valid());
+		auto eval_result = caoco::CVarDeclEval()(var_decl.expected(), runtime_env);
+		EXPECT_EQ(eval_result.type, caoco::RTValue::eType::NUMBER);
+		EXPECT_EQ(std::get<int>(eval_result.value), 1);
+		//std::cout << "Variable a = " << std::get<int>(runtime_env.resolve_variable("a").value().value) << std::endl;
+		EXPECT_EQ(std::get<int>(runtime_env.resolve_variable("a").value().value), 1);
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_UT_ConstantEvaluator_Structs
+TEST(CaocoConstantEvaluator_Structs, CaocoConstantEvaluator_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_structs.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
+
+	/* Basic class with variable members
+		#class Foo {
+			#var a = 1;
+			#var b = 2;
+		};
+	*/
+
+	//caoco::ParseDirectiveClass()
+	auto class_decl = caoco::ParseDirectiveClass()(result.cbegin(), result.cend());
+	EXPECT_TRUE(class_decl.valid());
+	print_ast(class_decl.node());
+	auto eval_result = caoco::CClassDeclEval()(class_decl.node(), runtime_env);
+
+	auto class_obj = std::get<std::shared_ptr<caoco::object_t>>(eval_result.value).get();
+	EXPECT_EQ(std::get<int>(class_obj->get_member("a").value), 1);
+	EXPECT_EQ(std::get<int>(class_obj->get_member("b").value), 2);
+	EXPECT_EQ(std::get<int>(class_obj->get_member("c").value), 3);
+}
+#endif
+#if CAOCO_UT_ConstantEvaluator_FreeFunctions
+TEST(CaocoConstantEvaluator_FreeFunctions, CaocoConstantEvaluator_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_ceval_free_functions.candi");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto runtime_env = caoco::rtenv("global");
+
+	/*
+		#func add(x) {
+			#return x + 40;
+		};
+		add(2);
+	*/
+	auto func_decl = caoco::ParseDirectiveFunc()(result.cbegin(), result.cend());
+	EXPECT_TRUE(func_decl.valid());
+	print_ast(func_decl.node());
+	auto eval_result = caoco::CFunctionDeclEval()(func_decl.node(), runtime_env);
+
+	// Check if function was declared in global scope.
+	auto func_obj_from_env = runtime_env.resolve_variable("add");
+
+	// check type of function object
+	EXPECT_EQ(func_obj_from_env.value().type, caoco::RTValue::eType::FUNCTION);
+
+
+	//// Call the function.
+	//auto func_call = caoco::ParseValueExpression()(func_decl.it(), result.cend());
+	//EXPECT_TRUE(func_call.valid());
+	//print_ast(func_call.node());
+	//auto eval_result2 = caoco::CFunctionCallEval()(func_call.node(), runtime_env);
+
+	//// Check the result of the function call.
+	//EXPECT_EQ(eval_result2.type, caoco::RTValue::eType::NUMBER);
+	//EXPECT_EQ(std::get<int>(eval_result2.value), 42);
+
 }
 #endif

@@ -37,7 +37,7 @@ expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit en
 expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end);
-expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_byte_literal(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end);
@@ -49,7 +49,7 @@ expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end)
 expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end);
-expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_byte(tk_vector_cit begin, tk_vector_cit end);
 expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end);
 //expected_parse_result parse_cso_pointer(tk_vector_cit begin, tk_vector_cit end);
 //expected_parse_result parse_cso_array(tk_vector_cit begin, tk_vector_cit end);
@@ -134,11 +134,11 @@ expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit 
 	>(begin, end);
 }
 
-expected_parse_result parse_octet_literal(tk_vector_cit begin, tk_vector_cit end) {
+expected_parse_result parse_byte_literal(tk_vector_cit begin, tk_vector_cit end) {
 	return generic_parse_single_token<
 		tk_enum::byte_literal_,
 		astnode_enum::byte_literal_,
-		LAMBDA_STRING(parse_octet_literal : begin is not octet_literal token.)
+		LAMBDA_STRING(parse_byte_literal : begin is not byte_literal token.)
 	>(begin, end);
 }
 
@@ -174,7 +174,7 @@ expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
 	case tk_enum::unsigned_literal_:
 		return parse_unsigned_literal(begin, end);
 	case tk_enum::byte_literal_:
-		return parse_octet_literal(begin, end);
+		return parse_byte_literal(begin, end);
 	case tk_enum::bit_literal_:
 		return parse_bit_literal(begin, end);
 	case tk_enum::open_scope_:// scope containing a value expression resolving to an operand.
@@ -338,8 +338,8 @@ expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
 	return generic_parse_single_token<tk_enum::abit_, astnode_enum::abit_, LAMBDA_STRING(cso_bit : begin is not abit_ token.)>(begin, end);
 }
 
-expected_parse_result parse_cso_octet(tk_vector_cit begin, tk_vector_cit end) {
-	return generic_parse_single_token<tk_enum::abyte_, astnode_enum::abyte_, LAMBDA_STRING(cso_octet : begin is not abyte_ token.)>(begin, end);
+expected_parse_result parse_cso_byte(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::abyte_, astnode_enum::abyte_, LAMBDA_STRING(cso_byte : begin is not abyte_ token.)>(begin, end);
 }
 
 expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
@@ -360,7 +360,7 @@ expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
 	case tk_enum::abit_:
 		return parse_cso_bit(begin, end);
 	case tk_enum::abyte_:
-		return parse_cso_octet(begin, end);
+		return parse_cso_byte(begin, end);
 	default:
 		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
 			astnode_enum::cso_, begin, "parse_cso : Invalid C& Special Object.")

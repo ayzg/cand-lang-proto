@@ -288,7 +288,7 @@ namespace caoco {
 			}
 			advance(it);
 
-			// Check for octet literal
+			// Check for byte literal
 			if (get(it) == 'c') {
 				advance(it);
 				return  make_result(tk_enum::byte_literal_, begin, it);
@@ -361,7 +361,7 @@ namespace caoco {
 				return make_result(tk_enum::unsigned_literal_, begin, it);
 			}
 
-			// Special case for octet literal(overflow is handled by the parser)
+			// Special case for byte literal(overflow is handled by the parser)
 			if (get(it) == 'c') {
 				advance(it);
 				return make_result(tk_enum::byte_literal_, begin, it);
@@ -814,7 +814,7 @@ namespace caoco {
 			//else if (find_forward(keyword_begin, u8"ureal")) {
 			//	return make_result(tk_enum::aureal_, begin, it);
 			//}
-			else if (find_forward(keyword_begin, u8"octet")) {
+			else if (find_forward(keyword_begin, u8"byte")) {
 				return make_result(tk_enum::abyte_, begin, it);
 			}
 			else if (find_forward(keyword_begin, u8"bit")) {
