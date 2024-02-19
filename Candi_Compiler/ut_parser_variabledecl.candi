@@ -1,18 +1,21 @@
 // Anon Var Decl
-#var foo;
+foo;
 
 // Anon Var Decl Assingment
-#var foo = 1;
+foo = 1;
 
 // Complex Anon Var Decl Assingment
-#var foo = 1 + c * (3 / 4);
+foo = 1 + c * (3 / 4);
 
 
 // Type constrained Var Decl
-#var [Int] foo;
+foo int;
 
 // Type Contrained Var Decl Assingment
-#var [Int] foo = 1;
+foo Int = 1;
 
-// Complex Type Contrained Var Decl Assingment
-#var [Int] foo = 1 + c * (3 / 4);
+// Type Expression Constrained Var Decl
+foo [int,Int];
+
+// Type Expression Constrained Var Decl Assingment
+foo [int,Int] = 1;

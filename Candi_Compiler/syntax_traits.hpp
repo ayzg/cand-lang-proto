@@ -59,7 +59,7 @@ namespace caoco {
 		CAOCO_TK_TRAIT(real_literal_,priority::max, left_, none_, real_literal_), // real literal
 		CAOCO_TK_TRAIT(none_literal_,priority::max, left_, none_, none_literal_), // directive none
 		CAOCO_TK_TRAIT(string_literal_,priority::max, left_, none_, string_literal_), // string literal
-		CAOCO_TK_TRAIT(octet_literal_,priority::max, left_, none_, octet_literal_), // octet literal
+		CAOCO_TK_TRAIT(byte_literal_,priority::max, left_, none_, byte_literal_), // octet literal
 		CAOCO_TK_TRAIT(bit_literal_,priority::max, left_, none_, bit_literal_), // bit literal
 		CAOCO_TK_TRAIT(unsigned_literal_,priority::max, left_, none_, unsigned_literal_), // unsigned literal
 		CAOCO_TK_TRAIT(open_scope_,priority::max, left_, none_, open_scope_), // ( function call
@@ -100,6 +100,9 @@ namespace caoco {
 		CAOCO_TK_TRAIT(left_shift_assignment_,priority::assignment, right_, binary_, left_shift_assignment_), // <<=
 		CAOCO_TK_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_, right_shift_assignment_), // >>=
 
+		// Keywords
+		CAOCO_TK_TRAIT(aint_,priority::max, left_, none_, aint_), // aint
+
 		CAOCO_TK_TRAIT(eos_,priority::max, left_, none_, eos_), // end of statement
 		};
 		static astnode_traits_map node_traits = {
@@ -108,7 +111,7 @@ namespace caoco {
 		CAOCO_AST_TRAIT(eof_,priority::max, left_, none_), // eof
 		CAOCO_AST_TRAIT(real_literal_,priority::max, left_, none_), // real literal
 		CAOCO_AST_TRAIT(string_literal_,priority::max, left_, none_), // string literal
-		CAOCO_AST_TRAIT(octet_literal_,priority::max, left_, none_), // octet literal
+		CAOCO_AST_TRAIT(byte_literal_,priority::max, left_, none_), // octet literal
 		CAOCO_AST_TRAIT(bit_literal_,priority::max, left_, none_), // bit literal
 		CAOCO_AST_TRAIT(unsigned_literal_,priority::max, left_, none_), // unsigned literal
 		CAOCO_AST_TRAIT(none_literal_,priority::max, left_, none_), // directive none)
@@ -151,6 +154,8 @@ namespace caoco {
 		CAOCO_AST_TRAIT(left_shift_assignment_,priority::assignment, right_, binary_), // <<=
 		CAOCO_AST_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_), // >>=
 		CAOCO_AST_TRAIT(expression_, priority::max, left_, none_), // expression
+
+		CAOCO_AST_TRAIT(aint_,priority::max, left_, none_), // aint
 
 		CAOCO_AST_TRAIT(eos_,priority::max, left_, none_), // end of statement
 		};

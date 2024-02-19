@@ -1,7 +1,6 @@
 // type alias
-#type IntAlias = int;
-// type_definition
-#type Int = &int;
-// Type definition with contraints
-#type IntRange = &int[1 ...10];
+use IntAlias = int;
+// type_alias expression
+use Int = int(0-100);
+
 

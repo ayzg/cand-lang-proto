@@ -4,14 +4,11 @@
 #define CAOCO_TEST_ALL 1
 #define CAOCO_TEST_NONE 0
 #define CAOCO_TEST_TOKENIZER 1
-
+#define CAOCO_TEST_PARSER_BASIC 1
+#define CAOCO_TEST_PARSER_UTILS 1
+#define CAOCO_TEST_PARSER_STATEMENTS 1
 #if CAOCO_TEST_ALL
-#define CAOCO_UT_V2Parser_SingleNodes 1
-#define CAOCO_UT_V2Parser_ValueExpressions 1
-#define CAOCO_UT_V2Parser_ValueStatementREPL 0
 
-
-#define CAOCO_UT_V2Parser_ValueStatements 1
 #define CAOCO_UT_V2Parser_BasicScopeFinder 0
 #define CAOCO_UT_V2Parser_ListScopeFinder 0
 #define CAOCO_UT_V2Parser_StatementScopeFinder 0
@@ -42,13 +39,16 @@
 #define CAOCO_UT_Preprocessor_Include 1
 #endif
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tokenizer Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_TEST_TOKENIZER 
 #define CAOCO_TEST_TOKENIZER_Keywords 1
 #define CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow 1
 #define CAOCO_TEST_TOKENIZER_KeywordsDirectiveReportEarlyMisspell 1
 #endif
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #if CAOCO_TEST_TOKENIZER_Keywords
 TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
 	// non-directive keywords
@@ -198,10 +198,135 @@ TEST(ut_Tokenizer_KeywordsDirectiveReportEarlyMisspell, ut_Tokenizer) {
 	}
 }
 #endif
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if CAOCO_UT_V2Parser_ValueExpressions
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parser Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if CAOCO_TEST_PARSER_BASIC
+#define CAOCO_TEST_PARSER_SingleNodes 1
+#define CAOCO_TEST_PARSER_ValueExpressions 1
+#define CAOCO_TEST_PARSER_ValueStatementREPL 0
+#define CAOCO_TEST_PARSER_ValueStatements 1
+#endif
+
+#if CAOCO_TEST_PARSER_SingleNodes
+TEST(ut_Parser_Operands, ut_Parser) {
+	// Operands.
+	caoco::astnode expected_result[] = {
+		caoco::astnode(caoco::astnode_enum::number_literal_, u8"1"),
+		caoco::astnode(caoco::astnode_enum::real_literal_, u8"1.1"),
+		caoco::astnode(caoco::astnode_enum::string_literal_, u8"'string literal'"),
+		caoco::astnode(caoco::astnode_enum::string_literal_, u8"'\\\''"),
+		caoco::astnode(caoco::astnode_enum::alnumus_, u8"alnumus"),
+		caoco::astnode(caoco::astnode_enum::byte_literal_, u8"1c"),
+		caoco::astnode(caoco::astnode_enum::bit_literal_, u8"1b"),
+		caoco::astnode(caoco::astnode_enum::unsigned_literal_, u8"1u"),
+		caoco::astnode(caoco::astnode_enum::none_literal_, u8"#none")
+	};
+
+	// Number literals.
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[0],
+		u8"1\0"
+	));
+
+	// Real literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[1],
+		u8"1.1\0"
+	));
+
+	// String literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[2],
+		u8"'string literal'\0"
+	));
+
+	// String literals with escape
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[3],
+		u8"'\\\''\0"
+	));
+
+	// Alnumus
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[4],
+		u8"alnumus\0"
+	));
+
+	// Byte literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[5],
+		u8"1c\0"
+	));
+
+	// Bit literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[6],
+		u8"1b\0"
+	));
+
+	// Unsigned literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[7],
+		u8"1u\0"
+	));
+
+	// None literals
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Operands",
+		&caoco::parse_operand,
+		expected_result[8],
+		u8"#none\0"
+	));
+}
+
+TEST(ut_Parser_Arguments, ut_Parser) {
+	using namespace caoco;
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Arguments",
+		&caoco::parse_arguments,
+		caoco::astnode(caoco::astnode_enum::arguments_, u8"()"),
+		u8"()\0"
+	));
+
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Arguments",
+		&caoco::parse_arguments,
+		astnode(astnode_enum::arguments_, u8"(1)", astnode(astnode_enum::number_literal_, u8"1")),
+		u8"(1)\0"
+	));
+
+
+	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
+		"Arguments",
+		&caoco::parse_arguments,
+		astnode(astnode_enum::arguments_, u8"(1,1,3)",
+			{ astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::number_literal_, u8"1"),
+			astnode(astnode_enum::number_literal_, u8"3") }),
+		u8"(1, 1, 3)\0"
+	));
+}
+#endif
+
+#if CAOCO_TEST_PARSER_ValueExpressions
 TEST(ut_Parser_Expression_SingleOperand, LiteralInt) {
 	using namespace caoco;
 
@@ -252,7 +377,7 @@ TEST(ut_Parser_Expression_SingleOperand, LiteralByte) {
 	using namespace caoco;
 	EXPECT_TRUE(test_and_compare_split_parsing_function_from_u8(
 		"SingleOperand_LiteralByte",
-		astnode(astnode_enum::octet_literal_, u8"1c"),
+		astnode(astnode_enum::byte_literal_, u8"1c"),
 		u8"1c\0"
 	));
 }
@@ -596,7 +721,7 @@ TEST(ut_Parser_Expression_ComplexOperation, OperationWithScopes) {
 }
 #endif
 
-#if CAOCO_UT_V2Parser_ValueStatementREPL
+#if CAOCO_TEST_PARSER_ValueStatementREPL
 TEST(ut_repl, ut_Parser) {
 	while (true) {
 		std::cout << "Caoco Expression AST REPL" << std::endl;
@@ -621,7 +746,7 @@ TEST(ut_repl, ut_Parser) {
 }
 #endif
 
-#if CAOCO_UT_V2Parser_ValueStatements
+#if CAOCO_TEST_PARSER_ValueStatements
 TEST(ut_Parser_ValueStatements, ut_Parser) {
 
 	EXPECT_TRUE(test_and_compare_parsing_function_from_u8(
@@ -684,95 +809,72 @@ TEST(ut_Parser_ValueStatements, ut_Parser) {
 
 }
 #endif
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if CAOCO_UT_V2Parser_SingleNodes
-//TEST(ut_Parser_Arguments, ut_Parser) {
-//	auto input_vec = caoco::sl::to_u8vec(u8"(1, 1, 3)\0");
-//	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
-//	auto parse_result = caoco::parse_arguments(result.cbegin(), result.cend());
-//	if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-//	else print_ast(parse_result.expected());
-//}
-
-TEST(ut_Parser_SinguleNodes, ut_Parser) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_singular_nodes.candi");
-	auto lex_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-	if (!lex_result.valid()) {
-		std::cout << lex_result.error_message() << std::endl;
-	}
-	else {
-		auto result = lex_result.expected();
-
-		// C& Special Objects
-		auto atype_end = test_parsing_function("&type:", &caoco::parse_cso_type, result.cbegin(), result.cend());
-		auto avalue_end = test_parsing_function("&value:", &caoco::parse_cso_value, atype_end, result.cend());
-		auto aidentity_end = test_parsing_function("&identity:", &caoco::parse_cso_identity, avalue_end, result.cend());
-		auto aint_end = test_parsing_function("&int:", &caoco::parse_cso_int, aidentity_end, result.cend());
-		auto aint_positive_range_end = test_parsing_function("&int[positive_range]:", &caoco::parse_cso_int, aint_end, result.cend());
-		auto aint_negative_range_end = test_parsing_function("&int[negative_range]:", &caoco::parse_cso_int, aint_positive_range_end, result.cend());
-		auto aint_lhs_negative_range_end = test_parsing_function("&int[lhs_negative_range]:", &caoco::parse_cso_int, aint_negative_range_end, result.cend());
-		auto aint_rhs_negative_range_end = test_parsing_function("&int[rhs_negative_range]:", &caoco::parse_cso_int, aint_lhs_negative_range_end, result.cend());
-		auto auint_end = test_parsing_function("&uint:", &caoco::parse_cso_uint, aint_rhs_negative_range_end, result.cend());
-		auto auint_positive_range_end = test_parsing_function("&uint[positive_range]:", &caoco::parse_cso_uint, auint_end, result.cend());
-		auto areal_end = test_parsing_function("&real:", &caoco::parse_cso_real, auint_positive_range_end, result.cend());
-		auto aoctet_end = test_parsing_function("&octet:", &caoco::parse_cso_octet, areal_end, result.cend());
-		auto abit_end = test_parsing_function("&bit:", &caoco::parse_cso_bit, aoctet_end, result.cend());
-		//auto apointer_end = test_parsing_function("&pointer[mytype]:", caoco::ParseCsoPointer(), abit_end, result.cend());
-		//auto apointer_int_end = test_parsing_function("&pointer[&int]:", caoco::ParseCsoPointer(), apointer_end, result.cend());
-		//auto aarray_end = test_parsing_function("&array[mytype, 42]:", caoco::ParseCsoArray(), apointer_int_end, result.cend());
-		//auto aarray_int_end = test_parsing_function("&array[&int, 42]:", caoco::ParseCsoArray(), aarray_end, result.cend());
-		//auto aarray_int_range_end = test_parsing_function("&array[&int[1 ...42], 42]:", caoco::ParseCsoArray(), aarray_int_end, result.cend());
-
-		// Literals and Operands.
-		auto string_literal_end = test_parsing_function("'string literal':", &caoco::parse_string_literal, abit_end, result.cend());
-		auto string_literal_with_escape_end = test_parsing_function("'string literal with \\'':", &caoco::parse_string_literal, string_literal_end, result.cend());
-		auto number_literal_end = test_parsing_function("number literal:", &caoco::parse_number_literal, string_literal_with_escape_end, result.cend());
-		auto real_literal_end = test_parsing_function("real literal:", &caoco::parse_real_literal, number_literal_end, result.cend());
-		auto alnumus_end = test_parsing_function("alnumus:", &caoco::parse_alnumus_literal, real_literal_end, result.cend());
-		// TODO: test bit, octet and unsigned literals
-	}
-}
+#if CAOCO_TEST_PARSER_UTILS
+#define CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_ListScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_StatementScopeFinder 1
 #endif
-
-#if CAOCO_UT_V2Parser_BasicScopeFinder 
+#if CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 
 TEST(CaocoParser_BasicNode_BasicScopes, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_scopes.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
 
 	// empty scope
 	std::cout << "Testing empty scope:" << std::endl;
-	caoco::parser_scope_result empty_scope = caoco::find_scope(result.cbegin(), result.cend());
+	caoco::parser_scope_result empty_scope = caoco::find_paren_scope(result.cbegin(), result.cend());
 	EXPECT_TRUE(empty_scope.valid);
-
+	for (auto i = empty_scope.scope_begin(); i != empty_scope.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
 
 	// scope with 1 element
 	std::cout << "Testing scope with 1 element:" << std::endl;
-	caoco::parser_scope_result scope_with_1_element = caoco::find_scope(empty_scope.scope_end(), result.cend());
+	caoco::parser_scope_result scope_with_1_element = caoco::find_paren_scope(empty_scope.scope_end(), result.cend());
 	EXPECT_TRUE(scope_with_1_element.valid);
-
+	for(auto i = scope_with_1_element.scope_begin(); i != scope_with_1_element.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
 	// double scope
 	std::cout << "Testing double scope:" << std::endl;
-	caoco::parser_scope_result double_scope = caoco::find_scope(scope_with_1_element.scope_end(), result.cend());
+	caoco::parser_scope_result double_scope = caoco::find_paren_scope(scope_with_1_element.scope_end(), result.cend());
 	EXPECT_TRUE(double_scope.valid);
-
+	for (auto i = double_scope.scope_begin(); i != double_scope.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
 	// complex scope
 	std::cout << "Testing complex scope:" << std::endl;
-	caoco::parser_scope_result complex_scope = caoco::find_scope(double_scope.scope_end(), result.cend());
+	caoco::parser_scope_result complex_scope = caoco::find_paren_scope(double_scope.scope_end(), result.cend());
 	EXPECT_TRUE(complex_scope.valid);
+	for (auto i = complex_scope.scope_begin(); i != complex_scope.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// complex scope with lists
+	std::cout << "Testing complex scope with lists:" << std::endl;
+	caoco::parser_scope_result complex_scope_with_lists = caoco::find_paren_scope(complex_scope.scope_end(), result.cend());
+	EXPECT_TRUE(complex_scope_with_lists.valid);
+	for (auto i = complex_scope_with_lists.scope_begin(); i != complex_scope_with_lists.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// complex scope with frames and lists
+	std::cout << "Testing complex scope with frames and lists:" << std::endl;
+	caoco::parser_scope_result complex_scope_with_frames_and_lists = caoco::find_paren_scope(complex_scope_with_lists.scope_end(), result.cend());
+	EXPECT_TRUE(complex_scope_with_frames_and_lists.valid);
 
 
-	// invalid scope should be invalid	
-	std::cout << "Testing invalid scope:" << std::endl;
-	caoco::parser_scope_result invalid_scope = caoco::find_scope(complex_scope.scope_end(), result.cend());
-	EXPECT_FALSE(invalid_scope.valid);
+	// Invalid scope should be invalid
+	auto source_file2 = caoco::sl::to_char8_vector("(()");
+	auto result2 = caoco::tokenizer(source_file2.cbegin(), source_file2.cend())().expected();
 
+	std::cout << "Testing invalid scope:";
+	caoco::parser_scope_result invalid_list = caoco::find_paren_scope(result2.cbegin(), result2.cend());
+	EXPECT_FALSE(invalid_list.valid);
+	std::cout << "scope error message:" << invalid_list.error_message << std::endl;
 }
 #endif
 
-#if CAOCO_UT_V2Parser_ListScopeFinder 
-TEST(CaocoParser_BasicNode_ListScopes, CaocoParser_Test) {
-	auto source_file = caoco::sl::to_char8_vector("{}{a}{{}}{({})[{}]{}}");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+#if CAOCO_TEST_PARSER_UTILS_ListScopeFinder 
+TEST(ut_PARSER_UTILS, ListScopeFinder) {
+	auto source_file = caoco::sl::to_char8_vector("{}{a}{{}}{({})[{}]{}}{{}");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
 
 	// empty list
 	std::cout << "Testing empty list:";
@@ -802,14 +904,60 @@ TEST(CaocoParser_BasicNode_ListScopes, CaocoParser_Test) {
 	for (auto i = complex_list.scope_begin(); i != complex_list.scope_end(); i++) std::cout << i->literal_str();
 	std::cout << std::endl;
 	
+	std::cout << "Testing invalid list:";
+	caoco::parser_scope_result invalid_list = caoco::find_list_scope(complex_list.scope_end(), result.cend());
+	EXPECT_FALSE(invalid_list.valid);
+	std::cout << "scope error message:" << invalid_list.error_message << std::endl;
 
 }
 #endif
 
-#if CAOCO_UT_V2Parser_StatementScopeFinder
+#if CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 
+TEST(ut_PARSER_UTILS, FrameScopeFinder) {
+	auto source_file = caoco::sl::to_char8_vector("[][a][[]][([])[[]][]][[]");
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
+
+	// empty frame
+	std::cout << "Testing empty frame:";
+	caoco::parser_scope_result empty_frame = caoco::find_frame_scope(result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_frame.valid);
+	for (auto i = empty_frame.scope_begin(); i != empty_frame.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// frame with 1 element
+	std::cout << "Testing frame with 1 element:";
+	caoco::parser_scope_result frame_with_1_element = caoco::find_frame_scope(empty_frame.scope_end(), result.cend());
+	EXPECT_TRUE(frame_with_1_element.valid);
+	for (auto i = frame_with_1_element.scope_begin(); i != frame_with_1_element.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// double frame
+	std::cout << "Testing double frame:";
+	caoco::parser_scope_result double_frame = caoco::find_frame_scope(frame_with_1_element.scope_end(), result.cend());
+	EXPECT_TRUE(double_frame.valid);
+	for (auto i = double_frame.scope_begin(); i != double_frame.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// complex frame
+	std::cout << "Testing complex frame:";
+	caoco::parser_scope_result complex_frame = caoco::find_frame_scope(double_frame.scope_end(), result.cend());
+	EXPECT_TRUE(complex_frame.valid);
+	for (auto i = complex_frame.scope_begin(); i != complex_frame.scope_end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	std::cout << "Testing invalid frame:";
+	caoco::parser_scope_result invalid_frame = caoco::find_frame_scope(complex_frame.scope_end(), result.cend());
+	EXPECT_FALSE(invalid_frame.valid);
+	std::cout << "scope error message:" << invalid_frame.error_message << std::endl;
+
+}
+#endif
+
+
+#if CAOCO_TEST_PARSER_UTILS_StatementScopeFinder
 TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_statementscope.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().extract();
 
 	// Single value statement : 1;
 	std::cout << "Testing single value statement" << std::endl;
@@ -841,95 +989,107 @@ TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 }
 #endif
 
+#if CAOCO_TEST_PARSER_STATEMENTS
+#define CAOCO_TEST_PARSER_STATEMENTS_TypeAlias 1
+#define CAOCO_TEST_PARSER_STATEMENTS_VariableDeclaration 1
+#endif
 
-#if CAOCO_UT_V2Parser_TypeAlias
+#if CAOCO_TEST_PARSER_STATEMENTS_TypeAlias
 TEST(ut_Parser_TypeAlias, ut_Parser) {
+	// type alias
+	//use IntAlias = int;
+	// type_alias expression
+	//use Int = int(0 - 100);
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_typealias.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+
+		auto result = exp_result.expected();
+
+		std::cout << "Testing use IntAlias = int;" << std::endl;
+		auto px2 = caoco::parse_directive_type(result.cbegin(), result.cend());
+		EXPECT_TRUE(px2.valid());
+		if (px2.valid()) print_ast(px2.expected());
+		else std::cout << px2.error_message() << std::endl;
+
+		std::cout << "Testing use Int = int(0 - 100);" << std::endl;
+		auto px1 = caoco::parse_directive_type(px2.always(), result.cend());
+		EXPECT_TRUE(px1.valid());
+		if (px1.valid()) print_ast(px1.expected());
+		else std::cout << px1.error_message() << std::endl;
 
 
-	// Type alias
-	// #type IntAlias = Int;
-	std::cout << "Testing #type IntAlias = Int;" << std::endl;
-	auto px2 = caoco::parse_directive_type(result.cbegin(), result.cend());
-	EXPECT_TRUE(px2.valid());
-	if(px2.valid()) print_ast(px2.expected());
-	else std::cout << px2.error_message() << std::endl;
-
-
-	// Type definition
-	// #type Int = &int;
-	std::cout << "Testing #type Int = &int;" << std::endl;
-	auto px1 = caoco::parse_directive_type(px2.always(), result.cend());
-	EXPECT_TRUE(px1.valid());
-	if (px1.valid()) print_ast(px1.expected());
-	else std::cout << px1.error_message() << std::endl;
-
-
-	// Type definition with contraints
-	// #type IntRange = &int[1 ...10];
-	std::cout << "Testing #type IntRange = &int[1 ...10];" << std::endl;
-	auto px3 = caoco::parse_directive_type(px1.always(), result.cend());
-	EXPECT_TRUE(px3.valid());
-	if (px3.valid()) print_ast(px3.expected());
-	else std::cout << px3.error_message() << std::endl;
-
+	}
+	else{
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
 
-#if CAOCO_UT_V2Parser_VariableDeclaration
+#if CAOCO_TEST_PARSER_STATEMENTS_VariableDeclaration
 TEST(ut_Parser_VariableDeclaration, ut_Parser) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_variabledecl.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
-	// Anon Var Decl
-	// #var foo;
-	std::cout << "Testing #var foo;" << std::endl;
-	auto anon_var_decl = caoco::parse_directive_var(result.begin(), result.cend());
-	EXPECT_TRUE(anon_var_decl.valid());
-	if(anon_var_decl.valid()) print_ast(anon_var_decl.expected());
-	else std::cout << anon_var_decl.error_message() << std::endl;
+		// Anon Var Decl
+		std::cout << "Testing foo;" << std::endl;
+		auto anon_var_decl = caoco::parse_directive_var(result.begin(), result.cend());
+		EXPECT_TRUE(anon_var_decl.valid());
+		if(anon_var_decl.valid()) print_ast(anon_var_decl.expected());
+		else std::cout << anon_var_decl.error_message() << std::endl;
 
-	// Anon Var Decl Assingment
-	// #var foo = 1;
-	std::cout << "Testing #var foo = 1;" << std::endl;
-	auto anon_var_decl_assign = caoco::parse_directive_var(anon_var_decl.always(), result.cend());
-	EXPECT_TRUE(anon_var_decl_assign.valid());
-	if(anon_var_decl_assign.valid()) print_ast(anon_var_decl_assign.expected());
-	else std::cout << anon_var_decl_assign.error_message() << std::endl;	
+		// Anon Var Decl Assingment
+		std::cout << "Testing foo = 1;" << std::endl;
+		auto anon_var_decl_assign = caoco::parse_directive_var(anon_var_decl.always(), result.cend());
+		EXPECT_TRUE(anon_var_decl_assign.valid());
+		if(anon_var_decl_assign.valid()) print_ast(anon_var_decl_assign.expected());
+		else std::cout << anon_var_decl_assign.error_message() << std::endl;	
 
-	// Complex Anon Var Decl Assingment
-	// #var foo = 1 + c * (3 / 4);
-	std::cout << "Testing #var foo = 1 + c * (3 / 4);" << std::endl;
-	auto anon_var_decl_assign_complex = caoco::parse_directive_var(anon_var_decl_assign.always(), result.cend());
-	EXPECT_TRUE(anon_var_decl_assign_complex.valid());
-	if(anon_var_decl_assign_complex.valid()) print_ast(anon_var_decl_assign_complex.expected());
-	else std::cout << anon_var_decl_assign_complex.error_message() << std::endl;
+		// Complex Anon Var Decl Assingment
+		// #var foo = 1 + c * (3 / 4);
+		std::cout << "Testing #var foo = 1 + c * (3 / 4);" << std::endl;
+		auto anon_var_decl_assign_complex = caoco::parse_directive_var(anon_var_decl_assign.always(), result.cend());
+		EXPECT_TRUE(anon_var_decl_assign_complex.valid());
+		if(anon_var_decl_assign_complex.valid()) print_ast(anon_var_decl_assign_complex.expected());
+		else std::cout << anon_var_decl_assign_complex.error_message() << std::endl;
 
-	// Type Contrained Var Decl
-	// #var [Int] foo;
-	std::cout << "Testing #var [Int] foo;" << std::endl;
-	auto type_constrained_var_decl = caoco::parse_directive_var(anon_var_decl_assign_complex.always(), result.cend());
-	EXPECT_TRUE(type_constrained_var_decl.valid());
-	if(type_constrained_var_decl.valid()) print_ast(type_constrained_var_decl.expected());
-	else std::cout << type_constrained_var_decl.error_message() << std::endl;
+		// Type Contrained Var Decl
+		std::cout << "foo int;" << std::endl;
+		auto type_constrained_var_decl = caoco::parse_directive_var(anon_var_decl_assign_complex.always(), result.cend());
+		EXPECT_TRUE(type_constrained_var_decl.valid());
+		if(type_constrained_var_decl.valid()) print_ast(type_constrained_var_decl.expected());
+		else std::cout << type_constrained_var_decl.error_message() << std::endl;
 
-	// Type Contrained Var Decl Assingment
-	// #var [Int] foo = 1;
-	std::cout << "Testing #var [Int] foo = 1;" << std::endl;
-	auto type_constrained_var_decl_assign = caoco::parse_directive_var(type_constrained_var_decl.always(), result.cend());
-	EXPECT_TRUE(type_constrained_var_decl_assign.valid());
-	if(type_constrained_var_decl_assign.valid()) print_ast(type_constrained_var_decl_assign.expected());
-	else std::cout << type_constrained_var_decl_assign.error_message() << std::endl;
+		// Type Contrained Var Decl Assingment
+		std::cout << "Testing foo Int = 1" << std::endl;
+		auto type_constrained_var_decl_assign = caoco::parse_directive_var(type_constrained_var_decl.always(), result.cend());
+		EXPECT_TRUE(type_constrained_var_decl_assign.valid());
+		if(type_constrained_var_decl_assign.valid()) print_ast(type_constrained_var_decl_assign.expected());
+		else std::cout << type_constrained_var_decl_assign.error_message() << std::endl;
 
 
-	// Complex Type Constrined Var Decl Assingment
-	// #var [Int] foo = 1 + c * (3 / 4);
-	std::cout << "Testing #var [Int] foo = 1 + c * (3 / 4);" << std::endl;
-	auto type_constrained_var_decl_assign_complex = caoco::parse_directive_var(type_constrained_var_decl_assign.always(), result.cend());
-	EXPECT_TRUE(type_constrained_var_decl_assign_complex.valid());
-	if(type_constrained_var_decl_assign_complex.valid()) print_ast(type_constrained_var_decl_assign_complex.expected());
-	else std::cout << type_constrained_var_decl_assign_complex.error_message() << std::endl;
+		// Type Expr Contrained Var Decl
+		std::cout << "Testing foo [int,Int];" << std::endl;
+		auto type_constrained_var_decl_assign_complex = caoco::parse_directive_var(type_constrained_var_decl_assign.always(), result.cend());
+		EXPECT_TRUE(type_constrained_var_decl_assign_complex.valid());
+		if(type_constrained_var_decl_assign_complex.valid()) print_ast(type_constrained_var_decl_assign_complex.expected());
+		else std::cout << type_constrained_var_decl_assign_complex.error_message() << std::endl;
+
+		// Type Expr Contrained Var Decl Assingment
+		std::cout << "Testing foo [int,Int] = 1" << std::endl;
+		auto type_constrained_var_decl_assign_complex_assign = caoco::parse_directive_var(type_constrained_var_decl_assign_complex.always(), result.cend());
+		EXPECT_TRUE(type_constrained_var_decl_assign_complex_assign.valid());
+		if(type_constrained_var_decl_assign_complex_assign.valid()) print_ast(type_constrained_var_decl_assign_complex_assign.expected());
+		else std::cout << type_constrained_var_decl_assign_complex_assign.error_message() << std::endl;
+
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
 

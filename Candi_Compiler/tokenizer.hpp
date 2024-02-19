@@ -31,7 +31,7 @@ namespace caoco {
 
 		// Lexers
 		SL_CX lex_result lex_solidus(sl_char8_vector_cit it);
-		SL_CX lex_result lex_apostrophe(sl_char8_vector_cit it);
+		SL_CX lex_result lex_quotation(sl_char8_vector_cit it);
 		SL_CX lex_result lex_newline(sl_char8_vector_cit it);
 		SL_CX lex_result lex_whitespace(sl_char8_vector_cit it);
 		SL_CX lex_result lex_eof(sl_char8_vector_cit it);
@@ -172,7 +172,7 @@ namespace caoco {
 		// Order of lexers is important. For example, the identifier lexer will match keywords, so it must come after the keyword lexer.
 		while (it != end_) {
 			bool match = false;
-			for (auto lexer : { &tokenizer::lex_solidus,&tokenizer::lex_apostrophe,&tokenizer::lex_newline,
+			for (auto lexer : { &tokenizer::lex_solidus,&tokenizer::lex_quotation,&tokenizer::lex_newline,
 					&tokenizer::lex_whitespace,&tokenizer::lex_eof,& tokenizer::lex_directive,&tokenizer::lex_number,&tokenizer::lex_alnumus,
 					&tokenizer::lex_candi_special,&tokenizer::lex_operator,&tokenizer::lex_scopes, &tokenizer::lex_eos,
 					&tokenizer::lex_comma, &tokenizer::lex_period }) {
@@ -302,10 +302,11 @@ namespace caoco {
 		}
 	}
 
-	SL_CX tokenizer::lex_result tokenizer::lex_apostrophe(sl_char8_vector_cit it) {
+	SL_CX tokenizer::lex_result tokenizer::lex_quotation(sl_char8_vector_cit it) {
 		auto begin = it;
 		if (get(it) == '\'') {
 			advance(it);
+
 			while (!(get(it) == '\'' && peek(it, -1) != '\\')) {
 				advance(it);
 			}
@@ -314,7 +315,7 @@ namespace caoco {
 			// Check for octet literal
 			if (get(it) == 'c') {
 				advance(it);
-				return  make_result(tk_enum::octet_literal_, begin, it);
+				return  make_result(tk_enum::byte_literal_, begin, it);
 			}
 			else
 				return make_result(tk_enum::string_literal_, begin, it);
@@ -387,7 +388,7 @@ namespace caoco {
 			// Special case for octet literal(overflow is handled by the parser)
 			if (get(it) == 'c') {
 				advance(it);
-				return make_result(tk_enum::octet_literal_, begin, it);
+				return make_result(tk_enum::byte_literal_, begin, it);
 			}
 
 			// If number is followed by elipsis. Return the number.
@@ -441,6 +442,8 @@ namespace caoco {
 				return make_result(tk_enum::include_, beg, it);
 			else if (find_forward(beg, u8::directives::MACRO))
 				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::directives::USE))
+				return make_result(tk_enum::use_, beg, it);
 			else if (find_forward(beg, u8::directives::TYPE))
 				return make_result(tk_enum::type_, beg, it);
 			else if (find_forward(beg, u8::directives::VAR))
@@ -513,6 +516,8 @@ namespace caoco {
 				return make_result(tk_enum::include_, beg, it);
 			else if (find_forward(beg, u8::keywords::MACRO))
 				return make_result(tk_enum::macro_, beg, it);
+			else if (find_forward(beg, u8::keywords::USE))
+				return make_result(tk_enum::use_, beg, it);
 			else if (find_forward(beg, u8::keywords::TYPE))
 				return make_result(tk_enum::type_, beg, it);
 			else if (find_forward(beg, u8::keywords::VAR))

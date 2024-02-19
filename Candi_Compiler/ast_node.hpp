@@ -8,7 +8,7 @@ namespace caoco {
 		enum class e_type : int {
 			none_ = -1, invalid_, eos_,
 			string_literal_, number_literal_, real_literal_, none_literal_, 
-			alnumus_, unsigned_literal_, octet_literal_, bit_literal_, 
+			alnumus_, unsigned_literal_, byte_literal_, bit_literal_, 
 			
 			period_, simple_assignment_, addition_assignment_, subtraction_assignment_, 
 			multiplication_assignment_, division_assignment_, remainder_assignment_, 
@@ -91,8 +91,17 @@ namespace caoco {
 			}
 		}
 
-		template<typename...  ChildTs> requires (std::is_same_v<astnode, ChildTs> && ...)
-		astnode(e_type type, const sl_u8string& literal, ChildTs... children) : type_(type), literal_(literal) {
+		template<typename...  ChildTs> requires (std::is_same_v<astnode, std::decay_t<ChildTs>> && ...)
+		astnode(e_type type, tk_vector_cit beg, tk_vector_cit end, ChildTs... children) : type_(type){
+			literal_ = u8"";
+			for (auto it = beg; it != end; it++) {
+				literal_ += it->literal();
+			}
+			(body_.push_back(children), ...);
+		}
+
+		template<typename...  ChildTs> requires (std::is_same_v<astnode, std::decay_t<ChildTs>> && ...)
+			astnode(e_type type, const sl_u8string& literal, ChildTs... children) : type_(type), literal_(literal) {
 			(body_.push_back(children), ...);
 		}
 

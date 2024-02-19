@@ -9,7 +9,7 @@ namespace caoco {
 			none_ = -1, invalid_, eof_,
 			// Base 
 			line_comment_, block_comment_,
-			string_literal_, number_literal_, real_literal_, octet_literal_,
+			string_literal_, number_literal_, real_literal_, byte_literal_,
 			bit_literal_, unsigned_literal_, newline_, whitespace_, alnumus_,
 			// Assignemnt operators
 			simple_assignment_, addition_assignment_, subtraction_assignment_, // -=
@@ -35,7 +35,7 @@ namespace caoco {
 			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
 			abit_, astr_,aarray_, apointer_, amemory_, afunction_,
 			// Directive Tokens
-			enter_, start_, include_,type_, var_, class_, func_, print_, none_literal_,
+			enter_, start_, include_,type_,use_, var_, class_, func_, print_, none_literal_,
 			obj_,private_,macro_,
 			// Modifier Tokens
 			public_, const_, static_, ref_,
@@ -240,7 +240,7 @@ namespace caoco {
 			case(e_type::into_): return "into_";
 			case(e_type::none_literal_): return "none_literal_";
 			case(e_type::bit_literal_): return "bit_literal";
-			case(e_type::octet_literal_): return "octet_literal";
+			case(e_type::byte_literal_): return "octet_literal";
 			case(e_type::unsigned_literal_): return "unsigned_literal";
 			case(e_type::obj_): return "obj_";
 			case(e_type::private_): return "private_";
