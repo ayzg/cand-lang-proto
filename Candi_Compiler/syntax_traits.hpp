@@ -63,6 +63,7 @@ namespace caoco {
 		CAOCO_TK_TRAIT(bit_literal_,priority::max, left_, none_, bit_literal_), // bit literal
 		CAOCO_TK_TRAIT(unsigned_literal_,priority::max, left_, none_, unsigned_literal_), // unsigned literal
 		CAOCO_TK_TRAIT(open_scope_,priority::max, left_, none_, open_scope_), // ( function call
+		CAOCO_TK_TRAIT(open_list_,priority::max, left_, none_, open_list_), // { generic list
 		CAOCO_TK_TRAIT(period_,priority::access, left_, binary_, period_), // . operator
 		CAOCO_TK_TRAIT(decrement_,priority::unary, left_, unary_, decrement_), // --
 		CAOCO_TK_TRAIT(increment_,priority::unary, left_, unary_, increment_), // ++

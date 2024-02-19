@@ -1,5 +1,5 @@
-#if(x+1){#var x;};
+#if(x+1){x;};
 
-#if(x+1){#var x;}#else{#var x;};
+#if(x+1){x;}#else{x;};
 
-#if(x+1){#var x;}#elif(x+2){#var x;}#else{#var x;};
+#if(x+1){x;}#elif(x+2){x;}#else{x;};

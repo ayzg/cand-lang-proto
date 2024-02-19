@@ -7,38 +7,6 @@
 #define CAOCO_TEST_PARSER_BASIC 1
 #define CAOCO_TEST_PARSER_UTILS 1
 #define CAOCO_TEST_PARSER_STATEMENTS 1
-#if CAOCO_TEST_ALL
-
-#define CAOCO_UT_V2Parser_BasicScopeFinder 0
-#define CAOCO_UT_V2Parser_ListScopeFinder 0
-#define CAOCO_UT_V2Parser_StatementScopeFinder 0
-
-#define CAOCO_UT_V2Parser_TypeAlias 0
-#define CAOCO_UT_V2Parser_VariableDeclaration 0
-#define CAOCO_UT_V2Parser_Functions 0
-#define CAOCO_UT_V2Parser_Classes 0
-#define CAOCO_UT_V2Parser_PragmaticBlock 0
-#define CAOCO_UT_V2Parser_FunctionalBlock 0
-#define CAOCO_UT_V2Parser_ConditionalStatements 0
-#define CAOCO_UT_V2Parser_SwitchStatement 0
-#define CAOCO_UT_V2Parser_WhileLoop 0
-#define CAOCO_UT_V2Parser_ForLoop 0
-
-#define CAOCO_UT_V2Parser_ReturnStatement 0
-
-#define CAOCO_UT_V2Parser_MinimumProgram 0
-#define CAOCO_UT_V2Parser_BasicProgram 0
-
-#define CAOCO_UT_V2ParserUtils_SeperatedList 0
-
-#define CAOCO_UT_Preprocessor_Include 0
-#endif
-
-
-#if CAOCO_TEST_NONE
-#define CAOCO_UT_Preprocessor_Include 1
-#endif
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tokenizer Tests
@@ -200,7 +168,7 @@ TEST(ut_Tokenizer_KeywordsDirectiveReportEarlyMisspell, ut_Tokenizer) {
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Parser Tests
+// Parser Basic Tests
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_TEST_PARSER_BASIC
 #define CAOCO_TEST_PARSER_SingleNodes 1
@@ -809,9 +777,10 @@ TEST(ut_Parser_ValueStatements, ut_Parser) {
 
 }
 #endif
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parser Utils Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_TEST_PARSER_UTILS
 #define CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 1
 #define CAOCO_TEST_PARSER_UTILS_ListScopeFinder 1
@@ -953,7 +922,6 @@ TEST(ut_PARSER_UTILS, FrameScopeFinder) {
 }
 #endif
 
-
 #if CAOCO_TEST_PARSER_UTILS_StatementScopeFinder
 TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_statementscope.candi");
@@ -989,9 +957,23 @@ TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
 }
 #endif
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parser Statement Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_TEST_PARSER_STATEMENTS
 #define CAOCO_TEST_PARSER_STATEMENTS_TypeAlias 1
 #define CAOCO_TEST_PARSER_STATEMENTS_VariableDeclaration 1
+#define CAOCO_TEST_PARSER_STATEMENTS_Functions 1
+#define CAOCO_TEST_PARSER_STATEMENTS_Classes 1
+#define CAOCO_TEST_PARSER_STATEMENTS_Conditional 1
+#define CAOCO_TEST_PARSER_STATEMENTS_SwitchStatement 1
+#define CAOCO_TEST_PARSER_STATEMENTS_WhileLoop 1
+#define CAOCO_TEST_PARSER_STATEMENTS_ForLoop 1
+#define CAOCO_TEST_PARSER_STATEMENTS_ReturnStatement 1
+#define CAOCO_TEST_PARSER_STATEMENTS_SeperatedList 1
+#define CAOCO_TEST_PARSER_STATEMENTS_ListOperand 1
+#define CAOCO_TEST_PARSER_STATEMENTS_PragmaticBlock 1
+#define CAOCO_TEST_PARSER_STATEMENTS_FunctionalBlock 1
 #endif
 
 #if CAOCO_TEST_PARSER_STATEMENTS_TypeAlias
@@ -1093,131 +1075,266 @@ TEST(ut_Parser_VariableDeclaration, ut_Parser) {
 }
 #endif
 
-#if CAOCO_UT_V2Parser_Functions
+#if CAOCO_TEST_PARSER_STATEMENTS_Functions
 TEST(ut_Parser_Functions, ut_Parser) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_function.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
-	// Shorthand Void Arg Method <#func> <alnumus> <functional_block>
-	std::cout << "Testing #func foo {};" << std::endl;
-	auto shorthand_void_arg_method = caoco::parse_directive_func(result.cbegin(), result.cend());
-	EXPECT_TRUE(shorthand_void_arg_method.valid());
-	if (!shorthand_void_arg_method.valid()) {
-		std::cout << shorthand_void_arg_method.error_message() << std::endl;
+		auto shorthand_void_arg_method = caoco::parse_directive_func(result.cbegin(), result.cend());
+		EXPECT_TRUE(shorthand_void_arg_method.valid());
+		if (!shorthand_void_arg_method.valid()) {
+			std::cout << shorthand_void_arg_method.error_message() << std::endl;
+		}
+		else
+			print_ast(shorthand_void_arg_method.expected());
+
+		auto unconstrained_method = caoco::parse_directive_func(shorthand_void_arg_method.always(), result.cend());
+		EXPECT_TRUE(unconstrained_method.valid());
+		if (!unconstrained_method.valid()) {
+			std::cout << unconstrained_method.error_message() << std::endl;
+		}
+		else
+			print_ast(unconstrained_method.expected());
+
+		auto unconstrained_method_no_args = caoco::parse_directive_func(unconstrained_method.always(), result.cend());
+		EXPECT_TRUE(unconstrained_method_no_args.valid());
+		if (!unconstrained_method_no_args.valid()) {
+			std::cout << unconstrained_method_no_args.error_message() << std::endl;
+		}
+		else
+			print_ast(unconstrained_method_no_args.expected());
+
+		auto constrained_shorthand_void_arg_method = caoco::parse_directive_func(unconstrained_method_no_args.always(), result.cend());
+		EXPECT_TRUE(constrained_shorthand_void_arg_method.valid());
+		if (!constrained_shorthand_void_arg_method.valid()) {
+			std::cout << constrained_shorthand_void_arg_method.error_message() << std::endl;
+		}
+		else
+		print_ast(constrained_shorthand_void_arg_method.expected());
+
+
+		auto constrained_method = caoco::parse_directive_func(constrained_shorthand_void_arg_method.always(), result.cend());
+		EXPECT_TRUE(constrained_method.valid());
+		if (!constrained_method.valid()) {
+			std::cout << constrained_method.error_message() << std::endl;
+		}
+		else
+		print_ast(constrained_method.expected());
+		
+		auto function_with_return = caoco::parse_directive_func(constrained_method.always(), result.cend());
+		EXPECT_TRUE(function_with_return.valid());
+		if (!function_with_return.valid()) {
+			std::cout << function_with_return.error_message() << std::endl;
+		}
+		else
+			print_ast(function_with_return.expected());
+
+		auto function_with_multiple_statements = caoco::parse_directive_func(function_with_return.always(), result.cend());
+		EXPECT_TRUE(function_with_multiple_statements.valid());
+		if (!function_with_multiple_statements.valid()) {
+			std::cout << function_with_multiple_statements.error_message() << std::endl;
+		}
+		else
+			print_ast(function_with_multiple_statements.expected());
 	}
-	else 
-		print_ast(shorthand_void_arg_method.expected());
-
-	// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
-	std::cout << "Testing #func foo (a, b, c) {};" << std::endl;
-	auto unconstrained_method = caoco::parse_directive_func(shorthand_void_arg_method.always(), result.cend());
-	EXPECT_TRUE(unconstrained_method.valid());
-	if (!unconstrained_method.valid()) {
-		std::cout << unconstrained_method.error_message() << std::endl;
+	else {
+		std::cout << exp_result.error_message() << std::endl;
 	}
-	else
-	print_ast(unconstrained_method.expected());
-
-	// Unconstrained Method Definition w/ no Args
-	std::cout << "Testing #func foo() {};" << std::endl;
-	auto unconstrained_method_no_args = caoco::parse_directive_func(unconstrained_method.always(), result.cend());
-	EXPECT_TRUE(unconstrained_method_no_args.valid());
-	if (!unconstrained_method_no_args.valid()) {
-		std::cout << unconstrained_method_no_args.error_message() << std::endl;
-	}
-	else
-	print_ast(unconstrained_method_no_args.expected());
-
-	//// Constrained Shorthand Void Arg Method #func [&int] foo {};
-	//std::cout << "Testing #func [&int] foo {};" << std::endl;
-	//auto constrained_shorthand_void_arg_method = caoco::parse_directive_func(unconstrained_method_no_args.always(), result.cend());
-	//EXPECT_TRUE(constrained_shorthand_void_arg_method.valid());
-	//if (!constrained_shorthand_void_arg_method.valid()) {
-	//	std::cout << constrained_shorthand_void_arg_method.error_message() << std::endl;
-	//}
-	//else
-	//print_ast(constrained_shorthand_void_arg_method.expected());
-
-
-	//// Constrained method definition #func [&int] foo (a, b, c) {};
-	//std::cout << "Testing #func [&int] foo (a, b, c) {};" << std::endl;
-	//auto constrained_method = caoco::parse_directive_func(constrained_shorthand_void_arg_method.always(), result.cend());
-	//EXPECT_TRUE(constrained_method.valid());
-	//if (!constrained_method.valid()) {
-	//	std::cout << constrained_method.error_message() << std::endl;
-	//}
-	//else
-	//print_ast(constrained_method.expected());
-	//
-	/*Function definition with returns and statements
-		#func foo{
-			#return 1;
-		};
-	*/
-	std::cout << "Testing #func foo{#return 1;}; " << std::endl;
-	auto function_with_return = caoco::parse_directive_func(unconstrained_method.always(), result.cend());
-	EXPECT_TRUE(function_with_return.valid());
-	if (!function_with_return.valid()) {
-		std::cout << function_with_return.error_message() << std::endl;
-	}
-	else
-		print_ast(function_with_return.expected());
-
-
-	/* Function definition with return and multiple statements
-		#func foo {
-			a = 1;
-			b = 2;
-			#return a + b;
-		};
-	*/
-	std::cout << "Testing #func foo {a = 1;b = 2;#return a + b;}; " << std::endl;
-	auto function_with_multiple_statements = caoco::parse_directive_func(function_with_return.always(), result.cend());
-	EXPECT_TRUE(function_with_multiple_statements.valid());
-	if (!function_with_multiple_statements.valid()) {
-		std::cout << function_with_multiple_statements.error_message() << std::endl;
-	}
-	else
-	print_ast(function_with_multiple_statements.expected());
-
 }
 #endif
 
-#if CAOCO_UT_V2Parser_Classes
+#if CAOCO_TEST_PARSER_STATEMENTS_Classes
 TEST(CaocoParser_BasicNode_Classes, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_classes.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto empty_class_def_end = test_parsing_function(
-		"Empty Class Definition", &caoco::parse_directive_class,result.cbegin(), result.cend());
-	auto class_def_with_members_end = test_parsing_function(
-		"Class Definition with Members", &caoco::parse_directive_class, empty_class_def_end, result.cend());
-	auto class_def_with_members_and_methods_end = test_parsing_function(
-		"Class Definition with Members and Methods", &caoco::parse_directive_class, class_def_with_members_end, result.cend());
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+		auto empty_class_def_end = test_parsing_function(
+			"Empty Class Definition", &caoco::parse_directive_class, result.cbegin(), result.cend());
+		auto class_def_with_members_end = test_parsing_function(
+			"Class Definition with Members", &caoco::parse_directive_class, empty_class_def_end, result.cend());
+		auto class_def_with_members_and_methods_end = test_parsing_function(
+			"Class Definition with Members and Methods", &caoco::parse_directive_class, class_def_with_members_end, result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
 
-#if CAOCO_UT_V2Parser_PragmaticBlock
+#if CAOCO_TEST_PARSER_STATEMENTS_Conditional
+TEST(CaocoParser_ControlFlow, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_conditional.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
+		auto if_statement = test_parsing_function(
+			"if statement", &caoco::parse_directive_if, result.cbegin(), result.cend());
+
+		auto if_else_statement = test_parsing_function("if else statement", &caoco::parse_directive_if, if_statement, result.cend());
+
+		auto if_elif_else = test_parsing_function("if elif else statement", &caoco::parse_directive_if, if_else_statement, result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_SwitchStatement
+TEST(CaocoParser_SwitchStatement, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_switch.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		auto switch_statement = test_parsing_function(
+			"switch statement", &caoco::parse_directive_on, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_WhileLoop
+TEST(CaocoParser_WhileLoop, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_while.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		auto while_loop = test_parsing_function(
+			"while loop", &caoco::parse_directive_while, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_ForLoop
+TEST(CaocoParser_ForLoop, CaocoParser_Test) {
+	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_for.candi");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		auto for_loop = test_parsing_function(
+			"for loop", &caoco::parse_directive_for, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_ReturnStatement 
+TEST(CaocoParser_ReturnStatement, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("#return a;\0");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		auto return_statement = test_parsing_function(
+			"return statement", &caoco::parse_directive_return, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_SeperatedList 
+TEST(CaocoParserUtils_SeperatedList, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("{(a),{b},[c],(a,b),{a,c},{a,d}}\0");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		auto seperated_list = caoco::find_seperated_list_scopes(result.cbegin(), result.cend(), caoco::tk_enum::comma_);
+
+		int i = 0;
+		for (auto& ascope : seperated_list) {
+			std::cout << "Seperated List Arg" << i++ << ": ";
+			for (auto a = ascope.scope_begin(); a != ascope.scope_end(); a++) {
+				std::cout << a->literal_str();
+			}
+			std::cout << std::endl;
+		}
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_ListOperand
+TEST(CaocoParserUtils_ListOperand, CaocoParser_Test) {
+	auto source_file = caoco::sl::to_char8_vector("{(a),{b},c}\0");
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
+
+		test_parsing_function(
+			"List Operand", &caoco::parse_operand, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
+}
+#endif
+
+#if CAOCO_TEST_PARSER_STATEMENTS_PragmaticBlock
 TEST(CaocoParser_BasicNode_PragmaticBlock, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_pragmaticblock.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
-	auto pragmatic_block_with_directives_end = test_parsing_function(
-		"Pragmatic Block with Directives", &caoco::parse_pragmatic_block, result.cbegin(), result.cend());
+		auto pragmatic_block_with_directives_end = test_parsing_function(
+			"Pragmatic Block with Directives", &caoco::parse_pragmatic_block, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
 
-#if CAOCO_UT_V2Parser_FunctionalBlock
+#if CAOCO_TEST_PARSER_STATEMENTS_FunctionalBlock
 TEST(CaocoParser_BasicNode_FunctionalBlock, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_functionalblock.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	auto exp_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	EXPECT_TRUE(exp_result.valid());
+	if (exp_result.valid()) {
+		auto result = exp_result.expected();
 
-	auto functional_block_with_statements_end = test_parsing_function(
-		"Functional Block with Statements", &caoco::parse_functional_block, result.cbegin(), result.cend());
+		auto functional_block_with_statements_end = test_parsing_function(
+			"Functional Block with Statements", &caoco::parse_functional_block, result.cbegin(), result.cend());
+	}
+	else {
+		std::cout << exp_result.error_message() << std::endl;
+	}
 }
 #endif
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parser Program Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_UT_V2Parser_MinimumProgram 
 TEST(CaocoParser_MinimumProgram, CaocoParser_Test) {
 	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_minimum_program.candi");
@@ -1231,82 +1348,6 @@ TEST(CaocoParser_MinimumProgram, CaocoParser_Test) {
 }
 #endif
 
-#if CAOCO_UT_V2Parser_ConditionalStatements
-TEST(CaocoParser_ControlFlow, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_conditional.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto if_statement = test_parsing_function(
-		"if statement", &caoco::parse_directive_if,result.cbegin(), result.cend());
-
-	auto if_else_statement = test_parsing_function("if else statement", &caoco::parse_directive_if, if_statement, result.cend());
-
-	auto if_elif_else = test_parsing_function("if elif else statement", &caoco::parse_directive_if, if_else_statement, result.cend());
-
-}
-#endif
-
-
-#if CAOCO_UT_V2Parser_SwitchStatement
-TEST(CaocoParser_SwitchStatement, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_switch.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto switch_statement = test_parsing_function(
-		"switch statement", &caoco::parse_directive_on, result.cbegin(), result.cend());
-}
-#endif
-
-
-#if CAOCO_UT_V2Parser_WhileLoop
-TEST(CaocoParser_WhileLoop, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_while.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto while_loop = test_parsing_function(
-		"while loop", &caoco::parse_directive_while, result.cbegin(), result.cend());
-}
-#endif
-
-#if CAOCO_UT_V2Parser_ForLoop
-TEST(CaocoParser_ForLoop, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_for.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto for_loop = test_parsing_function(
-		"for loop", &caoco::parse_directive_for, result.cbegin(), result.cend());
-}
-
-#endif
-
-
-#if CAOCO_UT_V2ParserUtils_SeperatedList 
-TEST(CaocoParserUtils_SeperatedList, CaocoParser_Test) {
-	auto source_file = caoco::sl::to_char8_vector("{(a),{b},[c],(a,b),{a,c},{a,d}}\0");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto seperated_list = caoco::find_seperated_list_scopes(result.cbegin(), result.cend(),caoco::tk_enum::comma_);
-
-	int i = 0;
-	for(auto& ascope : seperated_list){
-		std::cout << "Seperated List Arg" << i++ << ": ";
-		for(auto a = ascope.scope_begin(); a != ascope.scope_end(); a++){
-			std::cout << a->literal_str();
-		}
-		std::cout << std::endl;
-	}
-}
-#endif
-
-#if CAOCO_UT_V2Parser_ReturnStatement 
-TEST(CaocoParser_ReturnStatement, CaocoParser_Test) {
-	auto source_file = caoco::sl::to_char8_vector("#return a;\0");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
-
-	auto return_statement = test_parsing_function(
-		"return statement", &caoco::parse_directive_return, result.cbegin(), result.cend());
-}
-#endif
 
 #if CAOCO_UT_V2Parser_BasicProgram
 TEST(CaocoParser_BasicProgram, CaocoParser_Test) {
