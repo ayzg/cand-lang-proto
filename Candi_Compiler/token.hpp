@@ -240,7 +240,7 @@ namespace caoco {
 			case(e_type::into_): return "into_";
 			case(e_type::none_literal_): return "none_literal_";
 			case(e_type::bit_literal_): return "bit_literal";
-			case(e_type::byte_literal_): return "octet_literal";
+			case(e_type::byte_literal_): return "byte_literal";
 			case(e_type::unsigned_literal_): return "unsigned_literal";
 			case(e_type::obj_): return "obj_";
 			case(e_type::private_): return "private_";

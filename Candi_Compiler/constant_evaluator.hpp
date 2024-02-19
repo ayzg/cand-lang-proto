@@ -40,7 +40,7 @@ struct RTValue {
 		REAL = 1,
 		STRING = 2,
 		BIT = 3,
-		OCTET = 4,
+		BYTE = 4,
 		NONE = 5,
 		UNSIGNED = 6,
 		OBJECT = 7,
@@ -59,12 +59,12 @@ RTValue(const RTValue& other) {
 	value = other.value;
 }
 
-RTValue(RTValue&& other) {
+RTValue(RTValue&& other) noexcept {
 	type = other.type;
 	value = std::move(other.value);
 }
 
-RTValue& operator=(RTValue&& other) {
+RTValue& operator=(RTValue&& other)noexcept {
 	type = other.type;
 	value = std::move(other.value);
 	return *this;
@@ -286,7 +286,7 @@ public:
 		scope_ = other.scope_;
 	}
 
-	object_t(object_t&& other) : scope_(other.scope_) {
+	object_t(object_t&& other) noexcept : scope_(other.scope_) {
 		name_ = std::move(other.name_);
 		members_ = std::move(other.members_);
 		scope_ = std::move(other.scope_);
@@ -299,7 +299,7 @@ public:
 		return *this;
 	}
 
-	object_t& operator=(object_t&& other) {
+	object_t& operator=(object_t&& other) noexcept {
 		name_ = std::move(other.name_);
 		members_ = std::move(other.members_);
 		scope_ = std::move(other.scope_);
@@ -346,7 +346,7 @@ public:
 		scope_ = other.scope_;
 	}
 
-	function_t(function_t&& other) : scope_(other.scope_) {
+	function_t(function_t&& other) noexcept  : scope_(other.scope_) {
 		name_ = std::move(other.name_);
 		args_ = std::move(other.args_);
 		body_ = std::move(other.body_);
@@ -361,7 +361,7 @@ public:
 		return *this;
 	}
 
-	function_t& operator=(function_t&& other) {
+	function_t& operator=(function_t&& other) noexcept {
 		name_ = std::move(other.name_);
 		args_ = std::move(other.args_);
 		body_ = std::move(other.body_);
@@ -556,7 +556,7 @@ caoco_impl_env_eval_process(CUnsignedEval) {
 }
 
 caoco_impl_env_eval_process(COctetEval) {
-	return get_node_rtvalue(node, RTValue::OCTET,
+	return get_node_rtvalue(node, RTValue::BYTE,
 		[](const sl_string& literal) {
 			// literal will be in the form [0-255]c or '[character]'c
 			if (literal.back() != 'c') {
@@ -565,47 +565,47 @@ caoco_impl_env_eval_process(COctetEval) {
 
 			//if the literal is a character
 			if (literal[0] == '\'') {
-				auto octet_str = literal.substr(1, literal.size() - 3); // remove the quotes and the c
+				auto byte_str = literal.substr(1, literal.size() - 3); // remove the quotes and the c
 				// Check for escape characters.
-				auto escape_pos = octet_str.find('\\');
+				auto escape_pos = byte_str.find('\\');
 				if (escape_pos != sl_string::npos) {
 					// Replace the escape characters
 					switch (literal[escape_pos + 1]) {
 					case 'n':
-						octet_str.replace(escape_pos, 2, "\n");
+						byte_str.replace(escape_pos, 2, "\n");
 						break;
 					case 't':
-						octet_str.replace(escape_pos, 2, "\t");
+						byte_str.replace(escape_pos, 2, "\t");
 						break;
 					case 'r':
-						octet_str.replace(escape_pos, 2, "\r");
+						byte_str.replace(escape_pos, 2, "\r");
 						break;
 					case '0':
-						octet_str.replace(escape_pos, 2, "\0");
+						byte_str.replace(escape_pos, 2, "\0");
 						break;
 					case '\\':
-						octet_str.replace(escape_pos, 2, "\\");
+						byte_str.replace(escape_pos, 2, "\\");
 						break;
 					case '\'':
-						octet_str.replace(escape_pos, 2, "'");
+						byte_str.replace(escape_pos, 2, "'");
 						break;
 					case '\"':
-						octet_str.replace(escape_pos, 2, "\"");
+						byte_str.replace(escape_pos, 2, "\"");
 						break;
 					default:
 						throw std::runtime_error("COctetEval:Invalid escape character:" + literal);
 					}
 				}
 
-				if (octet_str.size() != 1) {
+				if (byte_str.size() != 1) {
 					throw std::runtime_error("COctetEval:Invalid character literal:" + literal);
 				}
 
-				return static_cast<unsigned char>(octet_str.at(0));
+				return static_cast<unsigned char>(byte_str.at(0));
 			}
 			else { // Has to be a number
-				auto octet_str = literal.substr(0, literal.size() - 1);
-				return static_cast<unsigned char>(std::stoi(octet_str));
+				auto byte_str = literal.substr(0, literal.size() - 1);
+				return static_cast<unsigned char>(std::stoi(byte_str));
 			}
 		}
 	);
@@ -692,8 +692,8 @@ caoco_impl_env_eval_process(CAddOpEval) {
 	else if (left_val.type == RTValue::BIT && right_val.type == RTValue::BIT) {
 		return RTValue{ RTValue::BIT, std::get<bool>(left_val.value) + std::get<bool>(right_val.value) };
 	}
-	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
-		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) + std::get<unsigned char>(right_val.value)) };
+	else if (left_val.type == RTValue::BYTE && right_val.type == RTValue::BYTE) {
+		return RTValue{ RTValue::BYTE, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) + std::get<unsigned char>(right_val.value)) };
 	}
 	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
 		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) + std::get<unsigned>(right_val.value) };
@@ -737,8 +737,8 @@ caoco_impl_env_eval_process(CSubOpEval) {
 	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
 		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) - std::get<double>(right_val.value) };
 	}
-	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
-		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) - std::get<unsigned char>(right_val.value)) };
+	else if (left_val.type == RTValue::BYTE && right_val.type == RTValue::BYTE) {
+		return RTValue{ RTValue::BYTE, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) - std::get<unsigned char>(right_val.value)) };
 	}
 	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
 		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) - std::get<unsigned>(right_val.value) };
@@ -783,8 +783,8 @@ caoco_impl_env_eval_process(CMultOpEval) {
 	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
 		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) * std::get<double>(right_val.value) };
 	}
-	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
-		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) * std::get<unsigned char>(right_val.value)) };
+	else if (left_val.type == RTValue::BYTE && right_val.type == RTValue::BYTE) {
+		return RTValue{ RTValue::BYTE, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) * std::get<unsigned char>(right_val.value)) };
 	}
 	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
 		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) * std::get<unsigned>(right_val.value) };
@@ -828,8 +828,8 @@ caoco_impl_env_eval_process(CDivOpEval) {
 	else if (left_val.type == RTValue::REAL && right_val.type == RTValue::REAL) {
 		return RTValue{ RTValue::REAL, std::get<double>(left_val.value) / std::get<double>(right_val.value) };
 	}
-	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
-		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) / std::get<unsigned char>(right_val.value)) };
+	else if (left_val.type == RTValue::BYTE && right_val.type == RTValue::BYTE) {
+		return RTValue{ RTValue::BYTE, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) / std::get<unsigned char>(right_val.value)) };
 	}
 	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
 		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) / std::get<unsigned>(right_val.value) };
@@ -870,8 +870,8 @@ caoco_impl_env_eval_process(CModOpEval) {
 	if (left_val.type == RTValue::NUMBER && right_val.type == RTValue::NUMBER) {
 		return RTValue{ RTValue::NUMBER, std::get<int>(left_val.value) % std::get<int>(right_val.value) };
 	}
-	else if (left_val.type == RTValue::OCTET && right_val.type == RTValue::OCTET) {
-		return RTValue{ RTValue::OCTET, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) % std::get<unsigned char>(right_val.value)) };
+	else if (left_val.type == RTValue::BYTE && right_val.type == RTValue::BYTE) {
+		return RTValue{ RTValue::BYTE, static_cast<unsigned char>(std::get<unsigned char>(left_val.value) % std::get<unsigned char>(right_val.value)) };
 	}
 	else if (left_val.type == RTValue::UNSIGNED && right_val.type == RTValue::UNSIGNED) {
 		return RTValue{ RTValue::UNSIGNED, std::get<unsigned>(left_val.value) % std::get<unsigned>(right_val.value) };

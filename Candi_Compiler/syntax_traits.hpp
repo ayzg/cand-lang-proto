@@ -59,7 +59,7 @@ namespace caoco {
 		CAOCO_TK_TRAIT(real_literal_,priority::max, left_, none_, real_literal_), // real literal
 		CAOCO_TK_TRAIT(none_literal_,priority::max, left_, none_, none_literal_), // directive none
 		CAOCO_TK_TRAIT(string_literal_,priority::max, left_, none_, string_literal_), // string literal
-		CAOCO_TK_TRAIT(byte_literal_,priority::max, left_, none_, byte_literal_), // octet literal
+		CAOCO_TK_TRAIT(byte_literal_,priority::max, left_, none_, byte_literal_), // byte literal
 		CAOCO_TK_TRAIT(bit_literal_,priority::max, left_, none_, bit_literal_), // bit literal
 		CAOCO_TK_TRAIT(unsigned_literal_,priority::max, left_, none_, unsigned_literal_), // unsigned literal
 		CAOCO_TK_TRAIT(open_scope_,priority::max, left_, none_, open_scope_), // ( function call
@@ -112,7 +112,7 @@ namespace caoco {
 		CAOCO_AST_TRAIT(eof_,priority::max, left_, none_), // eof
 		CAOCO_AST_TRAIT(real_literal_,priority::max, left_, none_), // real literal
 		CAOCO_AST_TRAIT(string_literal_,priority::max, left_, none_), // string literal
-		CAOCO_AST_TRAIT(byte_literal_,priority::max, left_, none_), // octet literal
+		CAOCO_AST_TRAIT(byte_literal_,priority::max, left_, none_), // byte literal
 		CAOCO_AST_TRAIT(bit_literal_,priority::max, left_, none_), // bit literal
 		CAOCO_AST_TRAIT(unsigned_literal_,priority::max, left_, none_), // unsigned literal
 		CAOCO_AST_TRAIT(none_literal_,priority::max, left_, none_), // directive none)
