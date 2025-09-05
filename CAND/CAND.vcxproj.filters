@@ -13,10 +13,42 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Transpiler">
+      <UniqueIdentifier>{15e902d0-ce24-4dfd-976c-3a94dd57717f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CAND.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CPPCANDTRANSPILER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPPAND_LEXER_INPUT_OPTIMIZER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="candi_token.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LanguageGuidelines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="c_tokens.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CPPCANDTRANSPILER.h">
+      <Filter>Header Files\Transpiler</Filter>
+    </ClInclude>
+    <ClInclude Include="CPPAND_LEXER_INPUT_OPTIMIZER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="candi_token.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="regex_algo.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
