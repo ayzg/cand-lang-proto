@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{69a1b6a6-2ada-4cee-8f46-5a6434b63320}</ProjectGuid>
+    <ProjectGuid>{e8c37b9d-476c-45b2-adfe-106e527d6142}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
     <ConfigurationType>Application</ConfigurationType>
@@ -88,6 +88,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -97,21 +98,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="candi\operator_table.hpp" />
-    <ClInclude Include="parser_literaltable.hpp" />
-    <ClInclude Include="char_traits.hpp" />
-    <ClInclude Include="global_typedef.hpp" />
-    <ClInclude Include="import.hpp" />
-    <ClInclude Include="parser.hpp" />
-    <ClInclude Include="parser_typetable.hpp" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="phase1.hpp" />
-    <ClInclude Include="phase2.hpp" />
-    <ClInclude Include="sanitizer.hpp" />
-    <ClInclude Include="statement.hpp" />
-    <ClInclude Include="syntax_traits.hpp" />
-    <ClInclude Include="token.hpp" />
-    <ClInclude Include="tokenizer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
@@ -123,10 +110,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="candi\basic.cil" />
-    <None Include="candi\csl_langtools.cil" />
-    <None Include="candi\minimum_program.cil" />
-    <None Include="candi\string_literal.cil" />
+    <None Include="main.candi" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
