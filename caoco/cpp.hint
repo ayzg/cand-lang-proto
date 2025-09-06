@@ -1,0 +1,4 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define MINITEST(TestName, TestCaseName) namespace minitest_unit_test { namespace TestName { bool MINITEST_TEST_##TestCaseName = []() -> bool { return minitest::Test < []() consteval -> const char* { return #TestName; }, []() consteval -> const char* { return #TestCaseName; }, decltype([]() -> void { minitest::last_failed_test_name = #TestName; minitest::last_failed_test_case_name = #TestCaseName;

@@ -1,0 +1,35 @@
+class @Husky:{
+	fn@makeSound:{
+		return 'Howl!';
+	};
+};
+
+class @Poodle:{
+	fn@makeSound:{
+		return 'Yip!';
+	};
+};
+
+
+main:{
+	cout('Welcome to the animal sound generator!');
+	while(true){
+		cout('What animal sound do you want to hear? Say none if you are done.');
+		def @chosen_animal: cin();
+
+		if(chosen_animal == 'husky'){
+			def @dog: Husky();
+			cout(dog.makeSound());
+		}
+		elif(chosen_animal == 'poodle'){
+			def @dog: Poodle();
+			cout(dog.makeSound());
+		}
+		elif(chosen_animal == 'none'){
+			cout('Goodbye!');
+			return;
+		} else {
+			cout('I dont know that animal.');
+		}
+	};
+};
