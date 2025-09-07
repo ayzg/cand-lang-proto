@@ -1,6 +1,8 @@
 # [Archive] C& Practical Programming Language
 - Archived for https://github.com/zhymet/cand-lang. 
 - Maintains pull request references to transferred issues from this repo.
+- Pulicized for educational purpose, and post mortem reference.
+- Copyright Anton Yashchenko 2025
 
 ## Grafted Commits
 ```
