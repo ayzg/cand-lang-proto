@@ -12,8 +12,10 @@
 #include "syntax_traits.hpp"
 #include "parser_utils.hpp"
 #include "cand_errors.hpp"
-
+#include <iterator>
 namespace caoco {
+
+	class parenthesizer;// fwd decl
 
 // partial expected result for parsing: 
 // expected() is the node, always() is one token iterator past the parsed tokens.
@@ -63,6 +65,10 @@ expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end); /
 expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass = nullptr);
 astnode expression_simplify(astnode node);
 expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vector_cit end);
+///
+expected_parse_result expression_split_parse2(tk_cursor cursor, astnode* last_pass = nullptr);
+expected_parse_result expression_split_and_simplify2(tk_vector_cit begin, tk_vector_cit end);
+/////
 expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end); // expects an expression without the <eos>, not a statement!
 expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end); // expects an expression which resolves to a single operand followed by an <;eos>.
 
@@ -402,406 +408,852 @@ expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vect
 	auto simplified = expression_simplify(result.expected());
 	return expected_parse_result::make_success(result.always(), simplified);
 }
+expected_parse_result expression_split_and_simplify2(tk_vector_cit begin, tk_vector_cit end) {
+	auto result = expression_split_parse2(tk_cursor(begin, end));
+	if (!result.valid()) return expected_parse_result::make_failure(result.always(), ca_error::parser::invalid_expression(
+		result.always(), "expression_split_and_simplify : Invalid expression."));
+	auto simplified = expression_simplify(result.expected());
+	return expected_parse_result::make_success(result.always(), simplified);
+}
+
+auto inline is_operational_operand(tk_cursor& tkcrsr){
+	return tkcrsr.operation() == syntax::e_operation::none_
+		|| tkcrsr.operation() == syntax::e_operation::unary_
+		|| tkcrsr.operation() == syntax::e_operation::variadic_;
+}
+
+auto make_partial_binop_after_unary(tk_cursor& crsr, sl_vector<astnode>& prefix_ops,
+	tk_cursor& next_operator_start,
+	tk_cursor& last_operand_start, astnode& operandnode) {
+	// Check if the next operator is more important than the unary operators.
+	if (next_operator_start.priority() > syntax::priority::unary) {
+		auto rest_of_expr_result = expression_split_parse(last_operand_start);
+		if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+
+		auto rest_of_expr = rest_of_expr_result.expected();
+		// Apply the unary operators to the rest of the expression.
+		astnode* last_unary_op = &rest_of_expr;
+		for (auto& op : prefix_ops) {
+			op.push_back(*last_unary_op);
+			last_unary_op = &op;
+		}
+
+		return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
+	}
+	else {
+		// Apply the unary operators to the operand
+		astnode* last_unary_op = &operandnode;
+		for (auto& op : prefix_ops) {
+			op.push_back(*last_unary_op);
+			last_unary_op = &op;
+		}
+		astnode subexpr = astnode(astnode_enum::expression_);
+		subexpr.push_back(*last_unary_op);
+		return expression_split_parse2(crsr.advance_to(*next_operator_start), &subexpr);
+	}
+};
+
+
+expected_parse_result expression_split_parse2(tk_cursor cursor, astnode* last_pass) {
+	// Intermetiade Expression Parser Nodes.
+	//LRPostfix, LRPrefix, LRScope, LRList, LRFrame, LRLiteral, LRSubexpr, LRLPartial, LRRPartial, LRLAccess, LRRAccess, LRFunctional, LRBegin, LREnd, LRError
+	return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+		cursor.get_it(), "expression_split_parse2 : Not implemented."));
+}
+
+
+
+
+//class parenthesizer
+//{
+//	class closure {
+//		std::list<tk>::iterator front_;
+//		std::list<tk>::iterator back_;
+//	public:
+//		closure(std::list<tk>::iterator front) : front_(front), back_(front) {}
+//		closure(std::list<tk>::iterator front, std::list<tk>::iterator back) : front_(front), back_(back) {}
+//
+//		std::list<tk>::iterator front() const { return front_; }
+//		std::list<tk>::iterator back() const { return back_; }
+//	};
+//
+//	class closure_list {
+//		std::list<closure> closures_;
+//
+//		std::list<closure>::iterator find_backward(std::function<bool(std::list<tk>::iterator)>&& condition) {
+//			return std::find_if(closures_.rbegin(), closures_.rend(), condition).base();
+//		}
+//		std::vector<std::list<closure>::iterator> find_backward_consecutive(
+//			std::function<bool(std::list<tk>::iterator, std::list<tk>::iterator)>&& condition) {
+//			auto it = closures_.rbegin();
+//			auto end = closures_.rend();
+//			std::vector<std::list<closure>::iterator> accumulated_iterators;
+//			while (it != end) {
+//				auto next = std::next(it);
+//				if (next == end) {
+//					break;
+//				}
+//				if (condition(it->front(), next->front())) {
+//					accumulated_iterators.push_back(it.base());
+//				}
+//				else {
+//					break;
+//				}
+//				++it;
+//			}
+//			return accumulated_iterators;
+//		}
+//
+//		void insert_tk_before(std::list<closure>::iterator closure_it, std::list<tk>& output, tk token) {
+//			auto front = closure_it->front();
+//			output.insert(front, token);
+//		}
+//		void insert_tk_after(std::list<closure>::iterator closure_it, std::list<tk>& output, tk token) {
+//			auto back = closure_it->back();
+//			auto next = std::next(back);
+//			if (next == output.end()) {
+//				output.push_back(token);
+//			}
+//			else {
+//				output.insert(next, token);
+//			}
+//		}
+//	public:
+//		void pop() {
+//			closures_.pop_back();
+//		}
+//		auto size() const {
+//			return closures_.size();
+//		}
+//		auto last_closure() {
+//			return closures_.rbegin().base();
+//		}
+//		tk& last_closure_front_tk() {
+//			return *closures_.back().front();
+//		}
+//		tk& last_closure_back_tk() {
+//			return *closures_.back().back();
+//		}
+//
+//		void resolve(std::list<tk>& output, const tk& head) {
+//		}
+//
+//		void resolve_binary_associative(std::list<tk>& output, const tk& head) {
+//		}
+//		void resolve_postfix(std::list<tk>& output, const tk& head) {
+//		}
+//		void resolve_binary_single(std::list<tk>& output, const tk& head) {
+//			if (std::prev(last_closure())->front()->priority() == last_closure_front_tk().priority()) {
+//				resolve_binary_associative(output, head);
+//			}
+//			else {
+//				insert_tk_after(std::prev(closures_.end(), 2), output, tk{ tk::l_paren_ });
+//				output.push_back(tk{ tk::r_paren_ });
+//			}
+//		}
+//		void resolve_prefix(std::list<tk>& output, const tk& head) {
+//			insert_tk_before(last_closure(), output, tk{ tk::l_paren_ });
+//			output.push_back(tk{ tk::r_paren_ });
+//			pop();
+//		}
+//
+//		void push_front(std::list<tk>::iterator front) {
+//			closures_.push_front(closure(front));
+//		}
+//		void push_front(std::list<tk>::iterator front, std::list<tk>::iterator back) {
+//			closures_.push_front(closure(front, back));
+//		}
+//
+//		void push_back(std::list<tk>::iterator front) {
+//			closures_.push_back(closure(front));
+//		}
+//		void push_back(std::list<tk>::iterator front, std::list<tk>::iterator back) {
+//			closures_.push_back(closure(front, back));
+//		}
+//
+//	};
+//public:
+//	enum class e_expected_head { operative_, operator_ };
+//	std::vector<tk> parenthesize_expression(std::vector<tk>::const_iterator beg, std::vector<tk>::const_iterator end) {
+//		std::vector<tk>::const_iterator head; // [Head]
+//		std::list<tk> output; // [Output]
+//		closure_list closures; // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		tk sentinel_end{ tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//		// Switches
+//		e_expected_head expected_head = e_expected_head::operative_; // Expected type of head on next iteration.
+//		bool first_pass = true; // Start has to be set after first insertion or else begin is the end.
+//		auto check_performed = false; // If a check has been performed, iterate from start again.
+//
+//		auto first_pass_switch = [&]() {
+//			if (first_pass) {
+//				output.push_back(tk(tk::none_));
+//				closures.push_back(output.rend().base());
+//				first_pass = false;
+//			}
+//		};
+//		auto check_performed_switch = [&]() {
+//			if (!check_performed)
+//				check_performed = true;
+//		};
+//		auto action_skip = [&]()->void {
+//			expected_head = e_expected_head::operator_;
+//			if (head->type == tk::l_paren_) {
+//				auto scope = find_paren_scope(head, end);
+//				if (!scope.valid) {
+//					throw "Mismatched parentheses in operand.";
+//				}
+//				else {
+//					first_pass_switch();
+//					for (auto it = scope.scope_begin(); it != scope.scope_end(); it++) {
+//						output.push_back(*it);
+//					}
+//					head = scope.scope_end();
+//				}
+//			}
+//			else {
+//				first_pass_switch();
+//				output.push_back(*head);
+//				std::advance(head, 1);
+//			}
+//		};
+//		auto action_store = [&]()->void {
+//			expected_head = e_expected_head::operative_;
+//			first_pass_switch();
+//			output.push_back(*head);
+//			closures.push_back(output.rend().base());
+//			std::advance(head, 1);
+//		};
+//		auto subaction_closure = [&]()->void {
+//			assert(!first_pass);
+//			output.push_back(*head);
+//			closures.push_back(output.rend().base());
+//			std::advance(head, 1);
+//		};
+//		auto subaction_resolve = [&]()->void {
+//			// Last Closure > Head
+//			assert(head->priority() < closures.last_closure_front_tk().priority());
+//			// Resolve all higher priority closures.
+//			if (head == end)
+//				closures.resolve(output, sentinel_end);
+//			else
+//				closures.resolve(output, *head);
+//
+//			// If not at end:
+//			// Push token to output. Add closure after the rest have been resolved.Advance.
+//			if (head != end) {
+//				output.push_back(*head);
+//				closures.push_back(output.rend().base());
+//				std::advance(head, 1);
+//			}
+//		};
+//		auto action_check = [&]()->void {
+//			expected_head = e_expected_head::operative_;
+//			check_performed_switch();
+//			if (head->priority() >= closures.last_closure_front_tk().priority()) {
+//				// Head >= Last Closure
+//				subaction_closure();
+//			}
+//			else {
+//				// Head < Last Closure
+//				subaction_resolve();
+//			}
+//		};
+//		auto choose_action = [&]() {
+//			if (head == end) {
+//				subaction_resolve();
+//			}
+//
+//			if (expected_head == e_expected_head::operative_) {
+//				// Looking for an operand or prefix operator.Open scope(subexpr).
+//				switch (head->type)
+//				{
+//				case tk::identifier_:case tk::l_paren_: // Identifier Operand/Subexpr
+//					action_skip();
+//					break;
+//				case tk::neg_:
+//					if (first_pass)
+//						action_store();
+//					else
+//						action_check();
+//					break;
+//				default:
+//					throw "Invalid token in expression stream.";
+//				}
+//
+//			}
+//			else if (expected_head == e_expected_head::operator_) {
+//				// Looking for a binary operator, 
+//				// [not implemented] postfix operator, or open scope(function call), or variadic operator( <op><framestart><frameend> or <op><liststart><listend> )
+//				switch (head->type)
+//				{
+//				case tk::add_: case tk::sub_: case tk::mul_:case tk::div_:case tk::mod_:case tk::member_:case tk::subspace_:
+//				case tk::neg_:case tk::inc_:case tk::dec_:case tk::assign_:
+//					if (first_pass)
+//						action_store();
+//					else
+//						action_check();
+//					break;
+//				default:
+//					throw "Invalid token in expression stream.";
+//				}
+//			}
+//			else {
+//				throw "[Programmer Logic Error] expected_head in parenthesize_expression() is set to an invalid value.";
+//			}
+//		};
+//
+//		// Main loop
+//		while (head != end) {
+//			choose_action();
+//		}
+//
+//		// Convert list to vector.
+//
+//		if (check_performed) {
+//			choose_action(); // Resolve end.
+//			// Convert list to vector.
+//			output.pop_front(); // remove none_ token.
+//			std::vector<tk> parenthesized_vector;
+//			parenthesized_vector.reserve(output.size());
+//			for (auto& tk : output) { parenthesized_vector.push_back(tk); }
+//			return parenthesize_expression(parenthesized_vector.begin(), parenthesized_vector.end());
+//		}
+//		else {
+//			std::vector<tk> parenthesized_vector;
+//			parenthesized_vector.reserve(output.size());
+//			for (auto& tk : output) { parenthesized_vector.push_back(tk); }
+//			return parenthesized_vector; // Done.
+//		}
+//	}
+//
+//};
+
+
+
+sl_vector<tk> parenthesize_expression(tk_vector_cit beg, tk_vector_cit end) {
+	using namespace syntax;
+}
+
+
 
 expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass) {
-	// 1. First Pass
-	if (last_pass == nullptr) {
-		// Expecting operand or a unary operator.
-		if (cursor.operation() == syntax::e_operation::none_) {
-			auto first_operand_parse_result = parse_operand(cursor.get_it(), cursor.end());
-			if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
-			auto first_operand = first_operand_parse_result.expected();
-			return expression_split_parse(cursor.advance_to(first_operand_parse_result.always()), &first_operand);
-		}
+	return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+		cursor.get_it(), "expression_split_parse : Not implemented."));
+	//// 1. First Pass
+	//if (last_pass == nullptr) {
+	//	// An expression may only start with a literal, a subexpression, or a prefix unary operator.
+	//	syntax::e_operation first_token_operation = cursor.operation();
+	//	if (not(is_operational_operand(cursor))) {
+	//		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//			cursor.get_it(), "expression_split_parse : Invalid expression start.Must be literal, identifier, scope, or prefix."));
+	//	}
 
-		if (cursor.operation() == syntax::e_operation::unary_) {
-			sl_vector<astnode> unary_operators;
+	//	// If the operation is a scope entry or a none, then it must be an operand.
+	//	if (first_token_operation == syntax::e_operation::none_
+	//		|| first_token_operation == syntax::e_operation::scope_entry_) {
+	//		auto first_operand_parse_result = parse_operand(cursor.get_it(), cursor.end());
+	//		if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error
+	//		auto first_operand = first_operand_parse_result.expected();
 
-			// Find the first operand following the unary operator.
-			auto unary_cursor = cursor;
-			while (unary_cursor.operation() == syntax::e_operation::unary_) {
-				unary_operators.push_back(unary_cursor.to_statement());
+	//		auto next_operator_begin = cursor.jump_to(first_operand_parse_result.always());
+	//		//-> Open scope after prefix operation-> function call.
+	//		if (next_operator_begin.type_is(tk_enum::open_scope_)) {
+	//			auto function_call = parse_function_call(next_operator_begin, first_operand);
+	//			if (!function_call.valid()) return function_call; // Error parsing function call.
+	//			first_operand = function_call.expected();
+	//			next_operator_begin.advance_to(function_call.always());
 
-				if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
-					return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
-						unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
-				}
+	//			// No following operator -> End of expr.
+	//			if (next_operator_begin.at_end()) {
+	//				return expected_parse_result::make_success(next_operator_begin.get_it(), first_operand);
+	//			}
+	//			else {
+	//				return expression_split_parse(next_operator_begin, &first_operand);
+	//			}
+	//		}
 
-				unary_cursor.advance();
-			}
-			std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
+	//		return expression_split_parse(cursor.advance_to(first_operand_parse_result.always()), &first_operand);
+	//	}
+	//	// Otherwise its a prefix operator.
+	//	else if (first_token_operation == syntax::e_operation::unary_) {
+	//		sl_vector<astnode> unary_operators;
 
-			// Expecting an operand following the unary operator.
-			auto first_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
-			if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
-			auto first_operand = first_operand_parse_result.expected();
-			auto next_operator_begin = first_operand_parse_result.always();
+	//		// Find the first non-prefix following the prefix operators.
+	//		auto unary_cursor = cursor;
+	//		while (unary_cursor.operation() == syntax::e_operation::unary_) {
+	//			unary_operators.push_back(unary_cursor.to_statement());
 
-			// No following operator -> End of expr.
-			if (next_operator_begin == cursor.end()) {
-				// Apply the unary operators to the operand
-				astnode* last_unary_op = &first_operand;
-				for (auto& op : unary_operators) {
-					op.push_back(*last_unary_op);
-					last_unary_op = &op;
-				}
-				return expected_parse_result::make_success(next_operator_begin, *last_unary_op);
-			}
+	//			if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+	//				return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//					unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+	//			}
 
-			// Check if the next operator is a binary operator.
-			if (syntax::e_operation::binary_ == syntax::get_token_operation(next_operator_begin->type())) {
-				// Check if the next operator is more important than the unary operators.
-				if (syntax::get_token_priority(next_operator_begin->type()) > syntax::get_node_priority(unary_operators.begin()->type())) {
-					auto rest_of_expr_result = expression_split_parse(unary_cursor);
-					if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+	//			unary_cursor.advance();
+	//		}
+	//		std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the prefix operators to apply them in the correct order.
 
-					auto rest_of_expr = rest_of_expr_result.expected();
-					// Apply the unary operators to the rest of the expression.
-					astnode* last_unary_op = &rest_of_expr;
-					for (auto& op : unary_operators) {
-						op.push_back(*last_unary_op);
-						last_unary_op = &op;
-					}
+	//		// Expecting an operand following the prefix operators.
+	//		if(not(is_operational_operand(unary_cursor))){
+	//			return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//				unary_cursor.get_it(), "expression_split_parse : Prefix operator is not followed by an operand."));
+	//		}
 
-					return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
-				}
-				else {
-					// Apply the unary operators to the operand
-					astnode* last_unary_op = &first_operand;
-					for (auto& op : unary_operators) {
-						op.push_back(*last_unary_op);
-						last_unary_op = &op;
-					}
+	//		// Parse the operand following the prefix operators.
+	//		auto first_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+	//		if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
+	//		auto first_operand = first_operand_parse_result.expected();
+	//		auto next_operator_begin = cursor.jump_to(first_operand_parse_result.always());
+	//		
+	//		int * a = new int(5);
+	//		// Choose the next operation:
+	//		//-> End of expr after prefix operation.
+	//		if (next_operator_begin.at_end()) {
+	//			return make_end_of_expr_after_unary(cursor,unary_operators,first_operand);
+	//		}
 
-					return expression_split_parse(cursor.advance_to(next_operator_begin), last_unary_op);
-				}
-			}
+	//		//-> Binop after prefix operation.
+	//		if (next_operator_begin.operation() == syntax::e_operation::binary_) {
+	//			return make_partial_binop_after_unary(cursor,unary_operators,next_operator_begin,unary_cursor,first_operand);
+	//		}
 
-			// SPECIAL CASE: check for a function call.
-			if (next_operator_begin->type() == tk_enum::open_scope_) {
-				auto arg_scope = find_scope(next_operator_begin, cursor.end());
-				if (!arg_scope.valid) {
-					return expected_parse_result::make_failure(next_operator_begin, ca_error::parser::invalid_expression(
-						next_operator_begin, "expression_split_parse : Invalid function call scope."));
-				}
+	//		//-> Open scope after prefix operation-> function call.
+	//		if (next_operator_begin.type_is(tk_enum::open_scope_)) {
+	//			auto function_call = parse_function_call(next_operator_begin, first_operand);
+	//			if (!function_call.valid()) return function_call; // Error parsing function call.
+	//			first_operand = function_call.expected();
+	//			next_operator_begin = cursor.jump_to(function_call.always());
 
-				auto arg_parse = parse_arguments(next_operator_begin, cursor.end());
-				if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+	//			// No following operator -> End of expr.
+	//			if (next_operator_begin.at_end()) {
+	//				return make_end_of_expr_after_unary(cursor,unary_operators,first_operand);
+	//			}
+	//			// Check if the next operator is a binary operator.
+	//			if (syntax::e_operation::binary_ == next_operator_begin.operation()) {
+	//				return make_partial_binop_after_unary(cursor,unary_operators,next_operator_begin,unary_cursor,first_operand);
+	//			}
+	//		}
 
+	//		//-> Operand after prefix operation. -> error.
+	//		if (next_operator_begin.operation() == syntax::e_operation::none_) {
+	//			return expected_parse_result::make_failure(next_operator_begin.get_it(), ca_error::parser::invalid_expression(
+	//				next_operator_begin.get_it(), "expression_split_parse : Operand followed by operand."));
+	//		}
 
-				auto function_call_args = arg_parse.expected();
-				// Bind the arguments to the operand as a function call.
-				auto function_call = astnode(astnode_enum::function_call_, next_operator_begin, arg_scope.scope_end());
-				function_call.push_back(first_operand);
-				function_call.push_back(function_call_args);
-				// Function call is now the new operand.
-				first_operand = function_call;
-				// Next operation is the end of the function call scope.
-				next_operator_begin = arg_scope.scope_end();
+	//		throw "unreachable";
+	//		//auto this_operator = cursor.to_statement();
+	//		//this_operator.push_back(first_operand);
+	//		//return expression_split_parse(cursor.advance_to(*next_operator_begin), &this_operator);
+	//	}
+	//	else {
+	//		throw std::logic_error("expression_split_parse : critical programmer error.");
+	//	}
+	//}
+	//// 2. Following Pass.
+	//// From the first pass->
+	//// CASE 1: Cursor is on 1 past first operand. Last pass is the first operand.
+	//// Case 2: Cursor is on 1 past a unary prefix operation chain. Last pass is the unary operation. The innermost leaf is the first operand.
+	//else {
+	//	// End of expression.
+	//	if (cursor.at_end()) {
+	//		return expected_parse_result::make_success(cursor.get_it(), *last_pass);
+	//	}
 
-				// No following operator -> End of expr.
-				if (next_operator_begin == cursor.end()) {
-					// Apply the unary operators to the operand
-					astnode* last_unary_op = &first_operand;
-					for (auto& op : unary_operators) {
-						op.push_back(*last_unary_op);
-						last_unary_op = &op;
-					}
-					return expected_parse_result::make_success(next_operator_begin, *last_unary_op);
-				}
-				// Check if the next operator is a binary operator.
-				if (syntax::e_operation::binary_ == syntax::get_token_operation(next_operator_begin->type())) {
-					// Check if the next operator is more important than the unary operators.
-					if (syntax::get_token_priority(next_operator_begin->type()) > syntax::get_node_priority(unary_operators.begin()->type())) {
-						auto rest_of_expr_result = expression_split_parse(unary_cursor);
-						if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+	//	//CASE 1:
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_) {
+	//		// Binary operator following the first operand.
+	//		if (cursor.operation() == syntax::e_operation::binary_) {
+	//			// Expecting an operand or a prefix unary.
+	//			auto next_operand_begin = cursor.next();
+	//			if (not(is_operational_operand(next_operand_begin))) {
+	//				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//					cursor.get_it(), "expression_split_parse :Expecting operand after binary operator.."));
+	//			}
 
-						auto rest_of_expr = rest_of_expr_result.expected();
-						// Apply the unary operators to the rest of the expression.
-						astnode* last_unary_op = &rest_of_expr;
-						for (auto& op : unary_operators) {
-							op.push_back(*last_unary_op);
-							last_unary_op = &op;
-						}
+	//		}
+	//	}
 
-						return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
-					}
-					else {
-						// Apply the unary operators to the operand
-						astnode* last_unary_op = &first_operand;
-						for (auto& op : unary_operators) {
-							op.push_back(*last_unary_op);
-							last_unary_op = &op;
-						}
+	//	// Was the last pass an operand/unary ?
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_
+	//		|| syntax::get_node_operation(last_pass->type()) == syntax::e_operation::unary_) {
+	//		// Expecting a binary operator on the cursor. or a function call.
+	//		if (!(cursor.operation() == syntax::e_operation::binary_)) {
+	//			// Has to be a function call or else it is an error.
+	//			if (cursor.type_is(tk_enum::open_scope_)) {
+	//				auto arg_scope = find_paren_scope(cursor.get_it(), cursor.end());
+	//				if (!arg_scope.valid) {
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid function call scope."));
+	//				}
 
-						return expression_split_parse(cursor.advance_to(next_operator_begin), last_unary_op);
-					}
-				}
-			}
-
-
-
-			auto this_operator = cursor.to_statement();
-			this_operator.push_back(first_operand);
-			return expression_split_parse(cursor.advance_to(next_operator_begin), &this_operator);
-		}
-	}
-	// 2. Following Pass.
-	else {
-		if (cursor.at_end()) {
-			return expected_parse_result::make_success(cursor.get_it(), *last_pass);
-		}
-
-		// Was the last pass an operand/unary ?
-		if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_
-			|| syntax::get_node_operation(last_pass->type()) == syntax::e_operation::unary_) {
-			// Expecting a binary operator on the cursor. or a function call.
-			if (!(cursor.operation() == syntax::e_operation::binary_)) {
-				// Has to be a function call or else it is an error.
-				if (cursor.type_is(tk_enum::open_scope_)) {
-					auto arg_scope = find_paren_scope(cursor.get_it(), cursor.end());
-					if (!arg_scope.valid) {
-						return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
-							cursor.get_it(), "expression_split_parse : Invalid function call scope."));
-					}
-
-					auto arg_parse = parse_arguments(cursor.get_it(), cursor.end());
-					if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+	//				auto arg_parse = parse_arguments(cursor.get_it(), cursor.end());
+	//				if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
 
 
-					auto function_call_args = arg_parse.expected();
+	//				auto function_call_args = arg_parse.expected();
 
-					/*auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());*/
-					// Bind the arguments to the operand as a function call.
-					auto function_call = astnode(astnode_enum::function_call_, cursor.get_it(), arg_scope.scope_end());
-					function_call.push_back(*last_pass);
-					function_call.push_back(function_call_args);
-					// continue parsing the rest of the expression.
-					return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &function_call);
-				}
-				else {
-					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
-						cursor.get_it(), "expression_split_parse : Operand followed by operand."));
-				}
-			}
+	//				/*auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());*/
+	//				// Bind the arguments to the operand as a function call.
+	//				auto function_call = astnode(astnode_enum::function_call_, cursor.get_it(), arg_scope.scope_end());
+	//				function_call.push_back(*last_pass);
+	//				function_call.push_back(function_call_args);
+	//				// continue parsing the rest of the expression.
+	//				return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &function_call);
+	//			}
+	//			// Or it has to be a postfix unary operator.
+	//			else if (cursor.type_is(tk_enum::decrement_) or cursor.type_is(tk_enum::increment_)) {
+	//				auto next_pass = cursor.to_statement();
+	//				next_pass.push_front(*last_pass);
+	//				return expression_split_parse(cursor.advance(), &next_pass);
+	//			}
+	//			// or it has to be a variadic operator (at_operator_)
+	//			else if(cursor.type_is(tk_enum::at_operator_)){
+	//				auto next_pass = cursor.to_statement();
+	//				// the args are following the at_operator in [] scopes.
+	//				auto arg_scope = find_frame_scope(cursor.next().get_it(), cursor.end());
+	//				if(!arg_scope.valid){
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid variadic operator scope."));
+	//				}
+	//				astnode args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//				
+	//				if (syntax::get_node_priority(last_pass->type()) <= syntax::get_node_priority(next_pass.type())) {
+	//					next_pass.push_back(last_pass->back());
+	//					next_pass.push_back(args);
+	//					last_pass->pop_back();
+	//					last_pass->push_back(next_pass);
+	//					return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), last_pass);
 
-			// Expecting an operand following the binary operator.
-			if (cursor.operation() == syntax::e_operation::binary_) {
-				// Handle a following operand.
-				if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::none_) {
-					auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
-					if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
-					auto next_operand = next_operand_parse_result.expected();
+	//				}
+	//				else {
+	//					next_pass.push_back(*last_pass);
+	//					next_pass.push_back(args);
+	//					return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &next_pass);
+	//				}
+	//			}
+	//			else {
+	//				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//					cursor.get_it(), "expression_split_parse : Operand followed by operand."));
+	//			}
+	//		}
 
-					// Get the following operator
-					tk_cursor cursor_next = cursor;
-					cursor_next.advance_to(next_operand_parse_result.always());
+	//		// Expecting an operand following the binary operator.
+	//		if (cursor.operation() == syntax::e_operation::binary_) {
+	//			// Handle a following operand.
+	//			if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::none_) {
+	//				auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
 
-					// No following operator -> End of expr.
-					if (cursor_next.at_end()) {
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(next_operand);
-						return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
-					}
-					else if (cursor_next.type_is(tk_enum::open_scope_)) {
-						// Special case: function call.
-						auto arg_scope = find_scope(cursor_next.get_it(), cursor_next.end());
-						if (!arg_scope.valid) {
-							return expected_parse_result::make_failure(cursor_next.get_it(), ca_error::parser::invalid_expression(
-								cursor_next.get_it(), "expression_split_parse : Invalid function call scope."));
-						}
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operand_parse_result.always());
 
-						if (cursor.priority() > syntax::priority::functional) {
-							auto arg_parse = parse_arguments(cursor_next.get_it(), cursor_next.end());
-							if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else if (cursor_next.type_is(tk_enum::open_scope_)) {
+	//					// Special case: function call.
+	//					auto arg_scope = find_scope(cursor_next.get_it(), cursor_next.end());
+	//					if (!arg_scope.valid) {
+	//						return expected_parse_result::make_failure(cursor_next.get_it(), ca_error::parser::invalid_expression(
+	//							cursor_next.get_it(), "expression_split_parse : Invalid function call scope."));
+	//					}
 
-							//auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
-							auto function_call_args = arg_parse.expected();
+	//					if (cursor.priority() > syntax::priority::functional) {
+	//						auto arg_parse = parse_arguments(cursor_next.get_it(), cursor_next.end());
+	//						if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
 
-							// Bind the arguments to the operand as a function call.
-							auto function_call = astnode(astnode_enum::function_call_, cursor_next.get_it(), arg_scope.scope_end());
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(next_operand);
-							function_call.push_back(this_operator);
-							function_call.push_back(function_call_args);
-							// continue parsing the rest of the expression.
-							return expression_split_parse(cursor_next.advance_to(arg_scope.scope_end()), &function_call);
-						}//else fallthrough
+	//						//auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//						auto function_call_args = arg_parse.expected();
 
-					}
-					//else
-					if (cursor.priority() == cursor_next.priority()) {
-						if (cursor.associativity() == syntax::e_assoc::right_) {
-							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(rest_of_expr.expected());
-							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-						}
-						else {
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(next_operand);
-							return expression_split_parse(cursor_next, &this_operator);
-						}
-					}
-					if (cursor.priority() < cursor_next.priority()) {
-						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(rest_of_expr.expected());
-						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-					}
-					else {
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(next_operand);
-						return expression_split_parse(cursor_next, &this_operator);
+	//						// Bind the arguments to the operand as a function call.
+	//						auto function_call = astnode(astnode_enum::function_call_, cursor_next.get_it(), arg_scope.scope_end());
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						function_call.push_back(this_operator);
+	//						function_call.push_back(function_call_args);
+	//						// continue parsing the rest of the expression.
+	//						return expression_split_parse(cursor_next.advance_to(arg_scope.scope_end()), &function_call);
+	//					}//else fallthrough
 
-					}
-				}
-				else if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::unary_) {
-					sl_vector<astnode> unary_operators;
+	//				}
+	//				//else
+	//				if (cursor.priority() == cursor_next.priority()) {
+	//					if (cursor.associativity() == syntax::e_assoc::right_) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
+	//					}
+	//				}
+	//				if (cursor.priority() < cursor_next.priority()) {
+	//					auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//					if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(rest_of_expr.expected());
+	//					return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//				}
+	//				else {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expression_split_parse(cursor_next, &this_operator);
 
-					// Find the first operand following the unary operator.
-					auto unary_cursor = cursor.next();
-					while (unary_cursor.operation() == syntax::e_operation::unary_) {
-						unary_operators.push_back(unary_cursor.to_statement());
+	//				}
+	//			}
+	//			else if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::unary_) {
+	//				sl_vector<astnode> unary_operators;
 
-						if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
-							return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
-								unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
-						}
+	//				// Find the first operand following the unary operator.
+	//				auto unary_cursor = cursor.next();
+	//				while (unary_cursor.operation() == syntax::e_operation::unary_) {
+	//					unary_operators.push_back(unary_cursor.to_statement());
 
-						unary_cursor.advance();
-					}
-					std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
+	//					if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+	//						return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//							unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+	//					}
 
-					// Expecting an operand following the unary operator.
-					auto next_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
-					if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
-					auto next_operand = next_operand_parse_result.expected();
-					auto next_operator_begin = next_operand_parse_result.always();
+	//					unary_cursor.advance();
+	//				}
+	//				std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
 
-					// Get the following operator
-					tk_cursor cursor_next = cursor;
-					cursor_next.advance_to(next_operator_begin);
+	//				// Expecting an operand following the unary operator.
+	//				auto next_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
+	//				auto next_operator_begin = next_operand_parse_result.always();
 
-					// No following operator -> End of expr.
-					if (cursor_next.at_end()) {
-						// Apply the unary operators to the operand
-						astnode* last_unary_op = &next_operand;
-						for (auto& op : unary_operators) {
-							op.push_back(*last_unary_op);
-							last_unary_op = &op;
-						}
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operator_begin);
 
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(*last_unary_op);
-						return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
-					}
-					else {
-						if (cursor.priority() == cursor_next.priority()) {
-							if (cursor.associativity() == syntax::e_assoc::right_) {
-								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-								auto this_operator = cursor.to_statement();
-								this_operator.push_front(*last_pass);
-								this_operator.push_back(rest_of_expr.expected());
-								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-							}
-							else {
-								auto this_operator = cursor.to_statement();
-								this_operator.push_front(*last_pass);
-								this_operator.push_back(next_operand);
-								return expression_split_parse(cursor_next, &this_operator);
-							}
-						}
-						if (cursor.priority() < cursor_next.priority()) {
-							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(rest_of_expr.expected());
-							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-						}
-						else {
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(next_operand);
-							return expression_split_parse(cursor_next, &this_operator);
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					// Apply the unary operators to the operand
+	//					astnode* last_unary_op = &next_operand;
+	//					for (auto& op : unary_operators) {
+	//						op.push_back(*last_unary_op);
+	//						last_unary_op = &op;
+	//					}
 
-						}
-					}
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(*last_unary_op);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else if (cursor_next.operation() == syntax::e_operation::unary_) {
+	//					// Apply the unary operators to the operand
+	//											// Apply the unary operators to the operand
+	//					astnode* last_unary_op = &next_operand;
+	//					for (auto& op : unary_operators) {
+	//						op.push_back(*last_unary_op);
+	//						last_unary_op = &op;
+	//					}
+	//					// Find the first operand following the postfix unary operators.
+	//					sl_vector<astnode> postfix_operators;
+	//					auto unary_cursor = tk_cursor(next_operator_begin,cursor.end());
+	//					while(unary_cursor.operation() == syntax::e_operation::unary_) {
+	//						postfix_operators.push_back(unary_cursor.to_statement());
+	//						unary_cursor.advance();
+	//					}
+	//					std::reverse(postfix_operators.begin(), postfix_operators.end()); // Reverse the unary operators to apply them in the correct order.
 
-				}
-				else
-					throw "not implemented yet.";
-			}
-		}
+	//					// apply all the postifx unary operators to the last operand.
+	//					astnode* last_unary_op2 = last_unary_op;
+	//					for (auto& op : postfix_operators) {
+	//						op.push_back(*last_unary_op2);
+	//						last_unary_op2 = &op;
+	//					}
 
-		// Was the last pass a binary operator ?
-		if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::binary_) {
-			if (last_pass->children().size() == 2) {
-				auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
-				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
-				auto next_operand = next_operand_parse_result.expected();
+	//					tk_cursor cursor_next = cursor;
+	//					cursor_next.advance_to(unary_cursor.get_it());
+	//				// No following operator -> End of expr.
+	//					if(cursor_next.at_end()){
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(*last_unary_op2);
+	//						return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//					}
+	//					else {
+	//						if (cursor.priority() == cursor_next.priority()) {
+	//							if (cursor.associativity() == syntax::e_assoc::right_) {
+	//								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//								auto this_operator = cursor.to_statement();
+	//								this_operator.push_front(*last_pass);
+	//								this_operator.push_back(rest_of_expr.expected());
+	//								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//							}
+	//							else {
+	//								auto this_operator = cursor.to_statement();
+	//								this_operator.push_front(*last_pass);
+	//								this_operator.push_back(next_operand);
+	//								return expression_split_parse(cursor_next, &this_operator);
+	//							}
+	//						}
+	//						if (cursor.priority() < cursor_next.priority()) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
 
-				// Get the following operator
-				tk_cursor cursor_next = cursor;
-				cursor_next.advance_to(next_operand_parse_result.always());
+	//						}
+	//					}
 
-				// No following operator -> End of expr.
-				if (cursor_next.at_end()) {
-					auto this_operator = cursor.to_statement();
-					this_operator.push_front(*last_pass);
-					this_operator.push_back(next_operand);
-					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
-				}
-				else {
-					if (cursor.priority() == cursor_next.priority()) {
-						if (cursor.associativity() == syntax::e_assoc::left_) {
-							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(rest_of_expr.expected());
-							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-						}
-						else {
-							auto this_operator = cursor.to_statement();
-							this_operator.push_front(*last_pass);
-							this_operator.push_back(next_operand);
-							return expression_split_parse(cursor_next, &this_operator);
-						}
-					}
-					else if (cursor.priority() < cursor_next.priority()) {
-						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
-						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(rest_of_expr.expected());
-						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
-					}
-					else {
-						auto this_operator = cursor.to_statement();
-						this_operator.push_front(*last_pass);
-						this_operator.push_back(next_operand);
-						return expression_split_parse(cursor_next, &this_operator);
+	//				}
+	//				else {
+	//					if (cursor.priority() == cursor_next.priority()) {
+	//						if (cursor.associativity() == syntax::e_assoc::right_) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
+	//						}
+	//					}
+	//					if (cursor.priority() < cursor_next.priority()) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
 
-					}
-				}
-			}
-			else
-				throw "not implemented yet.";
-		}
+	//					}
+	//				}
 
-	}
+	//			}
+	//			else
+	//				throw "not implemented yet.";
+	//		}
+	//	}
+
+	//	// Was the last pass a binary operator ?
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::binary_) {
+	//		if (last_pass->children().size() == 2) {
+	//			// if we are a binary operator, we expect an operand.
+	//			if (cursor.operation() == syntax::e_operation::binary_) {
+	//				auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
+
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operand_parse_result.always());
+
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else {
+	//					if (cursor.priority() == cursor_next.priority()) {
+	//						if (cursor.associativity() == syntax::e_assoc::left_) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
+	//						}
+	//					}
+	//					else if (cursor.priority() < cursor_next.priority()) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
+
+	//					}
+	//				}
+	//			}
+	//			else if (cursor.operation() == syntax::e_operation::unary_) {
+	//				// apply unary operator to the last operation.
+	//				auto next_pass = cursor.to_statement();
+	//				next_pass.push_front(*last_pass);
+	//				return expression_split_parse(cursor.advance(), &next_pass);
+	//			}
+	//			// handle variadic operator
+	//			else if (cursor.operation() == syntax::e_operation::variadic_) {
+	//				// get the args following the variadic operator in [] scopes.
+	//				auto arg_scope = find_frame_scope(cursor.next().get_it(), cursor.end());
+	//				if(!arg_scope.valid){
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid variadic operator scope."));
+	//				}
+	//				astnode args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//				cursor.advance_to(arg_scope.scope_end());
+
+	//				if (syntax::get_node_priority(last_pass->type()) <= syntax::get_token_priority(cursor.type())) {
+	//					last_pass->push_back(cursor.to_statement());
+	//					last_pass->push_back(args);
+	//					return expression_split_parse(cursor, last_pass);
+	//				}
+	//				else {
+	//					throw "not implemented yet.";
+
+	//				}
+
+	//			}
+	//			else throw "not implemented yet.";
+	//		}
+	//		else
+	//			throw "not implemented yet.";
+	//	}
+
+	//	throw "NOT IMPLEMENTED";
+	//}
 }
 
 expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end) {
@@ -825,7 +1277,7 @@ expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_ci
 			return parse_primary_expression(scope.contained_begin(), scope.contained_end());
 		}
 	}
-	return expression_split_and_simplify(begin, end);
+	return expression_split_and_simplify2(begin, end);
 }
 
 expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end) {

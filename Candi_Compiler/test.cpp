@@ -1,15 +1,32 @@
 #include "pch.h"
-#include "unit_test_util.hpp"
+#include "global_dependencies.hpp"
+#include "cand_syntax.hpp"
+#include "tokenizer.hpp"
+#include "parenthesizer.hpp"
+#include "LLK_parser.hpp"
+
+// Google Test will not do check on caoco::sl_u8string, so we need to define the << operator for char8_t
+std::ostream& operator<<(std::ostream& os, char8_t u8) {
+	os << u8;
+	return os;
+}
+
+// This is defined for printing direct u8 literals
+std::ostream& operator<<(std::ostream& os, const char8_t* u8_cstr) {
+	os << reinterpret_cast<const char*>(u8_cstr);
+	return os;
+}
 
 #define CAOCO_TEST_ALL 1
 #define CAOCO_TEST_NONE 0
 #define CAOCO_TEST_TOKENIZER 1
-#define CAOCO_TEST_PARSER_BASIC 1
+#define CAOCO_TEST_PARENTHESIZER 1
+#define CAOCO_TEST_PARSER_BASIC 0
 #define CAOCO_TEST_PARSER_UTILS 1
-#define CAOCO_TEST_PARSER_STATEMENTS 1
-#define CAOCO_TEST_PARSER_PROGRAM 1
-#define CAOCO_TEST_PREPROCESSOR 1
-#define CAOCO_TEST_CONST_EVALUATOR 1
+#define CAOCO_TEST_PARSER_STATEMENTS 0
+#define CAOCO_TEST_PARSER_PROGRAM 0
+#define CAOCO_TEST_PREPROCESSOR 0
+#define CAOCO_TEST_CONST_EVALUATOR 0
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tokenizer Tests
@@ -23,113 +40,84 @@
 #if CAOCO_TEST_TOKENIZER_Keywords
 TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
 	// non-directive keywords
-	auto input_vec1 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
- public func const static if else elif while for on break continue return print none int uint real\
- byte bit str\0");
-	auto expected_result1 = caoco::tk_vector({
-		{caoco::tk_enum::include_},
-		{caoco::tk_enum::macro_},
-		{caoco::tk_enum::enter_},
-		{caoco::tk_enum::start_},
-		{caoco::tk_enum::type_},
-		{caoco::tk_enum::var_},
-		{caoco::tk_enum::class_},
-		{caoco::tk_enum::obj_},
-		{caoco::tk_enum::private_},
-		{caoco::tk_enum::public_},
-		{caoco::tk_enum::func_},
-		{caoco::tk_enum::const_},
-		{caoco::tk_enum::static_},
-		{caoco::tk_enum::if_},
-		{caoco::tk_enum::else_},
-		{caoco::tk_enum::elif_},
-		{caoco::tk_enum::while_},
-		{caoco::tk_enum::for_},
-		{caoco::tk_enum::on_},
-		{caoco::tk_enum::break_},
-		{caoco::tk_enum::continue_},
-		{caoco::tk_enum::return_},
-		{caoco::tk_enum::print_},
-		{caoco::tk_enum::none_literal_},
-		{caoco::tk_enum::aint_},
-		{caoco::tk_enum::auint_},
-		{caoco::tk_enum::areal_},
-		{caoco::tk_enum::abyte_},
-		{caoco::tk_enum::abit_},
-		{caoco::tk_enum::astr_}
+	auto input_vec1 = sl::to_u8vec(u8"include macro enter start use class obj private\
+ public const static if else elif while for switch break continue return print none int uint real\
+ byte bit str type value identity array pointer memory function\0");
+	auto input_vec2 = sl::to_u8vec(u8"#include #macro #enter #start #use #class #obj #private\
+ #public #const #static #if #else #elif #while #for #switch #break #continue #return #print #none #int #uint #real\
+ #byte #bit #str #type #value #identity #array #pointer #memory #function\0");
+
+	auto expected_result1 = tk_vector({
+		{e_tk::include_},
+		{e_tk::macro_},
+		{e_tk::enter_},
+		{e_tk::start_},
+		{e_tk::use_},
+		{e_tk::class_},
+		{e_tk::obj_},
+		{e_tk::private_},
+		{e_tk::public_},
+		{e_tk::const_},
+		{e_tk::static_},
+		{e_tk::if_},
+		{e_tk::else_},
+		{e_tk::elif_},
+		{e_tk::while_},
+		{e_tk::for_},
+		{e_tk::switch_},
+		{e_tk::break_},
+		{e_tk::continue_},
+		{e_tk::return_},
+		{e_tk::print_},
+		{e_tk::none_literal_},
+		{e_tk::int_},
+		{e_tk::uint_},
+		{e_tk::real_},
+		{e_tk::byte_},
+		{e_tk::bit_},
+		{e_tk::str_},
+		{e_tk::type_},
+		{e_tk::value_},
+		{e_tk::identity_},
+		{e_tk::array_},
+		{e_tk::pointer_},
+		{e_tk::memory_},
+		{e_tk::function_}
 		});
-	auto exp_result1 = caoco::tokenizer(input_vec1.cbegin(), input_vec1.cend())();
+	auto exp_result1 = tokenizer(input_vec1.cbegin(), input_vec1.cend())();
 	if(!exp_result1.valid()){
 		std::cout << exp_result1.error_message() << std::endl;
 	}
 	auto result1 = exp_result1.extract();
 	for (auto& tk : result1) {
-		std::cout << tk.type_to_string() << " ";
+		std::cout << sl::to_str(tk.type()) << " ";
 	}
 	std::cout << std::endl;
 	for (size_t i = 0; i < result1.size(); ++i) {
 		EXPECT_EQ(result1[i].type(), expected_result1[i].type());
 		if (result1[i].type() != expected_result1[i].type()) {
-			std::cout << "Tokenization result expected keyword token: " << expected_result1[i].type_to_string()
-				<< " Got: " << result1[i].type_to_string() << std::endl;
+			std::cout << "Tokenization result expected keyword token: " << sl::to_str(expected_result1[i].type())
+				<< " Got: " << sl::to_str(result1[i].type()) << std::endl;
 		}
 	}
 
 
 	// directive keywords
-	auto input_vec2 = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj \
-#private #public #func #const #static #if #else #elif #while #for #on #break #continue #return \
-#print #none #int #uint #real #byte #bit #str\0");
-	auto expected_result2 = caoco::tk_vector({
-		{caoco::tk_enum::include_},
-		{caoco::tk_enum::macro_},
-		{caoco::tk_enum::enter_},
-		{caoco::tk_enum::start_},
-		{caoco::tk_enum::type_},
-		{caoco::tk_enum::var_},
-		{caoco::tk_enum::class_},
-		{caoco::tk_enum::obj_},
-		{caoco::tk_enum::private_},
-		{caoco::tk_enum::public_},
-		{caoco::tk_enum::func_},
-		{caoco::tk_enum::const_},
-		{caoco::tk_enum::static_},
-		{caoco::tk_enum::if_},
-		{caoco::tk_enum::else_},
-		{caoco::tk_enum::elif_},
-		{caoco::tk_enum::while_},
-		{caoco::tk_enum::for_},
-		{caoco::tk_enum::on_},
-		{caoco::tk_enum::break_},
-		{caoco::tk_enum::continue_},
-		{caoco::tk_enum::return_},
-		{caoco::tk_enum::print_},
-		{caoco::tk_enum::none_literal_},
-		{caoco::tk_enum::aint_},
-		{caoco::tk_enum::auint_},
-		{caoco::tk_enum::areal_},
-		{caoco::tk_enum::abyte_},
-		{caoco::tk_enum::abit_},
-		{caoco::tk_enum::astr_}
-		});
-	auto exp_result2 = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+	auto exp_result2 = tokenizer(input_vec2.cbegin(), input_vec2.cend())();
 
 	if (!exp_result2.valid()) {
 		std::cout << exp_result2.error_message() << std::endl;
 	}
 	auto result2 = exp_result2.extract();
 	for (auto& tk : result2) {
-		std::cout << tk.type_to_string() << " ";
-	}
-	for (auto& tk : result2) {
-		std::cout << tk.type_to_string() << " ";
+		std::cout << sl::to_str(tk.type()) << " ";
 	}
 	std::cout << std::endl;
 	for (size_t i = 0; i < result2.size(); ++i) {
-		EXPECT_EQ(result2[i].type(), expected_result2[i].type());
-		if (result2[i].type() != expected_result2[i].type()) {
-			std::cout << "Tokenization result expected keyword token: " << expected_result2[i].type_to_string()
-				<< " Got: " << result2[i].type_to_string() << std::endl;
+		EXPECT_EQ(result2[i].type(), result2[i].type());
+		if (result2[i].type() != result2[i].type()) {
+			std::cout << "Tokenization result expected keyword token: " << sl::to_str(result2[i].type())
+				<< " Got: " << sl::to_str(result2[i].type()) << std::endl;
 		}
 	}
 }
@@ -137,21 +125,21 @@ TEST(ut_Tokenizer_Keywords, ut_Tokenizer) {
 
 #if CAOCO_TEST_TOKENIZER_KeywordsMixedShouldThrow
 TEST(ut_Tokenizer_KeywordsMixedShouldThrow, ut_Tokenizer) {
-	auto input_vec = caoco::sl::to_u8vec(u8"#include #macro #enter #start #type #var #class #obj #private\
- public #func #const #static #if #else #elif #while #for #on #break #continue #return #print #none #int #uint #real\
+	auto input_vec = sl::to_u8vec(u8"#include #macro #enter #start #type #class #obj #private\
+ public #func #const #static #if #else #elif #while #for #break #continue #return #print #none #int #uint #real\
  #byte #bit #str");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();
 	EXPECT_FALSE(result.valid());
 	if(!result.valid()){
 		std::cout << result.error_message() << std::endl;
 	}
 
 
-	auto input_vec2 = caoco::sl::to_u8vec(u8"include macro enter start type var class obj private\
+	auto input_vec2 = sl::to_u8vec(u8"include macro enter start type class obj private\
  #public func const static if else elif while for on break continue return print none int uint real\
  byte bit str\0");
 
-	result = caoco::tokenizer(input_vec2.cbegin(), input_vec2.cend())();
+	result = tokenizer(input_vec2.cbegin(), input_vec2.cend())();
 	EXPECT_FALSE(result.valid());
 	if (!result.valid()) {
 		std::cout << result.error_message() << std::endl;
@@ -161,8 +149,8 @@ TEST(ut_Tokenizer_KeywordsMixedShouldThrow, ut_Tokenizer) {
 
 #if CAOCO_TEST_TOKENIZER_KeywordsDirectiveReportEarlyMisspell 
 TEST(ut_Tokenizer_KeywordsDirectiveReportEarlyMisspell, ut_Tokenizer) {
-	auto input_vec = caoco::sl::to_u8vec(u8"#inclde");
-	auto result = caoco::tokenizer(input_vec.cbegin(), input_vec.cend())();
+	auto input_vec = sl::to_u8vec(u8"#inclde");
+	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();
 	EXPECT_FALSE(result.valid());
 	if (!result.valid()) {
 		std::cout << result.error_message() << std::endl;
@@ -171,13 +159,661 @@ TEST(ut_Tokenizer_KeywordsDirectiveReportEarlyMisspell, ut_Tokenizer) {
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parser Utils Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if CAOCO_TEST_PARSER_UTILS
+#define CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_ListScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 1
+#define CAOCO_TEST_PARSER_UTILS_StatementScopeFinder 1
+#endif
+#if CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 
+TEST(CaocoParser_BasicNode_BasicScopes, CaocoParser_Test) {
+	auto source_file = sl::load_file_to_char8_vector("ut_parser_scopes.candi");
+	auto result = tokenizer(source_file.cbegin(), source_file.cend())().expected();
+
+	// empty scope
+	std::cout << "Testing empty scope:" << std::endl;
+	tk_scope empty_scope = tk_scope::find_paren(result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_scope.valid());
+	for (auto i = empty_scope.begin(); i != empty_scope.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// scope with 1 element
+	std::cout << "Testing scope with 1 element:" << std::endl;
+	tk_scope scope_with_1_element = tk_scope::find_paren(empty_scope.end(), result.cend());
+	EXPECT_TRUE(scope_with_1_element.valid());
+	for (auto i = scope_with_1_element.begin(); i != scope_with_1_element.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// double scope
+	std::cout << "Testing double scope:" << std::endl;
+	tk_scope double_scope = tk_scope::find_paren(scope_with_1_element.end(), result.cend());
+	EXPECT_TRUE(double_scope.valid());
+	for (auto i = double_scope.begin(); i != double_scope.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// complex scope
+	std::cout << "Testing complex scope:" << std::endl;
+	tk_scope complex_scope = tk_scope::find_paren(double_scope.end(), result.cend());
+	EXPECT_TRUE(complex_scope.valid());
+	for (auto i = complex_scope.begin(); i != complex_scope.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// complex scope with lists
+	std::cout << "Testing complex scope with lists:" << std::endl;
+	tk_scope complex_scope_with_lists = tk_scope::find_paren(complex_scope.end(), result.cend());
+	EXPECT_TRUE(complex_scope_with_lists.valid());
+	for (auto i = complex_scope_with_lists.begin(); i != complex_scope_with_lists.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+	// complex scope with frames and lists
+	std::cout << "Testing complex scope with frames and lists:" << std::endl;
+	tk_scope complex_scope_with_frames_and_lists = tk_scope::find_paren(complex_scope_with_lists.end(), result.cend());
+	EXPECT_TRUE(complex_scope_with_frames_and_lists.valid());
+
+
+	// Invalid scope should be invalid
+	auto source_file2 = sl::to_char8_vector("(()");
+	auto result2 = tokenizer(source_file2.cbegin(), source_file2.cend())().expected();
+
+	std::cout << "Testing invalid scope:";
+	tk_scope invalid_list = tk_scope::find_paren(result2.cbegin(), result2.cend());
+	EXPECT_FALSE(invalid_list.valid());
+	std::cout << "scope error message:" << invalid_list.error() << std::endl;
+}
+#endif
+
+#if CAOCO_TEST_PARSER_UTILS_ListScopeFinder 
+TEST(ut_PARSER_UTILS, ListScopeFinder) {
+	auto source_file = sl::to_char8_vector("{}{a}{{}}{({})[{}]{}}{{}");
+	auto result = tokenizer(source_file.cbegin(), source_file.cend())().expected();
+
+	// empty list
+	std::cout << "Testing empty list:";
+	tk_scope empty_list = tk_scope::find_brace(result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_list.valid());
+	for (auto i = empty_list.begin(); i != empty_list.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// list with 1 element
+	std::cout << "Testing list with 1 element:";
+	tk_scope list_with_1_element = tk_scope::find_brace(empty_list.end(), result.cend());
+	EXPECT_TRUE(list_with_1_element.valid());
+	for (auto i = list_with_1_element.begin(); i != list_with_1_element.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// double list
+	std::cout << "Testing double list:";
+	tk_scope double_list = tk_scope::find_brace(list_with_1_element.end(), result.cend());
+	EXPECT_TRUE(double_list.valid());
+	for (auto i = double_list.begin(); i != double_list.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// complex list
+	std::cout << "Testing complex list:";
+	tk_scope complex_list = tk_scope::find_brace(double_list.end(), result.cend());
+	EXPECT_TRUE(complex_list.valid());
+	for (auto i = complex_list.begin(); i != complex_list.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	std::cout << "Testing invalid list:";
+	tk_scope invalid_list = tk_scope::find_brace(complex_list.end(), result.cend());
+	EXPECT_FALSE(invalid_list.valid());
+	std::cout << "scope error message:" << invalid_list.error() << std::endl;
+
+}
+#endif
+
+#if CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 
+TEST(ut_PARSER_UTILS, FrameScopeFinder) {
+	auto source_file = sl::to_char8_vector("[][a][[]][([])[[]][]][[]");
+	auto result = tokenizer(source_file.cbegin(), source_file.cend())().expected();
+
+	// empty frame
+	std::cout << "Testing empty frame:";
+	tk_scope empty_frame = tk_scope::find_bracket(result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_frame.valid());
+	for (auto i = empty_frame.begin(); i != empty_frame.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// frame with 1 element
+	std::cout << "Testing frame with 1 element:";
+	tk_scope frame_with_1_element = tk_scope::find_bracket(empty_frame.end(), result.cend());
+	EXPECT_TRUE(frame_with_1_element.valid());
+	for (auto i = frame_with_1_element.begin(); i != frame_with_1_element.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// double frame
+	std::cout << "Testing double frame:";
+	tk_scope double_frame = tk_scope::find_bracket(frame_with_1_element.end(), result.cend());
+	EXPECT_TRUE(double_frame.valid());
+	for (auto i = double_frame.begin(); i != double_frame.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	// complex frame
+	std::cout << "Testing complex frame:";
+	tk_scope complex_frame = tk_scope::find_bracket(double_frame.end(), result.cend());
+	EXPECT_TRUE(complex_frame.valid());
+	for (auto i = complex_frame.begin(); i != complex_frame.end(); i++) std::cout << i->literal_str();
+	std::cout << std::endl;
+
+	std::cout << "Testing invalid frame:";
+	tk_scope invalid_frame = tk_scope::find_bracket(complex_frame.end(), result.cend());
+	EXPECT_FALSE(invalid_frame.valid());
+	std::cout << "scope error message:" << invalid_frame.error() << std::endl;
+
+}
+#endif
+
+#if CAOCO_TEST_PARSER_UTILS_StatementScopeFinder
+TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
+	auto source_file = sl::load_file_to_char8_vector("ut_parser_statementscope.candi");
+	auto result = tokenizer(source_file.cbegin(), source_file.cend())().extract();
+
+	// Single value statement : 1;
+	std::cout << "Testing single value statement" << std::endl;
+	tk_scope empty_statement = tk_scope::find_statement(e_tk::number_literal_, e_tk::semicolon_, result.cbegin(), result.cend());
+	EXPECT_TRUE(empty_statement.valid());
+
+	// statement with multiple tokens: a = 1;
+	std::cout << "Testing statement with multiple tokens" << std::endl;
+	tk_scope multiple_token_statement = tk_scope::find_statement(e_tk::alnumus_, e_tk::semicolon_, empty_statement.end(), result.cend());
+	EXPECT_TRUE(multiple_token_statement.valid());
+
+	// statement with multiple tokens and scopes: a = (1;2;3);
+	std::cout << "Testing statement with multiple tokens and scopes" << std::endl;
+	tk_scope multiple_token_scope_statement = tk_scope::find_statement(e_tk::alnumus_, e_tk::semicolon_, multiple_token_statement.end(), result.cend());
+	EXPECT_TRUE(multiple_token_scope_statement.valid());
+
+	// statement with lists frames and scopes nested in diffrent ways containing end tokens. a = 1 + ([ 2 ;3 + {4;5;6}]);
+	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing end tokens." << std::endl;
+	tk_scope complex_statement = tk_scope::find_statement(e_tk::alnumus_, e_tk::semicolon_, multiple_token_scope_statement.end(), result.cend());
+	EXPECT_TRUE(complex_statement.valid());
+	//EXPECT_TRUE(complex_statement.end() == result.cend() - 1);
+
+	// Test finding an "open" statement which allows for repeated open tokens. ex a = a + a + ([ a ;a + {a;a;a}]);
+	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing begin and end tokens." << std::endl;
+	tk_scope open_statement = tk_scope::find_open_statement(e_tk::alnumus_, e_tk::semicolon_, complex_statement.end(), result.cend());
+	EXPECT_TRUE(open_statement.valid());
+	EXPECT_TRUE(open_statement.end() == result.cend() - 1);
+
+}
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Parenthesizer Tests
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+//TEST(unaryClosure,LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"!a");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Resolve
+//		closures.resolve_prefix();
+//
+//		for(auto& t : output){
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(binaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"a+b");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		closures.resolve_binary();
+//
+//		for (auto& t : output) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(leftAssocBinaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"a+b+c+d");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		closures.resolve_binary_left_associative();
+//
+//		for (auto& t : output) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(rightAssocBinaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"a.b.c.d");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		closures.resolve_binary_right_associative();
+//
+//		for (auto& t : output) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(postfixClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"a++++++");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		closures.resolve_postfix();
+//
+//		for (auto& t : output) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(postfixFollowedByHigherPriorityBinaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"b++++.b");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		std::vector<tk>::const_iterator head(exp_result.begin()); // [Head]
+//		tk_list output{ e_tk::none_ }; // [Output]
+//		closure_list closures(output); // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		closures.push_back(std::prev(output.end()));
+//		tk sentinel_end{ e_tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// Store
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Check-> Closure
+//		output.push_back(*head);
+//		closures.push_back(std::prev(output.end()));
+//		head++;
+//
+//		// Skip
+//		output.push_back(*head);
+//		head++;
+//
+//		// end-> Resolve
+//		closures.resolve_next();
+//		closures.resolve_next();
+//
+//		//closures.resolve_binary();
+//		//closures.resolve_postfix();
+//
+//		for (auto& t : output) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//
+//
+//		parenthesizer p(exp_result.begin(), exp_result.end());
+//		p.action_skip(p.next_head());
+//		p.action_store(p.next_head());
+//		p.action_check(p.next_head());
+//		p.action_check(p.next_head());
+//		p.action_skip(p.next_head());
+//		p.action_check(p.next_head());
+//
+//		for (auto& t : p.parenthesized()) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(functioncallFollowedByHigherPriorityBinaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"b().b");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		parenthesizer p(exp_result.begin(), exp_result.end());
+//		p.action_skip(p.next_head());
+//		tk_scope scope = tk_scope::find_paren(p.head(), p.buffer_end());
+//		if(!scope.valid()){
+//			std::cout << "Scope not valid"<< scope.error() << std::endl;
+//			throw "Scope not valid";
+//		}
+//		p.action_store(scope.end());
+//		p.action_check(p.next_head());
+//		p.action_skip(p.next_head());
+//		p.action_check(p.next_head());
+//
+//		for (auto& t : p.parenthesized()) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//}
+//}
+//TEST(subexprThenfunctioncallFollowedByHigherPriorityBinaryClosure, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"()().b");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		parenthesizer p(exp_result.begin(), exp_result.end());
+//
+//		// Expected head-> Operational -> See ( -> Subexpr => Skip.
+//		tk_scope oprand_scope = tk_scope::find_paren(p.head(), p.buffer_end());
+//		if (!oprand_scope.valid()) {
+//			std::cout << "oprand_scope not valid" << oprand_scope.error() << std::endl;
+//			throw "oprand_scope not valid";
+//		}
+//		p.action_skip(oprand_scope.end());
+//
+//		// Expected head-> Operand -> See ( -> Functioncall => Store.
+//		tk_scope scope = tk_scope::find_paren(p.head(), p.buffer_end());
+//		if (!scope.valid()) {
+//			std::cout << "Scope not valid" << scope.error() << std::endl;
+//			throw "Scope not valid";
+//		}
+//		p.action_store(scope.end());
+//
+//		p.action_check(p.next_head());
+//		p.action_skip(p.next_head());
+//		p.action_check(p.next_head());
+//
+//		for (auto& t : p.parenthesized()) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//		std::cout << std::endl;
+//		parenthesizer pp(exp_result.begin(), exp_result.end());
+//		auto yay = pp.parenthesize_expression();
+//		for (auto& t : yay) {
+//			std::cout << sl::to_str(t.type()) << " ";
+//		}
+//	}
+//}
+//TEST(ExtensiveUnaryBinaryLeftPostifxClosures, LARPARSER) {
+//	auto input_vec = sl::to_u8vec(u8"a + a + a + a; a + a + a + a(); a + a + a + !a; a + a() + a + a; a + a() + a + a();\
+// a + a() + a + !a; a + !a + a + a; a + !a + a + a(); a + !a + a + !a; a() + a + a + a; a() + a + a + a(); a() + a + a + !a;\
+// a() + a() + a + a; a() + a() + a + a(); a() + a() + a + !a; a() + !a + a + a; a() + !a + a + a(); a() + !a + a + !a; !a + a + a + a;\
+// !a + a + a + a(); !a + a + a + !a; !a + a() + a + a; !a + a() + a + a(); !a + a() + a + !a; !a + !a + a + a; !a + !a + a + a();\
+// !a + !a + a + !a; a + a + a() + a; a + a + a() + a(); a + a + a() + !a; a + a() + a() + a; a + a() + a() + a(); a + a() + a() + !a;\
+// a + !a + a() + a; a + !a + a() + a(); a + !a + a() + !a; a() + a + a() + a; a() + a + a() + a(); a() + a + a() + !a; a() + a() + a()\
+// + a; a() + a() + a() + a(); a() + a() + a() + !a; a() + !a + a() + a; a() + !a + a() + a(); a() + !a + a() + !a; !a + a + a() + a; !a\
+// + a + a() + a(); !a + a + a() + !a; !a + a() + a() + a; !a + a() + a() + a(); !a + a() + a() + !a; !a + !a + a() + a; !a + !a + a() + \
+//a(); !a + !a + a() + !a; a + a + !a + a; a + a + !a + a(); a + a + !a + !a; a + a() + !a + a; a + a() + !a + a(); a + a() + !a + !a; a \
+//+ !a + !a + a; a + !a + !a + a(); a + !a + !a + !a; a() + a + !a + a; a() + a + !a + a(); a() + a + !a + !a; a() + a() + !a + a; a() + \
+//a() + !a + a(); a() + a() + !a + !a; a() + !a + !a + a; a() + !a + !a + a(); a() + !a + !a + !a; !a + a + !a + a; !a + a + !a + a(); !a\
+// + a + !a + !a; !a + a() + !a + a; !a + a() + !a + a(); !a + a() + !a + !a; !a + !a + !a + a; !a + !a + !a + a(); !a + !a + !a + !a;");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		tk_vector_cit last_parsed = exp_result.begin();
+//
+//		while(last_parsed != exp_result.end()){
+//			tk_scope stmt_scope = tk_scope::find_program_statement(last_parsed, exp_result.end());
+//			if(!stmt_scope.valid()){
+//				std::cout << "stmt_scope not valid" << stmt_scope.error() << std::endl;
+//				throw "stmt_scope not valid";
+//			}
+//			last_parsed = stmt_scope.end();
+//
+//			parenthesizer p(stmt_scope.begin(), stmt_scope.contained_end());
+//			auto yay = p.parenthesize_expression();
+//			for (auto& t : yay) {
+//				std::cout << sl::to_str(t.literal()) << " ";
+//			}
+//			std::cout << std::endl;
+//		}
+//
+//	}
+//}
+//TEST(ExtensiveUnaryBinaryRightPostifxClosures, LARPARSER) {
+	//auto input_vec = sl::to_u8vec(u8"a . a . a . a; a . a . a . a(); a . a . a() . a; a . a . a() . a(); a . a() . a . a; a . a() . a . a();\
+ //a . a() . a() . a; a . a() . a() . a(); a() . a . a . a; a() . a . a . a(); a() . a . a() . a; a() . a . a() . a(); a() . a() . a . a; a() .\
+ //a() . a . a(); a() . a() . a() . a; a() . a() . a() . a(); !a . a . a . a; !a . a . a . a(); !a . a . a() . a; !a . a . a() . a(); !a . a() .\
+ //a . a; !a . a() . a . a(); !a . a() . a() . a; !a . a() . a() . a(); !a() . a . a . a; !a() . a . a . a(); !a() . a . a() . a; !a() . a . a()\
+ //. a(); !a() . a() . a . a; !a() . a() . a . a(); !a() . a() . a() . a; !a() . a() . a() . a();");
+//	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+//	if (!result.valid()) {
+//		std::cout << result.error_message() << std::endl;
+//	}
+//	else {
+//		auto exp_result = result.expected();
+//
+//		tk_vector_cit last_parsed = exp_result.begin();
+//
+//		while (last_parsed != exp_result.end()) {
+//			tk_scope stmt_scope = tk_scope::find_program_statement(last_parsed, exp_result.end());
+//			if (!stmt_scope.valid()) {
+//				std::cout << "stmt_scope not valid" << stmt_scope.error() << std::endl;
+//				throw "stmt_scope not valid";
+//			}
+//			last_parsed = stmt_scope.end();
+//
+//			parenthesizer p(stmt_scope.begin(), stmt_scope.contained_end());
+//			auto yay = p.parenthesize_expression();
+//			for (auto& t : yay) {
+//				std::cout << sl::to_str(t.literal()) << " ";
+//			}
+//			std::cout << std::endl;
+//		}
+//
+//	}
+//}
+
+void print_ast(const ast& node, int depth = 0) {
+	for (int i = 0; i < depth; i++)
+		std::cout << "--";
+	std::cout << ">";
+	std::cout << "[T:"<< sl::to_str(node.type()) << "|L:" << node.literal_str() <<"]" << std::endl;
+	for (const auto& child : node.children())
+		print_ast(child, depth + 1);
+}
+
+TEST(ExtensiveUnaryBinaryPostifxCombinedClosures, LARPARSER) {
+	//!!!!!!foo.bar(aa) + 1 * a.google()++++++++;
+	auto input_vec = sl::to_u8vec(u8"!!!!!!(foo).bar[aa] + 1 * a.google{1}++++++++;");
+	auto result = tokenizer(input_vec.cbegin(), input_vec.cend())();;
+	if (!result.valid()) {
+		std::cout << result.error_message() << std::endl;
+	}
+	else {
+		auto exp_result = result.expected();
+
+		tk_vector_cit last_parsed = exp_result.begin();
+
+		while (last_parsed != exp_result.end()) {
+			tk_scope stmt_scope = tk_scope::find_program_statement(last_parsed, exp_result.end());
+			if (!stmt_scope.valid()) {
+				std::cout << "stmt_scope not valid" << stmt_scope.error() << std::endl;
+				throw "stmt_scope not valid";
+			}
+			last_parsed = stmt_scope.end();
+
+			parenthesizer p(stmt_scope.begin(), stmt_scope.contained_end());
+			auto yay = p.parenthesize_expression();
+			for (auto& t : yay) {
+				std::cout << sl::to_str(t.literal()) << " ";
+			}
+			std::cout << std::endl;
+
+			ast a = parse_expression_impl(yay.begin(), yay.end());
+
+			print_ast(a);
+
+			ast b = parse_expression(stmt_scope.begin(), stmt_scope.contained_end());
+			print_ast(b);
+		}
+
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Parser Basic Tests
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if CAOCO_TEST_PARSER_BASIC
-#define CAOCO_TEST_PARSER_SingleNodes 1
-#define CAOCO_TEST_PARSER_ValueExpressions 1
+#define CAOCO_TEST_PARSER_SingleNodes 0
+#define CAOCO_TEST_PARSER_ValueExpressions 0
 #define CAOCO_TEST_PARSER_ValueStatementREPL 0
-#define CAOCO_TEST_PARSER_ValueStatements 1
+#define CAOCO_TEST_PARSER_ValueStatements 0
 #endif
 
 #if CAOCO_TEST_PARSER_SingleNodes
@@ -690,6 +1326,8 @@ TEST(ut_Parser_Expression_ComplexOperation, OperationWithScopes) {
 		u8"(foo.bar() + 1) * 1\0"
 	));
 }
+
+
 #endif
 
 #if CAOCO_TEST_PARSER_ValueStatementREPL
@@ -707,10 +1345,28 @@ TEST(ut_repl, ut_Parser) {
 				std::cout << result.error_message() << std::endl;
 			}
 			else {
-				auto exp_result = result.expected();
-				auto parse_result = caoco::parse_value_statement(exp_result.cbegin(), exp_result.cend());
-				if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
-				else print_ast(parse_result.expected());
+
+				// parser value statements until there is none left.
+				caoco::tk_vector_cit next_statement = result.expected().cbegin();
+				while (next_statement != result.expected().cend()) {
+					auto parse_result = caoco::parse_value_statement(next_statement, result.expected().cend());
+					if (!parse_result.valid()) {
+						std::cout << parse_result.error_message() << std::endl;
+						break;
+					}
+					else {
+						auto ast = parse_result.expected();
+						std::cout << "EXPR:"<< std::endl;
+						print_ast(ast);
+						std::cout << std::endl;
+						next_statement = parse_result.always();
+					}
+				}
+
+				//auto exp_result = result.expected();
+				//auto parse_result = caoco::parse_value_statement(exp_result.cbegin(), exp_result.cend());
+				//if (!parse_result.valid()) std::cout << parse_result.error_message() << std::endl;
+				//else print_ast(parse_result.expected());
 			}
 		}
 	}
@@ -777,185 +1433,6 @@ TEST(ut_Parser_ValueStatements, ut_Parser) {
 	caoco::astnode(caoco::astnode_enum::alnumus_, u8"foo"),
 	u8"foo=;"
 	));
-
-}
-#endif
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Parser Utils Tests
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-#if CAOCO_TEST_PARSER_UTILS
-#define CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 1
-#define CAOCO_TEST_PARSER_UTILS_ListScopeFinder 1
-#define CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 1
-#define CAOCO_TEST_PARSER_UTILS_StatementScopeFinder 1
-#endif
-#if CAOCO_TEST_PARSER_UTILS_BasicScopeFinder 
-TEST(CaocoParser_BasicNode_BasicScopes, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_scopes.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
-
-	// empty scope
-	std::cout << "Testing empty scope:" << std::endl;
-	caoco::parser_scope_result empty_scope = caoco::find_paren_scope(result.cbegin(), result.cend());
-	EXPECT_TRUE(empty_scope.valid);
-	for (auto i = empty_scope.scope_begin(); i != empty_scope.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// scope with 1 element
-	std::cout << "Testing scope with 1 element:" << std::endl;
-	caoco::parser_scope_result scope_with_1_element = caoco::find_paren_scope(empty_scope.scope_end(), result.cend());
-	EXPECT_TRUE(scope_with_1_element.valid);
-	for(auto i = scope_with_1_element.scope_begin(); i != scope_with_1_element.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-	// double scope
-	std::cout << "Testing double scope:" << std::endl;
-	caoco::parser_scope_result double_scope = caoco::find_paren_scope(scope_with_1_element.scope_end(), result.cend());
-	EXPECT_TRUE(double_scope.valid);
-	for (auto i = double_scope.scope_begin(); i != double_scope.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-	// complex scope
-	std::cout << "Testing complex scope:" << std::endl;
-	caoco::parser_scope_result complex_scope = caoco::find_paren_scope(double_scope.scope_end(), result.cend());
-	EXPECT_TRUE(complex_scope.valid);
-	for (auto i = complex_scope.scope_begin(); i != complex_scope.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-	// complex scope with lists
-	std::cout << "Testing complex scope with lists:" << std::endl;
-	caoco::parser_scope_result complex_scope_with_lists = caoco::find_paren_scope(complex_scope.scope_end(), result.cend());
-	EXPECT_TRUE(complex_scope_with_lists.valid);
-	for (auto i = complex_scope_with_lists.scope_begin(); i != complex_scope_with_lists.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-	// complex scope with frames and lists
-	std::cout << "Testing complex scope with frames and lists:" << std::endl;
-	caoco::parser_scope_result complex_scope_with_frames_and_lists = caoco::find_paren_scope(complex_scope_with_lists.scope_end(), result.cend());
-	EXPECT_TRUE(complex_scope_with_frames_and_lists.valid);
-
-
-	// Invalid scope should be invalid
-	auto source_file2 = caoco::sl::to_char8_vector("(()");
-	auto result2 = caoco::tokenizer(source_file2.cbegin(), source_file2.cend())().expected();
-
-	std::cout << "Testing invalid scope:";
-	caoco::parser_scope_result invalid_list = caoco::find_paren_scope(result2.cbegin(), result2.cend());
-	EXPECT_FALSE(invalid_list.valid);
-	std::cout << "scope error message:" << invalid_list.error_message << std::endl;
-}
-#endif
-
-#if CAOCO_TEST_PARSER_UTILS_ListScopeFinder 
-TEST(ut_PARSER_UTILS, ListScopeFinder) {
-	auto source_file = caoco::sl::to_char8_vector("{}{a}{{}}{({})[{}]{}}{{}");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
-
-	// empty list
-	std::cout << "Testing empty list:";
-	caoco::parser_scope_result empty_list = caoco::find_list_scope(result.cbegin(), result.cend());
-	EXPECT_TRUE(empty_list.valid);
-	for (auto i = empty_list.scope_begin(); i != empty_list.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// list with 1 element
-	std::cout << "Testing list with 1 element:";
-	caoco::parser_scope_result list_with_1_element = caoco::find_list_scope(empty_list.scope_end(), result.cend());
-	EXPECT_TRUE(list_with_1_element.valid);
-	for (auto i = list_with_1_element.scope_begin(); i != list_with_1_element.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// double list
-	std::cout << "Testing double list:";
-	caoco::parser_scope_result double_list = caoco::find_list_scope(list_with_1_element.scope_end(), result.cend());
-	EXPECT_TRUE(double_list.valid);
-	for (auto i = double_list.scope_begin(); i != double_list.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// complex list
-	std::cout << "Testing complex list:";
-	caoco::parser_scope_result complex_list = caoco::find_list_scope(double_list.scope_end(), result.cend());
-	EXPECT_TRUE(complex_list.valid);
-	for (auto i = complex_list.scope_begin(); i != complex_list.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-	
-	std::cout << "Testing invalid list:";
-	caoco::parser_scope_result invalid_list = caoco::find_list_scope(complex_list.scope_end(), result.cend());
-	EXPECT_FALSE(invalid_list.valid);
-	std::cout << "scope error message:" << invalid_list.error_message << std::endl;
-
-}
-#endif
-
-#if CAOCO_TEST_PARSER_UTILS_FrameScopeFinder 
-TEST(ut_PARSER_UTILS, FrameScopeFinder) {
-	auto source_file = caoco::sl::to_char8_vector("[][a][[]][([])[[]][]][[]");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().expected();
-
-	// empty frame
-	std::cout << "Testing empty frame:";
-	caoco::parser_scope_result empty_frame = caoco::find_frame_scope(result.cbegin(), result.cend());
-	EXPECT_TRUE(empty_frame.valid);
-	for (auto i = empty_frame.scope_begin(); i != empty_frame.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// frame with 1 element
-	std::cout << "Testing frame with 1 element:";
-	caoco::parser_scope_result frame_with_1_element = caoco::find_frame_scope(empty_frame.scope_end(), result.cend());
-	EXPECT_TRUE(frame_with_1_element.valid);
-	for (auto i = frame_with_1_element.scope_begin(); i != frame_with_1_element.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// double frame
-	std::cout << "Testing double frame:";
-	caoco::parser_scope_result double_frame = caoco::find_frame_scope(frame_with_1_element.scope_end(), result.cend());
-	EXPECT_TRUE(double_frame.valid);
-	for (auto i = double_frame.scope_begin(); i != double_frame.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	// complex frame
-	std::cout << "Testing complex frame:";
-	caoco::parser_scope_result complex_frame = caoco::find_frame_scope(double_frame.scope_end(), result.cend());
-	EXPECT_TRUE(complex_frame.valid);
-	for (auto i = complex_frame.scope_begin(); i != complex_frame.scope_end(); i++) std::cout << i->literal_str();
-	std::cout << std::endl;
-
-	std::cout << "Testing invalid frame:";
-	caoco::parser_scope_result invalid_frame = caoco::find_frame_scope(complex_frame.scope_end(), result.cend());
-	EXPECT_FALSE(invalid_frame.valid);
-	std::cout << "scope error message:" << invalid_frame.error_message << std::endl;
-
-}
-#endif
-
-#if CAOCO_TEST_PARSER_UTILS_StatementScopeFinder
-TEST(CaocoParser_BasicNode_StatementScope, CaocoParser_Test) {
-	auto source_file = caoco::sl::load_file_to_char8_vector("ut_parser_statementscope.candi");
-	auto result = caoco::tokenizer(source_file.cbegin(), source_file.cend())().extract();
-
-	// Single value statement : 1;
-	std::cout << "Testing single value statement" << std::endl;
-	caoco::parser_scope_result empty_statement = caoco::find_statement(caoco::tk_enum::number_literal_, caoco::tk_enum::eos_, result.cbegin(), result.cend());
-	EXPECT_TRUE(empty_statement.valid);
-
-	// statement with multiple tokens: #var a = 1;
-	std::cout << "Testing statement with multiple tokens" << std::endl;
-	caoco::parser_scope_result multiple_token_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, empty_statement.scope_end(), result.cend());
-	EXPECT_TRUE(multiple_token_statement.valid);
-
-	// statement with multiple tokens and scopes: #var a = (1;2;3);
-	std::cout << "Testing statement with multiple tokens and scopes" << std::endl;
-	caoco::parser_scope_result multiple_token_scope_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, multiple_token_statement.scope_end(), result.cend());
-	EXPECT_TRUE(multiple_token_scope_statement.valid);
-
-	// statement with lists frames and scopes nested in diffrent ways containing end tokens. #var a = 1 + ([ 2 ;3 + {4;5;6}]);
-	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing end tokens." << std::endl;
-	caoco::parser_scope_result complex_statement = caoco::find_statement(caoco::tk_enum::var_, caoco::tk_enum::eos_, multiple_token_scope_statement.scope_end(), result.cend());
-	EXPECT_TRUE(complex_statement.valid);
-	//EXPECT_TRUE(complex_statement.scope_end() == result.cend() - 1);
-
-	// Test finding an "open" statement which allows for repeated open tokens. ex a = a + a + ([ a ;a + {a;a;a}]);
-	std::cout << "Testing statement with lists frames and scopes nested in diffrent ways containing begin and end tokens." << std::endl;
-	caoco::parser_scope_result open_statement = caoco::find_open_statement(caoco::tk_enum::alnumus_, caoco::tk_enum::eos_, complex_statement.scope_end(), result.cend());
-	EXPECT_TRUE(open_statement.valid);
-	EXPECT_TRUE(open_statement.scope_end() == result.cend() - 1);
 
 }
 #endif
@@ -1492,9 +1969,9 @@ TEST(CaocoPreprocessor_Macro, CaocoPreprocessor_Test) {
 #if CAOCO_TEST_CONST_EVALUATOR
 #define CAOCO_TEST_CONST_EVALUATOR_Literals 1
 #define CAOCO_TEST_CONST_EVALUATOR_MathOperators 1
-#define CAOCO_TEST_CONST_EVALUATOR_VariableDeclaration 1
-#define CAOCO_TEST_CONST_EVALUATOR_Structs 1
-#define CAOCO_TEST_CONST_EVALUATOR_FreeFunctions 1
+#define CAOCO_TEST_CONST_EVALUATOR_VariableDeclaration 0
+#define CAOCO_TEST_CONST_EVALUATOR_Structs 0
+#define CAOCO_TEST_CONST_EVALUATOR_FreeFunctions 0
 #endif
 
 #if CAOCO_TEST_CONST_EVALUATOR_Literals

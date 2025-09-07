@@ -15,13 +15,13 @@ namespace caoco {
 			bitwise_and_assignment_, bitwise_or_assignment_, bitwise_xor_assignment_, 
 			left_shift_assignment_, right_shift_assignment_, 
 			
-			increment_, decrement_, 
+			increment_, decrement_, postfix_increment_, postfix_decrement_,
 			addition_, subtraction_, multiplication_, division_, remainder_, 
 			bitwise_NOT_, bitwise_AND_, bitwise_OR_, bitwise_XOR_, 
 			bitwise_left_shift_, bitwise_right_shift_, 
 			negation_, logical_AND_, logical_OR_, 
 
-			unary_minus_,
+			unary_minus_, at_operator_,
 			
 			equal_, not_equal_, less_than_, greater_than_, 
 			less_than_or_equal_, greater_than_or_equal_, three_way_comparison_, 
@@ -51,6 +51,10 @@ namespace caoco {
 			conditional_statement_,conditional_block_,on_block_,
 			capture_list_,generic_list_,
 			open_scope_, close_scope_, open_list_, close_list_, open_frame_, close_frame_, eof_,
+
+
+			// Intermetiade Expression Parser Nodes.
+			LRPostfix,LRPrefix,LRScope,LRList,LRFrame,LRLiteral,LRSubexpr,LRLPartial,LRRPartial,LRLAccess,LRRAccess,LRFunctional,LRBegin,LREnd,LRError
 		};
 	private:
 		e_type type_;
@@ -120,6 +124,9 @@ namespace caoco {
 			return sl::to_str(literal_);
 		}
 		const astnode& operator[](int index) const {
+			if(index < 0 || index >= body_.size()) throw std::out_of_range("Index out of range.");
+			if(index == 0) return body_.front();
+
 			return [this, &index]()->const astnode& {auto it = body_.begin();
 			for (auto i = 0; i < index; i++) { it++; } return *it;
 			}();
@@ -128,10 +135,15 @@ namespace caoco {
 		// Internal parser use only.
 		astnode& push_back(astnode stmt) { body_.push_back(stmt); return body_.back(); }
 		astnode& push_front(astnode stmt) { body_.push_front(stmt); return body_.front(); }
-		astnode& pop_back() { body_.pop_back(); return body_.back(); }
+		void pop_back() { body_.pop_back(); }
 		astnode& pop_front() { body_.pop_front(); return body_.front(); }
 		astnode& front() { return body_.front(); }
 		astnode& back() { return body_.back(); }
+
+		// 
+		auto& get_parent () { return *parent_; }
+		void set_parent(astnode& parent) { parent_ = &parent; }
+		void set_parent(astnode* parent) { parent_ = parent; }
 
 		// error handling only
 		static constexpr auto type_to_string(e_type node) {

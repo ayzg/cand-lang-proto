@@ -12,7 +12,7 @@ class object_t;
 class function_t;
 struct RTValue;
 class rtenv;
-struct CBinopEval;
+struct CBinopEval;	
 struct none_t {
 	bool operator==(const none_t&) const {
 		return true;
@@ -47,7 +47,8 @@ struct RTValue {
 		FUNCTION = 8
 	} type;
 
-	std::variant<int, double, sl_string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>,std::shared_ptr<function_t>> value;
+		std::variant<int, double, sl_string, bool, unsigned char, none_t,unsigned, std::shared_ptr<object_t>,std::shared_ptr<function_t>> 
+			value;
 
 RTValue() : type(NONE), value(none_t{}) {}
 
@@ -390,6 +391,7 @@ public:
 		return body_;
 	}
 };
+
 struct EnvEvalProcess {
 	virtual RTValue eval(const astnode & node, rtenv& env) = 0;
 	virtual ~EnvEvalProcess() = default;

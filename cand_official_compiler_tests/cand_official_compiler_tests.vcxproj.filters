@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="test.cc" />
+    <ClCompile Include="pch.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="caoco_gtest.h" />
+    <ClInclude Include="ut\castd\ut0_system_io.h">
+      <Filter>ut\castd</Filter>
+    </ClInclude>
+    <ClInclude Include="ut\castd\ut1_expected.h">
+      <Filter>ut\castd</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ut">
+      <UniqueIdentifier>{10eb9af8-92fc-441d-bc70-72191fc2e3a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ut\castd">
+      <UniqueIdentifier>{bbaa76cf-f8e8-485e-b567-3d7ea5c67c0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ut_scripts">
+      <UniqueIdentifier>{91c6c818-5921-40fe-9390-e66200c3589b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ut0_system_io_utc0.candi">
+      <Filter>ut_scripts</Filter>
+    </None>
+  </ItemGroup>
+</Project>

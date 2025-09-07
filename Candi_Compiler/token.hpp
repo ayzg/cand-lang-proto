@@ -30,7 +30,7 @@ namespace caoco {
 			// Scopes
 			open_scope_, close_scope_, open_list_, close_list_, open_frame_, close_frame_,
 			// Special
-			eos_, comma_, period_, ellipsis_,
+			eos_, comma_, period_, ellipsis_,at_operator_,
 			// Special Tokens
 			atype_, aidentity_, avalue_, aint_, auint_, areal_, abyte_,
 			abit_, astr_,aarray_, apointer_, amemory_, afunction_,
@@ -64,9 +64,7 @@ namespace caoco {
 		}
 	public:
 		SL_CX e_type type() const noexcept { return type_; }
-		SL_CX sl_char8_vector_cit beg() const noexcept { return beg_; }
-		SL_CX sl_char8_vector_cit end() const noexcept { return end_; }
-		SL_CX sl_size size() const { return std::distance(beg_, end_); }
+		SL_CX sl_size size() const { return literal_.size(); }
 		SL_CX sl_size line() const noexcept { return line_; }
 		SL_CX sl_size col() const noexcept { return col_; }
 		SL_CX const sl_u8string & literal() const {

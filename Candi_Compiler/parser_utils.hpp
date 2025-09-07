@@ -318,7 +318,6 @@ namespace caoco {
 		auto paren_scope_depth = 0;
 		auto frame_scope_depth = 0;
 		auto list_scope_depth = 0;
-		//tk_enum currrent_scope_type = tk_enum::none_;
 		std::stack<tk_enum> scope_type_history;
 		auto last_open = begin;
 		auto last_closed = begin;
@@ -415,6 +414,7 @@ namespace caoco {
 		}
 
 	} // end find_scope
+
 
 	// Methods for determining the start and end of a scope.
 	parser_scope_result find_paren_scope(tk_vector_cit begin, tk_vector_cit end) {
@@ -1047,7 +1047,7 @@ namespace caoco {
 
 	} // end find_scope
 
-		// <@method:find_forward> Returns the cursor if the next n tokens match the match vector.
+	// <@method:find_forward> Returns the cursor if the next n tokens match the match vector.
 	bool find_forward(tk_vector_cit cursor, tk_vector match) {
 		auto end = std::next(cursor, match.size());
 		auto found = std::search(cursor, end, match.begin(), match.end(), [](const tk& a, const tk& b) {

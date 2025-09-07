@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{ee14811c-a509-4d14-81cf-d34ef0eea21a}</ProjectGuid>
+    <ProjectGuid>{703cd29a-6b65-4bc0-a7df-5417f98da38c}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
     <ConfigurationType>Application</ConfigurationType>
@@ -50,13 +50,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>X64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -97,33 +97,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ast_node.hpp" />
-    <ClInclude Include="cand_constants.hpp" />
-    <ClInclude Include="cand_errors.hpp" />
-    <ClInclude Include="cand_syntax.hpp" />
-    <ClInclude Include="char_traits.hpp" />
-    <ClInclude Include="compiler_error.hpp" />
-    <ClInclude Include="constant_evaluator.hpp" />
-    <ClInclude Include="global_dependencies.hpp" />
-    <ClInclude Include="global_dependencies\libcsl.hpp" />
-    <ClInclude Include="global_dependencies\libstd_types.hpp" />
-    <ClInclude Include="macro_expander.hpp" />
-    <ClInclude Include="parenthesizer.hpp" />
-    <ClInclude Include="parser.hpp" />
-    <ClInclude Include="LLK_parser.hpp" />
-    <ClInclude Include="parser_utils.hpp" />
+    <ClInclude Include="caoco_gtest.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="preprocessor.hpp" />
-    <ClInclude Include="syntax_traits.hpp" />
-    <ClInclude Include="token.hpp" />
-    <ClInclude Include="tokenizer.hpp" />
-    <ClInclude Include="token_iterator.hpp" />
-    <ClInclude Include="unit_test_util.hpp" />
+    <ClInclude Include="ut\castd\ut0_system_io.h" />
+    <ClInclude Include="ut\castd\ut1_expected.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LLK_parser.cpp" />
-    <ClCompile Include="test.cpp" />
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="test.cc" />
+    <ClCompile Include="pch.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -131,34 +112,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="hundred_doors.candi" />
-    <None Include="standard.candi" />
-    <None Include="ut_ceval_free_functions.candi" />
-    <None Include="ut_ceval_literals.candi" />
-    <None Include="ut_ceval_operators.candi" />
-    <None Include="ut_ceval_structs.candi" />
-    <None Include="ut_ceval_vardecl.candi" />
+    <ProjectReference Include="..\cand_official_compiler\cand_official_compiler.vcxproj">
+      <Project>{d0ac99be-bad6-4674-bf97-db5b871f16df}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="packages.config" />
-    <None Include="ut_parser_conditional.candi" />
-    <None Include="ut_parser_for.candi" />
-    <None Include="ut_parser_functionalblock.candi" />
-    <None Include="ut_parser_while.candi" />
-    <None Include="ut_parser_pragmaticblock.candi" />
-    <None Include="ut_parser_singular_nodes.candi" />
-    <None Include="ut_parser_simplestatements.candi" />
-    <None Include="ut_parser_classes.candi" />
-    <None Include="ut_parser_function.candi" />
-    <None Include="ut_parser_minimum_program.candi" />
-    <None Include="ut_parser_primaryexpr.candi" />
-    <None Include="ut_parser_scopes.candi" />
-    <None Include="ut_parser_statementscope.candi" />
-    <None Include="ut_parser_switch.candi" />
-    <None Include="ut_parser_typealias.candi" />
-    <None Include="ut_parser_variabledecl.candi" />
-    <None Include="ut_preprocessor_include.candi" />
-    <None Include="ut_preprocessor_macros.candi" />
-    <None Include="ut_program_basic.candi" />
-    <None Include="ut_program_shortform.candi" />
+    <None Include="ut0_system_io_utc0.candi" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
