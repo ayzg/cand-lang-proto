@@ -1,0 +1,8 @@
+[]foo() {a;} // Void Arg Method Definition
+[]foo(a, b, c) {a;} // Unconstrained Method Definition
+[]foo() int {a;} // Constrained Method Definition
+[]foo() [int,int] {a;}
+
+[]foo {b;} // Void Arg Method Definition
+[]foo int {b;} // Constrained Method Definition
+[]foo [int,int] {b;}

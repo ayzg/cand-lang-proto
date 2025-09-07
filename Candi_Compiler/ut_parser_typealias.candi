@@ -1,0 +1,6 @@
+// type alias
+use IntAlias = int;
+// type_alias expression
+use Int = int(0-100);
+
+

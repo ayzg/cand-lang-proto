@@ -1,0 +1,183 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="test.cpp">
+      <Filter>unit_test</Filter>
+    </ClCompile>
+    <ClCompile Include="LLK_parser.cpp">
+      <Filter>compiler</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="global_dependencies.hpp" />
+    <ClInclude Include="tokenizer.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="preprocessor.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="parser.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="constant_evaluator.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="macro_expander.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="char_traits.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="unit_test_util.hpp">
+      <Filter>unit_test</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_syntax.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler_error.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="token_iterator.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="parenthesizer.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="LLK_parser.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="token.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_utils.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_errors.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_constants.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="ast_node.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="syntax_traits.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="global_dependencies\libcsl.hpp">
+      <Filter>global_dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="global_dependencies\libstd_types.hpp">
+      <Filter>global_dependencies</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="candi_test_scripts">
+      <UniqueIdentifier>{d3bded1e-9076-412c-b976-59c00b713152}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depreceated_scripts">
+      <UniqueIdentifier>{afccad54-0f02-4f60-a022-420e013a76e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler">
+      <UniqueIdentifier>{51f6575f-1ece-4c58-86d3-7abbb4385dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler_common">
+      <UniqueIdentifier>{56b25859-e4fc-4990-9dc7-6d8a5df76793}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="unit_test">
+      <UniqueIdentifier>{d35a90ad-f1a8-4b52-8b1f-a211a018d0d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depreceated_code">
+      <UniqueIdentifier>{48f87df0-8493-4cf7-b0b2-42dc1b1e7aab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="global_dependencies">
+      <UniqueIdentifier>{ad7a2913-6c5f-4b0b-9523-e2a9ff2332c6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ut_parser_singular_nodes.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_scopes.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_statementscope.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_simplestatements.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_function.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_classes.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="packages.config" />
+    <None Include="ut_parser_minimum_program.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_ceval_literals.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_ceval_operators.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_ceval_vardecl.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_ceval_structs.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_ceval_free_functions.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_program_basic.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="standard.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_conditional.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_while.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_typealias.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_variabledecl.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_pragmaticblock.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_functionalblock.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_switch.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_for.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="hundred_doors.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_program_shortform.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_preprocessor_include.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+    <None Include="ut_parser_primaryexpr.candi">
+      <Filter>depreceated_scripts</Filter>
+    </None>
+    <None Include="ut_preprocessor_macros.candi">
+      <Filter>candi_test_scripts</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,98 @@
+#enter{
+	 x = 0;
+
+	[] foo {
+		 x = 0;
+
+		#if(x+1){
+			 x;
+		}
+		#elif(x+2){
+			 x;
+		}
+		#else{
+			 x;
+		};
+		 x = 0;
+
+		#while(x+1){
+			 x;
+		};
+
+		#for(a;b;c){
+			 a;
+		};
+	
+		#on(x){
+			#if(1){ a;}
+			#elif(2){ b;}
+			#else{ c;};
+		};
+	}
+
+	#class Foo {
+		 bar;
+		[] foobar {
+			 x = 0;
+		}
+	};
+}
+#start{
+	x = 0;
+
+	[] foo {
+		x = 0;
+
+		#if(x+1){
+				x;
+		}
+		#elif(x+2){
+				x;
+		}
+		#else{
+				x;
+		};
+			x = 0;
+
+		#while(x+1){
+				x;
+		};
+
+		#for(a;b;c){
+				a;
+		};
+	
+		#on(x){
+			#if(1){ a;}
+			#elif(2){ b;}
+			#else{ c;};
+		};
+	}
+
+
+	#if(x+1){
+		 x;
+	}
+	#elif(x+2){
+		 x;
+	}
+	#else{
+		 x;
+	};
+	 x = 0;
+
+	#while(x+1){
+		 x;
+	};
+
+	#for(a;b;c){
+		 a;
+	};
+	
+	#on(x){
+		#if(1){ a;}
+		#elif(2){ b;}
+		#else{ c;};
+	};
+	
+}

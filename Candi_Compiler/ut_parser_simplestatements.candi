@@ -1,0 +1,28 @@
+// type_definition
+#type Int = &int;
+
+// type alias
+#type IntAlias = int;
+
+// Type definition with contraints
+#type IntRange = &int[1 ...10];
+
+
+// Anon Var Decl
+#var foo;
+
+// Anon Var Decl Assingment
+#var foo = 1;
+
+// Complex Anon Var Decl Assingment
+#var foo = 1 + c * (3 / 4);
+
+
+// Type constrained Var Decl
+#var [Int] foo;
+
+// Type Contrained Var Decl Assingment
+#var [Int] foo = 1;
+
+// Complex Type Contrained Var Decl Assingment
+#var [Int] foo = 1 + c * (3 / 4);

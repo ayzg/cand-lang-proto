@@ -1,0 +1,2371 @@
+#pragma once
+#include <vector>
+#include <stdexcept>
+#include <typeinfo>
+#include <typeindex>
+#include <map>
+#include "char_traits.hpp"
+#include "token.hpp"
+#include "tokenizer.hpp"
+#include "ast_node.hpp"
+#include <stack>
+#include "syntax_traits.hpp"
+#include "parser_utils.hpp"
+#include "cand_errors.hpp"
+#include <iterator>
+namespace caoco {
+
+	class parenthesizer;// fwd decl
+
+// partial expected result for parsing: 
+// expected() is the node, always() is one token iterator past the parsed tokens.
+using expected_parse_result = sl_partial_expected<astnode, tk_vector_cit>;
+
+// Helper functions for parsing a singular-token astnode.
+template<tk_enum TOKEN_TYPE, astnode_enum NODE_TYPE, auto error_lambda>
+constexpr inline expected_parse_result generic_parse_single_token(tk_vector_cit begin, tk_vector_cit end) {
+	if (begin->type() == TOKEN_TYPE) {
+		return expected_parse_result::make_success(std::next(begin), { NODE_TYPE, begin, std::next(begin) });
+	}
+	else {
+		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+			NODE_TYPE, begin, error_lambda()));
+	}
+}
+
+// Operand parsers. Note: an expression in a scope is an operand.
+expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_byte_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end);
+
+// C& Special Object parsers.
+expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_byte(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end);
+//expected_parse_result parse_cso_pointer(tk_vector_cit begin, tk_vector_cit end);
+//expected_parse_result parse_cso_array(tk_vector_cit begin, tk_vector_cit end);
+//expected_parse_result parse_cso_memory(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end);
+
+// Expressions and value statement split parser. (non-directive statements).
+// NEED TO FIX: This function is not parsing the arguments correctly because find_open_statement does not account for ( , or ) as closing or opening tokens.
+// NOTE: currently arguments containing scopes are not supported.
+expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end); // This is not the same as function definition arguments. This is for function calls.
+expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass = nullptr);
+astnode expression_simplify(astnode node);
+expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vector_cit end);
+///
+expected_parse_result expression_split_parse2(tk_cursor cursor, astnode* last_pass = nullptr);
+expected_parse_result expression_split_and_simplify2(tk_vector_cit begin, tk_vector_cit end);
+/////
+expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end); // expects an expression without the <eos>, not a statement!
+expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end); // expects an expression which resolves to a single operand followed by an <;eos>.
+
+expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit end);
+
+//expected_parse_result parse_directive_const(tk_vector_cit begin, tk_vector_cit end);
+//expected_parse_result parse_directive_static(tk_vector_cit begin, tk_vector_cit end);
+//expected_parse_result parse_directive_ref(tk_vector_cit begin, tk_vector_cit end);
+
+expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end); // handles if, else if, else
+expected_parse_result parse_directive_on(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end);
+
+expected_parse_result parse_directive_break(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_continue(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_directive_default(tk_vector_cit begin, tk_vector_cit end);
+expected_parse_result parse_control_flow(tk_vector_cit begin, tk_vector_cit end); // handles break, continue, default
+expected_parse_result parse_directive_return(tk_vector_cit begin, tk_vector_cit end);
+
+expected_parse_result parse_directive_include(tk_vector_cit begin, tk_vector_cit end);
+
+expected_parse_result parse_conditional_block(tk_vector_cit begin, tk_vector_cit end); // allows use of break,continue,default.
+// allows use of return. All except the above, and include is forbidden.
+expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit end); 
+// allows use of all except return/break/continue/default.Value expr is forbidden?allowed for now.
+expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit end); 
+
+expected_parse_result parse_string_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::string_literal_,
+		astnode_enum::string_literal_,
+		LAMBDA_STRING(parse_string_literal : begin is not string_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_number_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::number_literal_,
+		astnode_enum::number_literal_,
+		LAMBDA_STRING(parse_number_literal : begin is not number_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_real_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::real_literal_,
+		astnode_enum::real_literal_,
+		LAMBDA_STRING(parse_real_literal : begin is not real_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_alnumus_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::alnumus_,
+		astnode_enum::alnumus_,
+		LAMBDA_STRING(parse_alnumus_literal : begin is not alnumus token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_unsigned_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::unsigned_literal_,
+		astnode_enum::unsigned_literal_,
+		LAMBDA_STRING(parse_unsigned_literal : begin is not unsigned_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_byte_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::byte_literal_,
+		astnode_enum::byte_literal_,
+		LAMBDA_STRING(parse_byte_literal : begin is not byte_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_bit_literal(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::bit_literal_,
+		astnode_enum::bit_literal_,
+		LAMBDA_STRING(parse_bit_literal : begin is not bit_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_directive_none(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<
+		tk_enum::none_literal_,
+		astnode_enum::none_literal_,
+		LAMBDA_STRING(parse_directive_none : begin is not none_literal token.)
+	>(begin, end);
+}
+
+expected_parse_result parse_operand(tk_vector_cit begin, tk_vector_cit end) {
+	switch (begin->type())
+	{
+	case tk_enum::string_literal_:
+		return parse_string_literal(begin, end);
+	case tk_enum::number_literal_:
+		return parse_number_literal(begin, end);
+	case tk_enum::real_literal_:
+		return parse_real_literal(begin, end);
+	case tk_enum::alnumus_:
+		return parse_alnumus_literal(begin, end);
+	case tk_enum::none_literal_:
+		return parse_directive_none(begin, end);
+	case tk_enum::unsigned_literal_:
+		return parse_unsigned_literal(begin, end);
+	case tk_enum::byte_literal_:
+		return parse_byte_literal(begin, end);
+	case tk_enum::bit_literal_:
+		return parse_bit_literal(begin, end);
+	case tk_enum::open_scope_:// scope containing a value expression resolving to an operand.
+	{
+		parser_scope_result scope = find_scope(begin, end);
+		if (!scope.valid) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Mismatched parentheses in operand."));
+		}
+		else if (scope.is_empty()) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Empty operand."));
+		}
+		else {
+			auto expr = expression_split_parse(tk_cursor(scope.contained_begin(), scope.contained_end()));
+			if (!expr.valid())
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in operand."));
+
+			auto nd = astnode(astnode_enum::expression_, scope.scope_begin(), scope.scope_end());
+			nd.push_back(expr.expected());
+			return expected_parse_result::make_success(scope.scope_end(),nd);
+		}
+	}
+	case tk_enum::open_list_: // generic list operand
+	{
+		auto found_list_scope = find_list_scope(begin, end);
+		if(!found_list_scope.valid){
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Mismatched list in operand."));
+		}
+		else if (found_list_scope.is_empty()) {
+			return expected_parse_result::make_success(found_list_scope.scope_end(),
+				astnode(astnode_enum::generic_list_, found_list_scope.scope_begin(), found_list_scope.scope_end()));
+		}
+		else {
+
+			auto seperated_list = caoco::find_seperated_list_scopes(begin, end, caoco::tk_enum::comma_);
+			if (seperated_list.empty()) {
+				return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid list operand."));
+			}
+			else {
+				auto list = astnode(astnode_enum::generic_list_, seperated_list.front().scope_begin(), seperated_list.back().scope_end());
+				for (auto& scope : seperated_list) {
+					auto expr = parse_primary_expression(scope.contained_begin(), scope.contained_end());
+					if (!expr.valid())
+						return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "Invalid expression in list operand."));
+
+					list.push_back(expr.expected());
+				}
+				return expected_parse_result::make_success(seperated_list.back().scope_end(), list);
+			}
+		}
+	}
+	case tk_enum::aint_:
+		return parse_cso_int(begin, end);
+	default:
+		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+			astnode_enum::operand_, begin, "parse_operand : Invalid operand, not a literal or an identifier.")
+		);
+	}
+}
+
+expected_parse_result parse_cso_type(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::atype_, astnode_enum::atype_, LAMBDA_STRING(cso_type : begin is not atype_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso_value(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::avalue_, astnode_enum::avalue_, LAMBDA_STRING(cso_value : begin is not avalue_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso_identity(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::aidentity_, astnode_enum::aidentity_, LAMBDA_STRING(cso_identity : begin is not aidentity_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso_int(tk_vector_cit begin, tk_vector_cit end) {
+// <aint_ranged> 
+//		::= <aint> <open_frame> <unary_minus?> <number_literal>> <elipsis> <unary_minus?> <number_literal> <close_frame>
+// <aint>
+//		::= <aint>		
+	using constrained_int_type_mask = std::tuple<
+		tk_mask<tk_enum::aint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+		tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::subtraction_, mask_policy::optional>,
+		tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
+		
+	auto cursor = tk_cursor(begin, end);
+	if (scan_tokens_pack<constrained_int_type_mask>(begin, end)) {
+		astnode atype_node(astnode_enum::aint_constrained_);
+		cursor.advance(2); // Skip the 'aint' and the open frame.
+
+		if (cursor.type_is(tk_enum::subtraction_)) { // negative lower bound
+			cursor.advance();
+			auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
+			unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
+			cursor.advance(2); // past number and ellipsis.
+
+			// get the upper bound
+			if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
+				cursor.advance();
+				auto& unary_op2 = atype_node.push_back({ astnode_enum::unary_minus_ });
+				unary_op2.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and close frame
+				return expected_parse_result::make_success(cursor.get_it(), atype_node);
+			}
+			else {
+				atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and close frame
+				return expected_parse_result::make_success(cursor.get_it(), atype_node);
+			}
+		}
+		else { // positive lower bound
+			atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+			cursor.advance(2); // past number and ellipsis.
+
+			// get the upper bound
+			if (cursor.type_is(tk_enum::subtraction_)) { // negative upper bound
+				cursor.advance();
+				auto& unary_op = atype_node.push_back({ astnode_enum::unary_minus_ });
+				unary_op.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and close frame
+				return expected_parse_result::make_success(cursor.get_it(), atype_node);
+			}
+			else {
+				atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+				cursor.advance(2); // past number and close frame
+				return expected_parse_result::make_success(cursor.get_it(), atype_node);
+			}
+
+		}
+	}
+	else {
+		return generic_parse_single_token<tk_enum::aint_, astnode_enum::aint_, LAMBDA_STRING(cso_int : begin is not aint_ token.)>(begin, end);
+	}
+}
+
+expected_parse_result parse_cso_uint(tk_vector_cit begin, tk_vector_cit end) {
+// <auint_ranged> 
+//		::= <aint> <open_frame> <number_literal>> <elipsis> <number_literal> <close_frame>
+// <auint>
+//		::= <aint>	
+	using constrained_uint_type_mask = std::tuple<
+		tk_mask<tk_enum::auint_>, tk_mask<tk_enum::open_frame_>, tk_mask<tk_enum::number_literal_>,
+		tk_mask<tk_enum::ellipsis_>, tk_mask<tk_enum::number_literal_>, tk_mask<tk_enum::close_frame_>>;
+
+	auto cursor = tk_cursor(begin, end);
+	if (scan_tokens_pack<constrained_uint_type_mask>(begin, end)) {
+		astnode atype_node(astnode_enum::auint_constrained_);
+		cursor.advance(2); // Skip the 'auint' and the open frame.
+		atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+		cursor.advance(2); // past number and ellipsis.
+		atype_node.push_back(parse_number_literal(cursor.get_it(), end).expected());
+		cursor.advance(2); // past number and close frame
+		return expected_parse_result::make_success(cursor.get_it(), atype_node);
+	}
+	else {
+		return generic_parse_single_token<tk_enum::auint_, astnode_enum::auint_, LAMBDA_STRING(cso_uint : begin is not auint_ token.)>(begin, end);
+	}
+}
+
+expected_parse_result parse_cso_real(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::areal_, astnode_enum::areal_, LAMBDA_STRING(cso_real : begin is not areal_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso_bit(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::abit_, astnode_enum::abit_, LAMBDA_STRING(cso_bit : begin is not abit_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso_byte(tk_vector_cit begin, tk_vector_cit end) {
+	return generic_parse_single_token<tk_enum::abyte_, astnode_enum::abyte_, LAMBDA_STRING(cso_byte : begin is not abyte_ token.)>(begin, end);
+}
+
+expected_parse_result parse_cso(tk_vector_cit begin, tk_vector_cit end) {
+	switch (begin->type())
+	{
+	case tk_enum::atype_:
+		return parse_cso_type(begin, end);
+	case tk_enum::avalue_:
+		return parse_cso_value(begin, end);
+	case tk_enum::aidentity_:
+		return parse_cso_identity(begin, end);
+	case tk_enum::aint_:
+		return parse_cso_int(begin, end);
+	case tk_enum::auint_:
+		return parse_cso_uint(begin, end);
+	case tk_enum::areal_:
+		return parse_cso_real(begin, end);
+	case tk_enum::abit_:
+		return parse_cso_bit(begin, end);
+	case tk_enum::abyte_:
+		return parse_cso_byte(begin, end);
+	default:
+		return expected_parse_result::make_failure(begin, ca_error::parser::programmer_logic_error(
+			astnode_enum::cso_, begin, "parse_cso : Invalid C& Special Object.")
+		);
+	}
+}
+
+astnode expression_simplify(astnode node) {
+	if(node.type() == astnode_enum::expression_){
+		auto expr = node.front();
+		return expression_simplify(expr);
+	}
+	else{
+		if (node.children().empty()) return node;
+
+		if (node.front().type() == astnode_enum::expression_) {
+			auto expr = node.front().front();
+			node.front() = expr;
+		}
+
+		if (node.back().type() == astnode_enum::expression_) {
+			auto expr = node.back().front();
+			node.back() = expr;
+		}
+
+		auto new_front = expression_simplify(node.front());
+		auto new_back = expression_simplify(node.back());
+
+		node.front() = new_front;
+		node.back() = new_back;
+	}
+	return node;
+}
+
+expected_parse_result expression_split_and_simplify(tk_vector_cit begin, tk_vector_cit end) {
+	auto result = expression_split_parse(tk_cursor(begin, end));
+	if (!result.valid()) return expected_parse_result::make_failure(result.always(), ca_error::parser::invalid_expression(
+		result.always(), "expression_split_and_simplify : Invalid expression."));
+	auto simplified = expression_simplify(result.expected());
+	return expected_parse_result::make_success(result.always(), simplified);
+}
+expected_parse_result expression_split_and_simplify2(tk_vector_cit begin, tk_vector_cit end) {
+	auto result = expression_split_parse2(tk_cursor(begin, end));
+	if (!result.valid()) return expected_parse_result::make_failure(result.always(), ca_error::parser::invalid_expression(
+		result.always(), "expression_split_and_simplify : Invalid expression."));
+	auto simplified = expression_simplify(result.expected());
+	return expected_parse_result::make_success(result.always(), simplified);
+}
+
+auto inline is_operational_operand(tk_cursor& tkcrsr){
+	return tkcrsr.operation() == syntax::e_operation::none_
+		|| tkcrsr.operation() == syntax::e_operation::unary_
+		|| tkcrsr.operation() == syntax::e_operation::variadic_;
+}
+
+auto make_partial_binop_after_unary(tk_cursor& crsr, sl_vector<astnode>& prefix_ops,
+	tk_cursor& next_operator_start,
+	tk_cursor& last_operand_start, astnode& operandnode) {
+	// Check if the next operator is more important than the unary operators.
+	if (next_operator_start.priority() > syntax::priority::unary) {
+		auto rest_of_expr_result = expression_split_parse(last_operand_start);
+		if (!rest_of_expr_result.valid()) return rest_of_expr_result; // Error parsing rest of expression.
+
+		auto rest_of_expr = rest_of_expr_result.expected();
+		// Apply the unary operators to the rest of the expression.
+		astnode* last_unary_op = &rest_of_expr;
+		for (auto& op : prefix_ops) {
+			op.push_back(*last_unary_op);
+			last_unary_op = &op;
+		}
+
+		return expected_parse_result::make_success(rest_of_expr_result.always(), *last_unary_op);
+	}
+	else {
+		// Apply the unary operators to the operand
+		astnode* last_unary_op = &operandnode;
+		for (auto& op : prefix_ops) {
+			op.push_back(*last_unary_op);
+			last_unary_op = &op;
+		}
+		astnode subexpr = astnode(astnode_enum::expression_);
+		subexpr.push_back(*last_unary_op);
+		return expression_split_parse2(crsr.advance_to(*next_operator_start), &subexpr);
+	}
+};
+
+
+expected_parse_result expression_split_parse2(tk_cursor cursor, astnode* last_pass) {
+	// Intermetiade Expression Parser Nodes.
+	//LRPostfix, LRPrefix, LRScope, LRList, LRFrame, LRLiteral, LRSubexpr, LRLPartial, LRRPartial, LRLAccess, LRRAccess, LRFunctional, LRBegin, LREnd, LRError
+	return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+		cursor.get_it(), "expression_split_parse2 : Not implemented."));
+}
+
+
+
+
+//class parenthesizer
+//{
+//	class closure {
+//		std::list<tk>::iterator front_;
+//		std::list<tk>::iterator back_;
+//	public:
+//		closure(std::list<tk>::iterator front) : front_(front), back_(front) {}
+//		closure(std::list<tk>::iterator front, std::list<tk>::iterator back) : front_(front), back_(back) {}
+//
+//		std::list<tk>::iterator front() const { return front_; }
+//		std::list<tk>::iterator back() const { return back_; }
+//	};
+//
+//	class closure_list {
+//		std::list<closure> closures_;
+//
+//		std::list<closure>::iterator find_backward(std::function<bool(std::list<tk>::iterator)>&& condition) {
+//			return std::find_if(closures_.rbegin(), closures_.rend(), condition).base();
+//		}
+//		std::vector<std::list<closure>::iterator> find_backward_consecutive(
+//			std::function<bool(std::list<tk>::iterator, std::list<tk>::iterator)>&& condition) {
+//			auto it = closures_.rbegin();
+//			auto end = closures_.rend();
+//			std::vector<std::list<closure>::iterator> accumulated_iterators;
+//			while (it != end) {
+//				auto next = std::next(it);
+//				if (next == end) {
+//					break;
+//				}
+//				if (condition(it->front(), next->front())) {
+//					accumulated_iterators.push_back(it.base());
+//				}
+//				else {
+//					break;
+//				}
+//				++it;
+//			}
+//			return accumulated_iterators;
+//		}
+//
+//		void insert_tk_before(std::list<closure>::iterator closure_it, std::list<tk>& output, tk token) {
+//			auto front = closure_it->front();
+//			output.insert(front, token);
+//		}
+//		void insert_tk_after(std::list<closure>::iterator closure_it, std::list<tk>& output, tk token) {
+//			auto back = closure_it->back();
+//			auto next = std::next(back);
+//			if (next == output.end()) {
+//				output.push_back(token);
+//			}
+//			else {
+//				output.insert(next, token);
+//			}
+//		}
+//	public:
+//		void pop() {
+//			closures_.pop_back();
+//		}
+//		auto size() const {
+//			return closures_.size();
+//		}
+//		auto last_closure() {
+//			return closures_.rbegin().base();
+//		}
+//		tk& last_closure_front_tk() {
+//			return *closures_.back().front();
+//		}
+//		tk& last_closure_back_tk() {
+//			return *closures_.back().back();
+//		}
+//
+//		void resolve(std::list<tk>& output, const tk& head) {
+//		}
+//
+//		void resolve_binary_associative(std::list<tk>& output, const tk& head) {
+//		}
+//		void resolve_postfix(std::list<tk>& output, const tk& head) {
+//		}
+//		void resolve_binary_single(std::list<tk>& output, const tk& head) {
+//			if (std::prev(last_closure())->front()->priority() == last_closure_front_tk().priority()) {
+//				resolve_binary_associative(output, head);
+//			}
+//			else {
+//				insert_tk_after(std::prev(closures_.end(), 2), output, tk{ tk::l_paren_ });
+//				output.push_back(tk{ tk::r_paren_ });
+//			}
+//		}
+//		void resolve_prefix(std::list<tk>& output, const tk& head) {
+//			insert_tk_before(last_closure(), output, tk{ tk::l_paren_ });
+//			output.push_back(tk{ tk::r_paren_ });
+//			pop();
+//		}
+//
+//		void push_front(std::list<tk>::iterator front) {
+//			closures_.push_front(closure(front));
+//		}
+//		void push_front(std::list<tk>::iterator front, std::list<tk>::iterator back) {
+//			closures_.push_front(closure(front, back));
+//		}
+//
+//		void push_back(std::list<tk>::iterator front) {
+//			closures_.push_back(closure(front));
+//		}
+//		void push_back(std::list<tk>::iterator front, std::list<tk>::iterator back) {
+//			closures_.push_back(closure(front, back));
+//		}
+//
+//	};
+//public:
+//	enum class e_expected_head { operative_, operator_ };
+//	std::vector<tk> parenthesize_expression(std::vector<tk>::const_iterator beg, std::vector<tk>::const_iterator end) {
+//		std::vector<tk>::const_iterator head; // [Head]
+//		std::list<tk> output; // [Output]
+//		closure_list closures; // [Closures]  First closure is the sentinel begin created on the first pass. Do not pop.
+//		tk sentinel_end{ tk::none_ }; // [Sentinel End] When head is at the end, sentinel token is the head.
+//		// Switches
+//		e_expected_head expected_head = e_expected_head::operative_; // Expected type of head on next iteration.
+//		bool first_pass = true; // Start has to be set after first insertion or else begin is the end.
+//		auto check_performed = false; // If a check has been performed, iterate from start again.
+//
+//		auto first_pass_switch = [&]() {
+//			if (first_pass) {
+//				output.push_back(tk(tk::none_));
+//				closures.push_back(output.rend().base());
+//				first_pass = false;
+//			}
+//		};
+//		auto check_performed_switch = [&]() {
+//			if (!check_performed)
+//				check_performed = true;
+//		};
+//		auto action_skip = [&]()->void {
+//			expected_head = e_expected_head::operator_;
+//			if (head->type == tk::l_paren_) {
+//				auto scope = find_paren_scope(head, end);
+//				if (!scope.valid) {
+//					throw "Mismatched parentheses in operand.";
+//				}
+//				else {
+//					first_pass_switch();
+//					for (auto it = scope.scope_begin(); it != scope.scope_end(); it++) {
+//						output.push_back(*it);
+//					}
+//					head = scope.scope_end();
+//				}
+//			}
+//			else {
+//				first_pass_switch();
+//				output.push_back(*head);
+//				std::advance(head, 1);
+//			}
+//		};
+//		auto action_store = [&]()->void {
+//			expected_head = e_expected_head::operative_;
+//			first_pass_switch();
+//			output.push_back(*head);
+//			closures.push_back(output.rend().base());
+//			std::advance(head, 1);
+//		};
+//		auto subaction_closure = [&]()->void {
+//			assert(!first_pass);
+//			output.push_back(*head);
+//			closures.push_back(output.rend().base());
+//			std::advance(head, 1);
+//		};
+//		auto subaction_resolve = [&]()->void {
+//			// Last Closure > Head
+//			assert(head->priority() < closures.last_closure_front_tk().priority());
+//			// Resolve all higher priority closures.
+//			if (head == end)
+//				closures.resolve(output, sentinel_end);
+//			else
+//				closures.resolve(output, *head);
+//
+//			// If not at end:
+//			// Push token to output. Add closure after the rest have been resolved.Advance.
+//			if (head != end) {
+//				output.push_back(*head);
+//				closures.push_back(output.rend().base());
+//				std::advance(head, 1);
+//			}
+//		};
+//		auto action_check = [&]()->void {
+//			expected_head = e_expected_head::operative_;
+//			check_performed_switch();
+//			if (head->priority() >= closures.last_closure_front_tk().priority()) {
+//				// Head >= Last Closure
+//				subaction_closure();
+//			}
+//			else {
+//				// Head < Last Closure
+//				subaction_resolve();
+//			}
+//		};
+//		auto choose_action = [&]() {
+//			if (head == end) {
+//				subaction_resolve();
+//			}
+//
+//			if (expected_head == e_expected_head::operative_) {
+//				// Looking for an operand or prefix operator.Open scope(subexpr).
+//				switch (head->type)
+//				{
+//				case tk::identifier_:case tk::l_paren_: // Identifier Operand/Subexpr
+//					action_skip();
+//					break;
+//				case tk::neg_:
+//					if (first_pass)
+//						action_store();
+//					else
+//						action_check();
+//					break;
+//				default:
+//					throw "Invalid token in expression stream.";
+//				}
+//
+//			}
+//			else if (expected_head == e_expected_head::operator_) {
+//				// Looking for a binary operator, 
+//				// [not implemented] postfix operator, or open scope(function call), or variadic operator( <op><framestart><frameend> or <op><liststart><listend> )
+//				switch (head->type)
+//				{
+//				case tk::add_: case tk::sub_: case tk::mul_:case tk::div_:case tk::mod_:case tk::member_:case tk::subspace_:
+//				case tk::neg_:case tk::inc_:case tk::dec_:case tk::assign_:
+//					if (first_pass)
+//						action_store();
+//					else
+//						action_check();
+//					break;
+//				default:
+//					throw "Invalid token in expression stream.";
+//				}
+//			}
+//			else {
+//				throw "[Programmer Logic Error] expected_head in parenthesize_expression() is set to an invalid value.";
+//			}
+//		};
+//
+//		// Main loop
+//		while (head != end) {
+//			choose_action();
+//		}
+//
+//		// Convert list to vector.
+//
+//		if (check_performed) {
+//			choose_action(); // Resolve end.
+//			// Convert list to vector.
+//			output.pop_front(); // remove none_ token.
+//			std::vector<tk> parenthesized_vector;
+//			parenthesized_vector.reserve(output.size());
+//			for (auto& tk : output) { parenthesized_vector.push_back(tk); }
+//			return parenthesize_expression(parenthesized_vector.begin(), parenthesized_vector.end());
+//		}
+//		else {
+//			std::vector<tk> parenthesized_vector;
+//			parenthesized_vector.reserve(output.size());
+//			for (auto& tk : output) { parenthesized_vector.push_back(tk); }
+//			return parenthesized_vector; // Done.
+//		}
+//	}
+//
+//};
+
+
+
+sl_vector<tk> parenthesize_expression(tk_vector_cit beg, tk_vector_cit end) {
+	using namespace syntax;
+}
+
+
+
+expected_parse_result expression_split_parse(tk_cursor cursor, astnode* last_pass) {
+	return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+		cursor.get_it(), "expression_split_parse : Not implemented."));
+	//// 1. First Pass
+	//if (last_pass == nullptr) {
+	//	// An expression may only start with a literal, a subexpression, or a prefix unary operator.
+	//	syntax::e_operation first_token_operation = cursor.operation();
+	//	if (not(is_operational_operand(cursor))) {
+	//		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//			cursor.get_it(), "expression_split_parse : Invalid expression start.Must be literal, identifier, scope, or prefix."));
+	//	}
+
+	//	// If the operation is a scope entry or a none, then it must be an operand.
+	//	if (first_token_operation == syntax::e_operation::none_
+	//		|| first_token_operation == syntax::e_operation::scope_entry_) {
+	//		auto first_operand_parse_result = parse_operand(cursor.get_it(), cursor.end());
+	//		if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error
+	//		auto first_operand = first_operand_parse_result.expected();
+
+	//		auto next_operator_begin = cursor.jump_to(first_operand_parse_result.always());
+	//		//-> Open scope after prefix operation-> function call.
+	//		if (next_operator_begin.type_is(tk_enum::open_scope_)) {
+	//			auto function_call = parse_function_call(next_operator_begin, first_operand);
+	//			if (!function_call.valid()) return function_call; // Error parsing function call.
+	//			first_operand = function_call.expected();
+	//			next_operator_begin.advance_to(function_call.always());
+
+	//			// No following operator -> End of expr.
+	//			if (next_operator_begin.at_end()) {
+	//				return expected_parse_result::make_success(next_operator_begin.get_it(), first_operand);
+	//			}
+	//			else {
+	//				return expression_split_parse(next_operator_begin, &first_operand);
+	//			}
+	//		}
+
+	//		return expression_split_parse(cursor.advance_to(first_operand_parse_result.always()), &first_operand);
+	//	}
+	//	// Otherwise its a prefix operator.
+	//	else if (first_token_operation == syntax::e_operation::unary_) {
+	//		sl_vector<astnode> unary_operators;
+
+	//		// Find the first non-prefix following the prefix operators.
+	//		auto unary_cursor = cursor;
+	//		while (unary_cursor.operation() == syntax::e_operation::unary_) {
+	//			unary_operators.push_back(unary_cursor.to_statement());
+
+	//			if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+	//				return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//					unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+	//			}
+
+	//			unary_cursor.advance();
+	//		}
+	//		std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the prefix operators to apply them in the correct order.
+
+	//		// Expecting an operand following the prefix operators.
+	//		if(not(is_operational_operand(unary_cursor))){
+	//			return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//				unary_cursor.get_it(), "expression_split_parse : Prefix operator is not followed by an operand."));
+	//		}
+
+	//		// Parse the operand following the prefix operators.
+	//		auto first_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+	//		if (!first_operand_parse_result.valid()) return first_operand_parse_result; // Error parsing operand.
+	//		auto first_operand = first_operand_parse_result.expected();
+	//		auto next_operator_begin = cursor.jump_to(first_operand_parse_result.always());
+	//		
+	//		int * a = new int(5);
+	//		// Choose the next operation:
+	//		//-> End of expr after prefix operation.
+	//		if (next_operator_begin.at_end()) {
+	//			return make_end_of_expr_after_unary(cursor,unary_operators,first_operand);
+	//		}
+
+	//		//-> Binop after prefix operation.
+	//		if (next_operator_begin.operation() == syntax::e_operation::binary_) {
+	//			return make_partial_binop_after_unary(cursor,unary_operators,next_operator_begin,unary_cursor,first_operand);
+	//		}
+
+	//		//-> Open scope after prefix operation-> function call.
+	//		if (next_operator_begin.type_is(tk_enum::open_scope_)) {
+	//			auto function_call = parse_function_call(next_operator_begin, first_operand);
+	//			if (!function_call.valid()) return function_call; // Error parsing function call.
+	//			first_operand = function_call.expected();
+	//			next_operator_begin = cursor.jump_to(function_call.always());
+
+	//			// No following operator -> End of expr.
+	//			if (next_operator_begin.at_end()) {
+	//				return make_end_of_expr_after_unary(cursor,unary_operators,first_operand);
+	//			}
+	//			// Check if the next operator is a binary operator.
+	//			if (syntax::e_operation::binary_ == next_operator_begin.operation()) {
+	//				return make_partial_binop_after_unary(cursor,unary_operators,next_operator_begin,unary_cursor,first_operand);
+	//			}
+	//		}
+
+	//		//-> Operand after prefix operation. -> error.
+	//		if (next_operator_begin.operation() == syntax::e_operation::none_) {
+	//			return expected_parse_result::make_failure(next_operator_begin.get_it(), ca_error::parser::invalid_expression(
+	//				next_operator_begin.get_it(), "expression_split_parse : Operand followed by operand."));
+	//		}
+
+	//		throw "unreachable";
+	//		//auto this_operator = cursor.to_statement();
+	//		//this_operator.push_back(first_operand);
+	//		//return expression_split_parse(cursor.advance_to(*next_operator_begin), &this_operator);
+	//	}
+	//	else {
+	//		throw std::logic_error("expression_split_parse : critical programmer error.");
+	//	}
+	//}
+	//// 2. Following Pass.
+	//// From the first pass->
+	//// CASE 1: Cursor is on 1 past first operand. Last pass is the first operand.
+	//// Case 2: Cursor is on 1 past a unary prefix operation chain. Last pass is the unary operation. The innermost leaf is the first operand.
+	//else {
+	//	// End of expression.
+	//	if (cursor.at_end()) {
+	//		return expected_parse_result::make_success(cursor.get_it(), *last_pass);
+	//	}
+
+	//	//CASE 1:
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_) {
+	//		// Binary operator following the first operand.
+	//		if (cursor.operation() == syntax::e_operation::binary_) {
+	//			// Expecting an operand or a prefix unary.
+	//			auto next_operand_begin = cursor.next();
+	//			if (not(is_operational_operand(next_operand_begin))) {
+	//				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//					cursor.get_it(), "expression_split_parse :Expecting operand after binary operator.."));
+	//			}
+
+	//		}
+	//	}
+
+	//	// Was the last pass an operand/unary ?
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::none_
+	//		|| syntax::get_node_operation(last_pass->type()) == syntax::e_operation::unary_) {
+	//		// Expecting a binary operator on the cursor. or a function call.
+	//		if (!(cursor.operation() == syntax::e_operation::binary_)) {
+	//			// Has to be a function call or else it is an error.
+	//			if (cursor.type_is(tk_enum::open_scope_)) {
+	//				auto arg_scope = find_paren_scope(cursor.get_it(), cursor.end());
+	//				if (!arg_scope.valid) {
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid function call scope."));
+	//				}
+
+	//				auto arg_parse = parse_arguments(cursor.get_it(), cursor.end());
+	//				if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+
+
+	//				auto function_call_args = arg_parse.expected();
+
+	//				/*auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());*/
+	//				// Bind the arguments to the operand as a function call.
+	//				auto function_call = astnode(astnode_enum::function_call_, cursor.get_it(), arg_scope.scope_end());
+	//				function_call.push_back(*last_pass);
+	//				function_call.push_back(function_call_args);
+	//				// continue parsing the rest of the expression.
+	//				return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &function_call);
+	//			}
+	//			// Or it has to be a postfix unary operator.
+	//			else if (cursor.type_is(tk_enum::decrement_) or cursor.type_is(tk_enum::increment_)) {
+	//				auto next_pass = cursor.to_statement();
+	//				next_pass.push_front(*last_pass);
+	//				return expression_split_parse(cursor.advance(), &next_pass);
+	//			}
+	//			// or it has to be a variadic operator (at_operator_)
+	//			else if(cursor.type_is(tk_enum::at_operator_)){
+	//				auto next_pass = cursor.to_statement();
+	//				// the args are following the at_operator in [] scopes.
+	//				auto arg_scope = find_frame_scope(cursor.next().get_it(), cursor.end());
+	//				if(!arg_scope.valid){
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid variadic operator scope."));
+	//				}
+	//				astnode args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//				
+	//				if (syntax::get_node_priority(last_pass->type()) <= syntax::get_node_priority(next_pass.type())) {
+	//					next_pass.push_back(last_pass->back());
+	//					next_pass.push_back(args);
+	//					last_pass->pop_back();
+	//					last_pass->push_back(next_pass);
+	//					return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), last_pass);
+
+	//				}
+	//				else {
+	//					next_pass.push_back(*last_pass);
+	//					next_pass.push_back(args);
+	//					return expression_split_parse(cursor.advance_to(arg_scope.scope_end()), &next_pass);
+	//				}
+	//			}
+	//			else {
+	//				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//					cursor.get_it(), "expression_split_parse : Operand followed by operand."));
+	//			}
+	//		}
+
+	//		// Expecting an operand following the binary operator.
+	//		if (cursor.operation() == syntax::e_operation::binary_) {
+	//			// Handle a following operand.
+	//			if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::none_) {
+	//				auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
+
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operand_parse_result.always());
+
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else if (cursor_next.type_is(tk_enum::open_scope_)) {
+	//					// Special case: function call.
+	//					auto arg_scope = find_scope(cursor_next.get_it(), cursor_next.end());
+	//					if (!arg_scope.valid) {
+	//						return expected_parse_result::make_failure(cursor_next.get_it(), ca_error::parser::invalid_expression(
+	//							cursor_next.get_it(), "expression_split_parse : Invalid function call scope."));
+	//					}
+
+	//					if (cursor.priority() > syntax::priority::functional) {
+	//						auto arg_parse = parse_arguments(cursor_next.get_it(), cursor_next.end());
+	//						if (!arg_parse.valid()) return arg_parse; // Error parsing arguments.
+
+	//						//auto function_call_args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//						auto function_call_args = arg_parse.expected();
+
+	//						// Bind the arguments to the operand as a function call.
+	//						auto function_call = astnode(astnode_enum::function_call_, cursor_next.get_it(), arg_scope.scope_end());
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						function_call.push_back(this_operator);
+	//						function_call.push_back(function_call_args);
+	//						// continue parsing the rest of the expression.
+	//						return expression_split_parse(cursor_next.advance_to(arg_scope.scope_end()), &function_call);
+	//					}//else fallthrough
+
+	//				}
+	//				//else
+	//				if (cursor.priority() == cursor_next.priority()) {
+	//					if (cursor.associativity() == syntax::e_assoc::right_) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
+	//					}
+	//				}
+	//				if (cursor.priority() < cursor_next.priority()) {
+	//					auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//					if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(rest_of_expr.expected());
+	//					return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//				}
+	//				else {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expression_split_parse(cursor_next, &this_operator);
+
+	//				}
+	//			}
+	//			else if (syntax::get_token_operation(cursor.next().get_it()->type()) == syntax::e_operation::unary_) {
+	//				sl_vector<astnode> unary_operators;
+
+	//				// Find the first operand following the unary operator.
+	//				auto unary_cursor = cursor.next();
+	//				while (unary_cursor.operation() == syntax::e_operation::unary_) {
+	//					unary_operators.push_back(unary_cursor.to_statement());
+
+	//					if (unary_cursor.next().operation() == syntax::e_operation::binary_) {
+	//						return expected_parse_result::make_failure(unary_cursor.get_it(), ca_error::parser::invalid_expression(
+	//							unary_cursor.get_it(), "expression_split_parse : Unary operator is followed by a binary operator."));
+	//					}
+
+	//					unary_cursor.advance();
+	//				}
+	//				std::reverse(unary_operators.begin(), unary_operators.end()); // Reverse the unary operators to apply them in the correct order.
+
+	//				// Expecting an operand following the unary operator.
+	//				auto next_operand_parse_result = parse_operand(unary_cursor.get_it(), unary_cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
+	//				auto next_operator_begin = next_operand_parse_result.always();
+
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operator_begin);
+
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					// Apply the unary operators to the operand
+	//					astnode* last_unary_op = &next_operand;
+	//					for (auto& op : unary_operators) {
+	//						op.push_back(*last_unary_op);
+	//						last_unary_op = &op;
+	//					}
+
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(*last_unary_op);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else if (cursor_next.operation() == syntax::e_operation::unary_) {
+	//					// Apply the unary operators to the operand
+	//											// Apply the unary operators to the operand
+	//					astnode* last_unary_op = &next_operand;
+	//					for (auto& op : unary_operators) {
+	//						op.push_back(*last_unary_op);
+	//						last_unary_op = &op;
+	//					}
+	//					// Find the first operand following the postfix unary operators.
+	//					sl_vector<astnode> postfix_operators;
+	//					auto unary_cursor = tk_cursor(next_operator_begin,cursor.end());
+	//					while(unary_cursor.operation() == syntax::e_operation::unary_) {
+	//						postfix_operators.push_back(unary_cursor.to_statement());
+	//						unary_cursor.advance();
+	//					}
+	//					std::reverse(postfix_operators.begin(), postfix_operators.end()); // Reverse the unary operators to apply them in the correct order.
+
+	//					// apply all the postifx unary operators to the last operand.
+	//					astnode* last_unary_op2 = last_unary_op;
+	//					for (auto& op : postfix_operators) {
+	//						op.push_back(*last_unary_op2);
+	//						last_unary_op2 = &op;
+	//					}
+
+	//					tk_cursor cursor_next = cursor;
+	//					cursor_next.advance_to(unary_cursor.get_it());
+	//				// No following operator -> End of expr.
+	//					if(cursor_next.at_end()){
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(*last_unary_op2);
+	//						return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//					}
+	//					else {
+	//						if (cursor.priority() == cursor_next.priority()) {
+	//							if (cursor.associativity() == syntax::e_assoc::right_) {
+	//								auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//								if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//								auto this_operator = cursor.to_statement();
+	//								this_operator.push_front(*last_pass);
+	//								this_operator.push_back(rest_of_expr.expected());
+	//								return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//							}
+	//							else {
+	//								auto this_operator = cursor.to_statement();
+	//								this_operator.push_front(*last_pass);
+	//								this_operator.push_back(next_operand);
+	//								return expression_split_parse(cursor_next, &this_operator);
+	//							}
+	//						}
+	//						if (cursor.priority() < cursor_next.priority()) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
+
+	//						}
+	//					}
+
+	//				}
+	//				else {
+	//					if (cursor.priority() == cursor_next.priority()) {
+	//						if (cursor.associativity() == syntax::e_assoc::right_) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
+	//						}
+	//					}
+	//					if (cursor.priority() < cursor_next.priority()) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
+
+	//					}
+	//				}
+
+	//			}
+	//			else
+	//				throw "not implemented yet.";
+	//		}
+	//	}
+
+	//	// Was the last pass a binary operator ?
+	//	if (syntax::get_node_operation(last_pass->type()) == syntax::e_operation::binary_) {
+	//		if (last_pass->children().size() == 2) {
+	//			// if we are a binary operator, we expect an operand.
+	//			if (cursor.operation() == syntax::e_operation::binary_) {
+	//				auto next_operand_parse_result = parse_operand(cursor.next().get_it(), cursor.end());
+	//				if (!next_operand_parse_result.valid()) return next_operand_parse_result; // Error parsing operand.
+	//				auto next_operand = next_operand_parse_result.expected();
+
+	//				// Get the following operator
+	//				tk_cursor cursor_next = cursor;
+	//				cursor_next.advance_to(next_operand_parse_result.always());
+
+	//				// No following operator -> End of expr.
+	//				if (cursor_next.at_end()) {
+	//					auto this_operator = cursor.to_statement();
+	//					this_operator.push_front(*last_pass);
+	//					this_operator.push_back(next_operand);
+	//					return expected_parse_result::make_success(cursor_next.get_it(), this_operator);
+	//				}
+	//				else {
+	//					if (cursor.priority() == cursor_next.priority()) {
+	//						if (cursor.associativity() == syntax::e_assoc::left_) {
+	//							auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//							if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(rest_of_expr.expected());
+	//							return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//						}
+	//						else {
+	//							auto this_operator = cursor.to_statement();
+	//							this_operator.push_front(*last_pass);
+	//							this_operator.push_back(next_operand);
+	//							return expression_split_parse(cursor_next, &this_operator);
+	//						}
+	//					}
+	//					else if (cursor.priority() < cursor_next.priority()) {
+	//						auto rest_of_expr = expression_split_parse(cursor_next, &next_operand);
+	//						if (!rest_of_expr.valid()) return rest_of_expr; // Error parsing rest of expression.
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(rest_of_expr.expected());
+	//						return expression_split_parse(cursor.advance_to(rest_of_expr.always()), &this_operator);
+	//					}
+	//					else {
+	//						auto this_operator = cursor.to_statement();
+	//						this_operator.push_front(*last_pass);
+	//						this_operator.push_back(next_operand);
+	//						return expression_split_parse(cursor_next, &this_operator);
+
+	//					}
+	//				}
+	//			}
+	//			else if (cursor.operation() == syntax::e_operation::unary_) {
+	//				// apply unary operator to the last operation.
+	//				auto next_pass = cursor.to_statement();
+	//				next_pass.push_front(*last_pass);
+	//				return expression_split_parse(cursor.advance(), &next_pass);
+	//			}
+	//			// handle variadic operator
+	//			else if (cursor.operation() == syntax::e_operation::variadic_) {
+	//				// get the args following the variadic operator in [] scopes.
+	//				auto arg_scope = find_frame_scope(cursor.next().get_it(), cursor.end());
+	//				if(!arg_scope.valid){
+	//					return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+	//						cursor.get_it(), "expression_split_parse : Invalid variadic operator scope."));
+	//				}
+	//				astnode args = astnode(astnode_enum::arguments_, arg_scope.scope_begin(), arg_scope.scope_end());
+	//				cursor.advance_to(arg_scope.scope_end());
+
+	//				if (syntax::get_node_priority(last_pass->type()) <= syntax::get_token_priority(cursor.type())) {
+	//					last_pass->push_back(cursor.to_statement());
+	//					last_pass->push_back(args);
+	//					return expression_split_parse(cursor, last_pass);
+	//				}
+	//				else {
+	//					throw "not implemented yet.";
+
+	//				}
+
+	//			}
+	//			else throw "not implemented yet.";
+	//		}
+	//		else
+	//			throw "not implemented yet.";
+	//	}
+
+	//	throw "NOT IMPLEMENTED";
+	//}
+}
+
+expected_parse_result parse_primary_expression(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	// check if the scope is redundant
+	if (cursor.type_is(tk_enum::open_scope_)) {
+		parser_scope_result scope = find_scope(cursor.get_it(), cursor.end());
+
+		if (!scope.valid) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_primary_expression : Invalid scope."));
+		}
+
+		if (scope.is_empty()) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_primary_expression : Empty expression scope."));
+		}
+
+		// If the end of the scope is the end of the expression, then the scope is redundant.
+		if (scope.scope_end() == cursor.end()) {
+			return parse_primary_expression(scope.contained_begin(), scope.contained_end());
+		}
+	}
+	return expression_split_and_simplify2(begin, end);
+}
+
+expected_parse_result parse_value_statement(tk_vector_cit begin, tk_vector_cit end) {
+	parser_scope_result expr_scope;
+	try {
+		expr_scope = caoco::find_open_statement(begin->type(), caoco::tk_enum::eos_, begin, end);
+		if(!expr_scope.valid) {
+			return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+				begin, "parse_value_statement : Invalid value statement, missing an end of statement token ';'?\n"));
+		}
+	}
+	catch (std::exception e) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+			begin, "parse_value_statement : Invalid value statement format.\n Scope Error:" + sl_string(e.what())));
+	}
+	auto result = parse_primary_expression(expr_scope.scope_begin(), expr_scope.contained_end());
+	if (!result.valid()) return result;
+
+	return expected_parse_result::make_success(expr_scope.scope_end(), result.expected());
+}
+
+expected_parse_result parse_arguments(tk_vector_cit begin, tk_vector_cit end) {
+	parser_scope_result scope = find_paren_scope(begin, end);
+	if (!scope.valid) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(
+			begin, "parse_arguments : Invalid arguments scope."));
+	}
+
+	// Early Return, if arugments scope is empty.
+	if (scope.is_empty()) {
+		return expected_parse_result::make_success(scope.scope_end(),
+			astnode(astnode_enum::arguments_, scope.scope_begin(), scope.scope_end()));
+	}
+
+	// Get each argument out of the scope.
+	auto scope_cursor = tk_cursor(scope.contained_begin(), scope.scope_end());
+	sl_vector<astnode> arguments;
+	while(!scope_cursor.at_end()) {
+		auto arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::comma_, scope_cursor.get_it(), scope_cursor.end());
+			
+		if(!arg_expr_scope.valid) {
+			// Try finding the last argument.
+			//auto last_arg_expr_scope = find_open_statement(scope_cursor.get_it()->type(), tk_enum::close_scope_, scope_cursor.get_it(), scope_cursor.end());
+			//if (!last_arg_expr_scope.valid) {
+			//	return expected_parse_result::make_failure(scope_cursor.get_it(), ca_error::parser::invalid_expression(
+			//		scope_cursor.get_it(), "parse_arguments : Invalid argument scope."));
+			//}
+
+			// Get the last argument.
+			auto arg = parse_primary_expression(scope_cursor.get_it(), scope.contained_end());
+			if (!arg.valid()) return arg;
+			arguments.push_back(arg.expected());
+			break;
+		}
+
+		auto arg = parse_primary_expression(arg_expr_scope.scope_begin(), arg_expr_scope.contained_end());
+		if (!arg.valid()) return arg;
+		arguments.push_back(arg.expected());
+		scope_cursor.advance_to(arg.always()+1);
+	}
+
+	astnode args_node(astnode_enum::arguments_, scope.scope_begin(), scope.scope_end());
+	for (auto& arg : arguments) {
+		args_node.push_back(arg);
+	}
+
+	return expected_parse_result::make_success(scope.scope_end(), args_node);
+}
+
+expected_parse_result parse_directive_type(tk_vector_cit begin, tk_vector_cit end) {
+	// <alnumus> <assingment> <primary_expr> <eos>
+	tk_cursor cursor(begin, end);
+
+	if (!cursor.type_is(tk_enum::use_)) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin,
+			"parse_directive_type: Expected a type directive."));
+	}
+	cursor.advance();
+
+
+	if (!cursor.type_is(tk_enum::alnumus_)) {
+		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor,
+			"parse_directive_type: Expected an alnumus."));
+	}
+
+	auto alnumus_literal_type_name = parse_alnumus_literal(*cursor, end);
+	if (!alnumus_literal_type_name.valid()) {
+		return expected_parse_result::make_failure(*cursor.next(2), ca_error::parser::invalid_expression(*cursor.next(2),
+			"parse_directive_type: Expected an alnumus." + alnumus_literal_type_name.error_message()));
+	}
+	cursor.advance();
+
+	if (!cursor.type_is(tk_enum::simple_assignment_)) {
+		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+			"parse_directive_type: Expected a simple assignment token."));
+	}
+	cursor.advance();
+
+	auto statement = parse_value_statement(cursor.get_it(), end);
+	if (!statement.valid()) {
+		return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+			"parse_directive_type: Invalid type expression assignment." + statement.error_message()));
+	}
+	cursor.advance_to(statement.always());
+
+	astnode node(astnode_enum::type_alias_, cursor.begin(), cursor.get_it(),
+		alnumus_literal_type_name.expected(), statement.expected()
+	);
+
+	return expected_parse_result::make_success(cursor.get_it(), node);
+};
+
+expected_parse_result parse_directive_var(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	if (!cursor.type_is(tk_enum::alnumus_)) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin,
+			"parse_directive_var: Expected an alnumus."));
+	}
+	auto variable_name = parse_alnumus_literal(*cursor, end);
+	if(!variable_name.valid()){
+		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor,
+			"parse_directive_var: Expected an alnumus." + variable_name.error_message()));
+	}
+	cursor.advance();
+
+	if(cursor.type_is(tk_enum::eos_)) { // Anon Var Decl
+		astnode node{ astnode_enum::anon_variable_definition_, begin, cursor.get_it() ,variable_name.expected()};
+		return expected_parse_result::make_success(cursor.next().get_it(), node);
+	}
+	else if (cursor.type_is(tk_enum::simple_assignment_)) { // Anon Var Decl Assignment
+		cursor.advance();
+		auto expr = parse_value_statement(cursor.get_it(), end);
+		if (!expr.valid()) {
+			return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+				"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+		}
+		astnode node{ astnode_enum::anon_variable_definition_assingment_, begin, expr.always() ,
+			variable_name.expected(),
+			expr.expected() };
+		return expected_parse_result::make_success(expr.always(), node);
+	}
+	else if (cursor.type_is(tk_enum::alnumus_) or cursor.is_keyword_type()) { // Single Type Contrained Var Decl
+		auto type_operand = parse_operand(cursor.get_it(), end);
+		if(!type_operand.valid()){
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Type contraint is invalid:" + type_operand.error_message()));
+		}
+		cursor.advance_to(type_operand.always());
+
+		if(cursor.type_is(tk_enum::eos_)) {
+			astnode node{ astnode_enum::constrained_variable_definition_, begin, cursor.get_it() ,
+				variable_name.expected(),
+				type_operand.expected() };
+			return expected_parse_result::make_success(cursor.next().get_it(), node);
+		}
+		else if (cursor.type_is(tk_enum::simple_assignment_)) {
+			cursor.advance();
+			auto expr = parse_value_statement(cursor.get_it(), end);
+			if (!expr.valid()) {
+				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+					"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+			}
+			astnode node{ astnode_enum::constrained_variable_definition_assingment_, begin, expr.always() ,
+				variable_name.expected(),
+				type_operand.expected(),
+				expr.expected() };
+			return expected_parse_result::make_success(expr.always(), node);
+		}
+		else {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Expected an eos or an assingment token."));
+		}
+	}
+	else if (cursor.type_is(tk_enum::open_frame_)) { // Type Expression Constrained Var Decl
+		// Everything between the [] is a type expression.
+		auto frame_scope = find_frame_scope(cursor.get_it(), end);
+
+		if (!frame_scope.valid) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Type contraints are invalid."));
+		}
+		cursor.advance_to(frame_scope.scope_end());
+
+		// Expecting and eos or an assingment token.
+		if(cursor.type_is(tk_enum::eos_)) {
+			astnode node( astnode_enum::constrained_variable_definition_, begin, cursor.get_it() ,
+				variable_name.expected(),
+				astnode( astnode_enum::type_constraints_, frame_scope.scope_begin(), frame_scope.scope_end() ) );
+			return expected_parse_result::make_success(cursor.next().get_it(), node);
+		}
+		else if (cursor.type_is(tk_enum::simple_assignment_)) {
+			cursor.advance();
+			auto expr = parse_value_statement(cursor.get_it(), end);
+			if (!expr.valid()) {
+				return expected_parse_result::make_failure(expr.always(), ca_error::parser::invalid_expression(expr.always(),
+					"parse_directive_var: Invalid var statement format. Assingment expression is invalid:" + expr.error_message()));
+			}
+			astnode node( astnode_enum::constrained_variable_definition_assingment_, begin, expr.always() ,
+				variable_name.expected(),
+				astnode( astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() ),
+				expr.expected() );
+			return expected_parse_result::make_success(expr.always(), node);
+		}
+		else {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+				"parse_directive_var: Invalid var statement format. Expected an eos or an assingment token."));
+		}
+
+	}
+	else {
+		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(cursor.get_it(),
+			"parse_directive_var: Invalid var statement format. Expected an eos or an assingment or a type or a type constraint scope."));
+	}
+};
+
+expected_parse_result parse_directive_if(tk_vector_cit begin, tk_vector_cit end) {
+	//Format:
+	// #if (<expression>) <functional_block> <eos>
+	// #if (<expression>) <functional_block> #else <functional_block> <eos>
+	// #if (<expression>) <functional_block> #elif <expression> <functional_block> #else <functional_block> <eos>
+	tk_cursor cursor(begin, end);
+
+	auto parse_conditional = [&cursor](tk_enum type)->auto {
+		// First token must be #if
+		if (type == tk_enum::if_ || type == tk_enum::elif_) {
+			parser_scope_result conditional_scope = find_scope(cursor.next().get_it(), cursor.end());
+			if (!conditional_scope.valid) {
+				return expected_parse_result::make_failure(*cursor.next()
+					,"Invalid Scope following conditional directive.");
+			}
+			auto expr = parse_primary_expression(conditional_scope.contained_begin(), conditional_scope.contained_end());
+			if (!expr.valid()) {
+				return expected_parse_result::make_failure(conditional_scope.scope_begin()
+					,"Invalid if statement format. Expected an expression." + expr.error_message());
+			}
+
+			// Next is a functional block
+			parser_scope_result if_block_scope = find_list(conditional_scope.scope_end(), cursor.end());
+			if (!if_block_scope.valid) {
+				return expected_parse_result::make_failure(if_block_scope.scope_end(), 
+					"Invalid if statement format. Expected a functional block.");
+			}
+			auto if_block = parse_functional_block(if_block_scope.scope_begin(), if_block_scope.scope_end());
+			if (!if_block.valid()) {
+				return expected_parse_result::make_failure(if_block.always(), 
+					"Invalid if statement format. Invalid functional block." + if_block.error_message());
+			}
+
+			astnode node = astnode(astnode_enum::conditional_block_);
+			if (type == tk_enum::if_)
+				node = astnode{ astnode_enum::if_, cursor.get_it(), if_block_scope.scope_end() };
+			else
+				node = astnode{ astnode_enum::elif_, cursor.get_it(), if_block_scope.scope_end() };
+
+
+			node.push_back(expr.expected());
+			node.push_back(if_block.expected());
+			return expected_parse_result::make_success(if_block_scope.scope_end(), node);
+		}
+		else { // parsing an else block.
+			// Next is a functional block
+			parser_scope_result if_block_scope = find_list(cursor.next().get_it(), cursor.end());
+			if (!if_block_scope.valid) {
+				return expected_parse_result::make_failure(if_block_scope.scope_end(), 
+					"Invalid if statement format. Expected a functional block.");
+			}
+			auto if_block = parse_functional_block(if_block_scope.scope_begin(), if_block_scope.scope_end());
+			if (!if_block.valid()) {
+				return expected_parse_result::make_failure(if_block.always(),
+					"Invalid if statement format. Invalid functional block." + if_block.error_message());
+			}
+			if (!if_block.valid()) {
+				return expected_parse_result::make_failure(if_block.always(), 
+					"Invalid if statement format. Expected a functional block.");
+			}
+
+			astnode node{ astnode_enum::else_, cursor.get_it(), if_block_scope.scope_end() };
+			node.push_back(if_block.expected());
+			return expected_parse_result::make_success( if_block_scope.scope_end(), node);
+		}
+	};
+
+	// First token must be #if
+	if (begin->type() != tk_enum::if_) {
+		return expected_parse_result::make_failure(begin,
+			"ParseDirectiveIf: Expected an if directive.");
+	}
+
+	auto node = astnode{ astnode_enum::conditional_statement_ };
+
+	// Parse the if block
+	auto if_block = parse_conditional(tk_enum::if_);
+	if (!if_block.valid()) {
+		return if_block; // error
+	}
+	node.push_back(if_block.expected());
+	cursor.advance_to(if_block.always());
+
+	// if no elif, or else, return the if block
+	if (cursor.type_is(tk_enum::eos_)) {
+		cursor.advance();
+		return expected_parse_result::make_success(cursor.get_it(),node);
+	}
+
+	// while next is an #elif
+	while (cursor.type_is(tk_enum::elif_)) {
+		auto elif_block = parse_conditional(tk_enum::elif_);
+		if (!elif_block.valid()) {
+			return elif_block; // error
+		}
+		node.push_back(elif_block.expected());
+		cursor.advance_to(elif_block.always());
+	}
+
+	// expecting an else.
+	if (cursor.type_is(tk_enum::else_)) {
+		auto else_block = parse_conditional(tk_enum::else_);
+		if (!else_block.valid()) {
+			return else_block; // error
+		}
+		node.push_back(else_block.expected());
+		cursor.advance_to(else_block.always());
+
+		// expecting an eos
+		if (!cursor.type_is(tk_enum::eos_)) {
+			return expected_parse_result::make_failure(cursor.get_it(),
+				"ParseDirectiveIf: Expected an eos.");
+		}
+
+		cursor.advance();
+	}
+	else {
+		return expected_parse_result::make_failure(cursor.get_it(),
+			"ParseDirectiveIf: Expected an else directive.");
+	}
+
+	return expected_parse_result::make_success(cursor.get_it(), node);
+}
+
+expected_parse_result parse_directive_func(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	// <open_frame> <capture_list> <close_frame> <alnumus> <arguments> <type_constraints> <functional_block> 
+	if (cursor.type_is(tk_enum::open_frame_)) {
+		parser_scope_result capture_list_scope = find_frame_scope(cursor.get_it(), cursor.end());
+		if (!capture_list_scope.valid) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid capture list scope."));
+		}
+
+		auto capture_list = astnode(astnode_enum::capture_list_, capture_list_scope.scope_begin(), capture_list_scope.scope_end());
+		cursor.advance_to(capture_list_scope.scope_end());
+
+		auto func_name = parse_alnumus_literal(cursor.get_it(), end);
+		if (!func_name.valid()) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid func statement format. Expected an alnumus."));
+		}
+		cursor.advance();
+
+		astnode argscope = {astnode_enum::none_};
+		if (cursor.type_is(tk_enum::open_scope_)) {
+			parser_scope_result arguments_scope = find_paren_scope(cursor.get_it(), cursor.end());
+			if (!arguments_scope.valid) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid arguments scope."));
+			}
+
+			auto arguments = astnode(astnode_enum::arguments_, arguments_scope.scope_begin(), arguments_scope.scope_end());
+			argscope = arguments;
+			cursor.advance_to(arguments_scope.scope_end());
+		}
+
+		astnode type_constraint = {astnode_enum::none_};
+		if(cursor.type_is(tk_enum::alnumus_) or cursor.is_keyword_type()) {
+			auto type_constraints = parse_operand(cursor.get_it(), cursor.end());
+			if (!type_constraints.valid()) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid type constraints."));
+			}
+			type_constraint = type_constraints.expected();
+			cursor.advance_to(type_constraints.always());
+		}
+		else if(cursor.type_is(tk_enum::open_frame_)) {
+			parser_scope_result type_constraints_scope = find_frame_scope(cursor.get_it(), cursor.end());
+			if (!type_constraints_scope.valid) {
+				return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+					cursor.get_it(), "parse_directive_func: Invalid type constraints scope."));
+			}
+
+			auto type_constraints = astnode(astnode_enum::type_constraints_, type_constraints_scope.scope_begin(), type_constraints_scope.scope_end());
+			type_constraint = type_constraints;
+			cursor.advance_to(type_constraints_scope.scope_end());
+		}
+
+		auto functional_block = parse_functional_block(cursor.get_it(), cursor.end());
+		if (!functional_block.valid()) {
+			return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+				cursor.get_it(), "parse_directive_func: Invalid functional block."));
+		}
+
+		astnode node{ astnode_enum::func_, begin, functional_block.always() };
+		node.push_back(capture_list);
+		node.push_back(func_name.expected());
+		if(argscope.type() != astnode_enum::none_)
+			node.push_back(argscope);
+		if(type_constraint.type() != astnode_enum::none_)
+			node.push_back(type_constraint);
+		node.push_back(functional_block.expected());
+		return expected_parse_result::make_success(functional_block.always(), node);
+	}
+	else {
+		return expected_parse_result::make_failure(cursor.get_it(), ca_error::parser::invalid_expression(
+			cursor.get_it(), "parse_directive_func: Invalid func statement format."));
+	}
+
+
+	//auto get_and_push_function_name = [](astnode& nd, tk_cursor cs)->std::pair<bool, std::string> {
+	//	// get the identifier
+	//	auto vn = parse_alnumus_literal(cs.get_it(), cs.end());
+	//	if (!vn.valid()) {
+	//		return { false, "parse_directive_func: Invalid func statement format. Expected an alnumus." };
+	//	}
+	//	nd.push_back(vn.expected());
+	//	return { true, "" };
+	//};
+
+	//auto get_and_push_functional_block = [](parser_scope_result& func_body_scope, astnode& nd)->std::pair<bool, std::string> {
+	//	// get the functional block
+	//	if (func_body_scope.is_empty()) {
+	//		return { false, "parse_directive_func: Empty function definition, function must have a statement." };
+	//	}
+
+	//	auto functional_block = parse_functional_block(func_body_scope.scope_begin(), func_body_scope.scope_end());
+	//	if (!functional_block.valid()) {
+	//		return {false, "directive_func:functional_block: Could not parse functional block." };
+	//	}
+	//	nd.push_back(functional_block.expected());
+	//	return { true, "" };
+	//};
+
+	//// Shorthand Void Arg Method Definition <#func> <alnumus> <functional_block>
+	//if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_list_ })) {	// Shorthand Void Arg Method (#func name {} )same as #func [@] name () {}
+	//	parser_scope_result method_def_body_scope = find_list_scope( *cursor.next(2), cursor.end());
+
+	//	// After list scope must be an eos.
+	//	if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//		// Create the node, omit the eos token.
+	//		astnode node{ astnode_enum::shorthand_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+
+	//		// get the identifier
+	//		auto variable_name = parse_alnumus_literal(*cursor.next(), end);
+	//		if (!variable_name.valid()) {
+	//			return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(),
+	//				"parse_directive_func: Invalid func statement format. Expected an alnumus."));
+	//		}
+	//		node.push_back(variable_name.expected());
+	//		// get the functional block
+	//		auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//		if (!func_block_success) {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), func_block_error));
+	//		}
+	//		return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(method_def_body_scope.scope_end(),
+	//			"[ParseDirectiveFunc]: Invalid func statement format. Expected an eos token ';' after functional block in function definition. Function name:"
+	//			+ sl::to_str(cursor.next().lit())));
+	//	}
+	//}
+	//// Unconstrained Method Definition <#func> <alnumus> <arguments> <functional_block>
+	//else if (find_forward(*cursor, { tk_enum::func_,tk_enum::alnumus_,tk_enum::open_scope_ })) {
+	//	parser_scope_result method_arguments_scope = find_scope(*cursor.next(2), cursor.end());
+
+	//	if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+	//		parser_scope_result method_def_body_scope = find_list_scope(method_arguments_scope.scope_end(), cursor.end());
+	//		// After list scope must be an eos.
+	//		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+	//			// get the identifier
+	//			auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.next());
+	//			if (!var_name_success)
+	//				return expected_parse_result::make_failure(*cursor.next(), ca_error::parser::invalid_expression(*cursor.next(), var_name_error));
+
+	//			node.push_back({ astnode_enum::arguments_, method_arguments_scope.contained_begin(), method_arguments_scope.contained_end() });
+
+	//			// get the functional block
+	//			auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//			if (!func_block_success) {
+	//				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//					method_def_body_scope.scope_end(), func_block_error));
+	//			}
+	//			return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
+	//			method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//	}
+
+	//}
+	//// Shorthand Void Constrained Method Def or Constrained Method Def
+	//else if (find_forward(begin, { tk_enum::func_,tk_enum::open_frame_ })) {
+	//	// Find the scope of the frame.
+	//	parser_scope_result frame_scope = find_list_scope(*cursor.next(), cursor.end());
+
+	//	// After the frame scope must be an alnumus and an open list -> Shorthand Void Constrained Function Def
+	//	if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_list_ })) {
+	//		parser_scope_result method_def_body_scope = find_statement(tk_enum::open_list_, tk_enum::close_list_, frame_scope.scope_end() + 1, cursor.end());
+	//		// After list scope must be an eos.
+	//		if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//			// Create the node, omit the eos token.
+	//			astnode node{ astnode_enum::shorthand_constrained_void_method_definition_, *cursor, method_def_body_scope.scope_end() + 2 };
+	//			node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
+	//			// get the identifier
+	//			auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
+	//			if (!var_name_success)
+	//				return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()), 
+	//					ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
+
+	//			// get the functional block
+	//			auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//			if (!func_block_success) {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), func_block_error));
+	//			}
+
+	//			return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+	//	}
+	//	// Or an alnumus and an open scope -> Constrained Method Def
+	//	else if (find_forward(frame_scope.scope_end(), { tk_enum::alnumus_,tk_enum::open_scope_ })) {
+	//		parser_scope_result method_arguments_scope = find_scope(frame_scope.scope_end() + 1, cursor.end());
+
+	//		if (method_arguments_scope.scope_end()->type_is(tk_enum::open_list_)) {
+	//			parser_scope_result method_def_body_scope = find_list_scope( method_arguments_scope.scope_end(), cursor.end());
+	//			// After list scope must be an eos.
+	//			if (method_def_body_scope.scope_end()->type_is(tk_enum::eos_)) {
+	//				// Create the node, omit the eos token.
+	//				astnode node{ astnode_enum::method_definition_, *cursor, method_def_body_scope.scope_end() + 1 };
+	//				node.push_back({ astnode_enum::type_constraints_, frame_scope.contained_begin(), frame_scope.contained_end() });
+	//				node.push_back({ astnode_enum::alnumus_, frame_scope.scope_end(), frame_scope.scope_end() + 1 });
+
+	//				// get the identifier
+	//				auto [var_name_success, var_name_error] = get_and_push_function_name(node, cursor.jump_to(frame_scope.scope_end()));
+	//				if (!var_name_success)
+	//					return expected_parse_result::make_failure(*cursor.jump_to(frame_scope.scope_end()),
+	//						ca_error::parser::invalid_expression(*cursor.jump_to(frame_scope.scope_end()), var_name_error));
+
+	//				// get the functional block
+	//				auto [func_block_success, func_block_error] = get_and_push_functional_block(method_def_body_scope, node);
+	//				if (!func_block_success) {
+	//					return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//						method_def_body_scope.scope_end(), func_block_error));
+	//				}
+
+	//				return expected_parse_result::make_success(method_def_body_scope.scope_end() + 1, node); // 1 past eos token
+	//			}
+	//			else {
+	//				return expected_parse_result::make_failure(method_def_body_scope.scope_end(), ca_error::parser::invalid_expression(
+	//					method_def_body_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//			}
+
+	//		}
+	//		else {
+	//			return expected_parse_result::make_failure(method_arguments_scope.scope_end(), ca_error::parser::invalid_expression(
+	//				method_arguments_scope.scope_end(), "ParseDirectiveFunc: Invalid func statement format."));
+	//		}
+	//	}
+	//	else {
+	//		return expected_parse_result::make_failure(frame_scope.scope_end(), ca_error::parser::invalid_expression(
+	//			frame_scope.scope_end(), "ParseDirectiveVar: Invalid var statement format."));
+	//	}
+	//}
+	//else {
+	//	return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "ParseDirectiveFunc: Invalid func statement format."));
+	//}
+}
+
+expected_parse_result parse_directive_class(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	if (begin->type() != tk_enum::class_) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "ParseDirectiveClass: Expected a class directive."));
+	}
+
+	cursor.advance();
+
+	// next should be an alnumus, the class name.
+	if (!cursor.type_is(tk_enum::alnumus_)) {
+		return expected_parse_result::make_failure(begin, ca_error::parser::invalid_expression(begin, "ParseDirectiveClass: Expected an alnumus."));
+	}
+	// get the identifier
+	auto class_name = parse_alnumus_literal(*cursor, end);
+	if (!class_name.valid()) {
+		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor, class_name.error_message()));
+	}
+	cursor.advance_to(class_name.always());
+
+	// next should be an open list scope.
+	if (!cursor.type_is(tk_enum::open_list_)) {
+		return expected_parse_result::make_failure(*cursor, ca_error::parser::invalid_expression(*cursor, "ParseDirectiveClass: Expected an open list scope."));
+	}
+
+	// Everything within the list is a pragmatic block.
+	parser_scope_result class_scope = find_list_scope(*cursor, end);
+	if (class_scope.is_empty()) {
+		astnode node{ astnode_enum::class_definition_, begin, class_scope.scope_end() };
+		node.push_back(class_name.expected());
+		node.push_back({ astnode_enum::pragmatic_block_, class_scope.scope_begin(), class_scope.scope_end() });
+
+		// next should be an eos
+		if (class_scope.scope_end()->type() != tk_enum::eos_) {
+			return expected_parse_result::make_failure(class_scope.scope_end(), ca_error::parser::invalid_expression(class_scope.scope_end(),
+				"ParseDirectiveClass: Expected an eos."));
+		}
+
+		return expected_parse_result::make_success(class_scope.scope_end() + 1, node);
+	}
+
+	auto class_definition = parse_pragmatic_block(class_scope.scope_begin(), class_scope.scope_end());
+	if (!class_definition.valid()) {
+		return expected_parse_result::make_failure(class_definition.always(), ca_error::parser::invalid_expression(class_definition.always(),
+			"ParseDirectiveClass: Invalid class definition."));
+	}
+
+	// next should be an eos
+	if (class_scope.scope_end()->type() != tk_enum::eos_) {
+		return expected_parse_result::make_failure(class_definition.always(), ca_error::parser::invalid_expression(class_definition.always(),
+			"ParseDirectiveClass: Expected an eos."));
+	}
+
+	astnode node{ astnode_enum::class_definition_, begin, class_scope.scope_end() };
+	node.push_back(class_name.expected());
+	node.push_back(class_definition.expected());
+	return expected_parse_result::make_success(class_scope.scope_end()+ 1, node);
+};
+
+expected_parse_result parse_pragmatic_block(tk_vector_cit begin, tk_vector_cit end) {
+	// Pragmatic blocks may contain statements starting with a directive or alnumus, ending in a semicolon.
+	// <pragmatic_block> ::= (<directive>|<alnumus>) <statement> <eos> ?
+	// <statement> ::= <type> | <var> | <func> | <class> | <identifier_statement>
+	auto it = begin;
+	// Find the list scope of the block.
+	std::next(it);
+	if(it->type() != tk_enum::open_list_) {
+		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Expected an open list scope."));
+	}
+
+	parser_scope_result block_scope = find_list_scope(it, end);
+	if(!block_scope.valid) {
+		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid block scope."));
+	}
+
+	if(block_scope.is_empty()) {
+		astnode node(astnode_enum::pragmatic_block_, block_scope.scope_begin(), block_scope.scope_end());
+		return expected_parse_result::make_success(block_scope.scope_end(), node);
+		//return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Empty block."));
+	}
+		
+	begin = block_scope.contained_begin();
+	end = block_scope.contained_end();
+	it = begin;
+	astnode node(astnode_enum::pragmatic_block_, begin, end);
+
+	// Find and parse all statements in the block.
+	while (it < end && it->type() != tk_enum::eof_) {
+		// Get the scope of the statement stating from the first token to the last matching semicolon.
+		parser_scope_result statement_scope;
+
+		if (it->type_is(tk_enum::alnumus_)) { // Var Declaration
+			auto var_def = parse_directive_var(it, end);
+			if (!var_def.valid()) {
+				return expected_parse_result::make_failure(var_def.always(), ca_error::parser::invalid_expression(
+					var_def.always(), "ParsePragmaticBlock: Invalid var definition." + var_def.error_message()));
+			}
+			node.push_back(var_def.expected());
+			it = var_def.always();
+		}
+		else if (it->type_is(tk_enum::open_frame_)) { // Function declaration.
+			auto func_def = parse_directive_func(it, end);
+			if (!func_def.valid()) {
+				return expected_parse_result::make_failure(func_def.always(), ca_error::parser::invalid_expression(
+					func_def.always(), "ParsePragmaticBlock: Invalid function definition." + func_def.error_message()));
+			}
+			node.push_back(func_def.expected());
+			it = func_def.always();
+		}
+		else if (it->type_is(tk_enum::use_)) {
+			auto type_alias = parse_directive_type(it, end);
+			if (!type_alias.valid()) {
+				return expected_parse_result::make_failure(type_alias.always(), ca_error::parser::invalid_expression(
+					type_alias.always(), "ParsePragmaticBlock: Invalid type alias." + type_alias.error_message()));
+			}
+			node.push_back(type_alias.expected());
+			it = type_alias.always();
+		
+		}
+		else if (it->type_is(tk_enum::class_)) { // Class declaration
+			auto class_decl = parse_directive_class(it, end);
+			if (!class_decl.valid()) {
+				return expected_parse_result::make_failure(class_decl.always(), ca_error::parser::invalid_expression(
+					class_decl.always(), "ParsePragmaticBlock: Invalid class declaration." + class_decl.error_message()));
+			}
+			node.push_back(class_decl.expected());
+			it = class_decl.always();
+		}
+		else {
+			return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
+		}
+	}
+
+	return expected_parse_result::make_success(it,node);
+}
+
+expected_parse_result parse_functional_block(tk_vector_cit begin, tk_vector_cit end) {
+	// Pragmatic blocks may contain statements starting with a directive or alnumus, ending in a semicolon.
+	// <pragmatic_block> ::= (<directive>|<alnumus>) <statement> <eos> ?
+	// <statement> ::= <type> | <var> | <func> | <class> | <identifier_statement>
+	auto it = begin;
+	// Find the list scope of the block.
+	std::next(it);
+	if (it->type() != tk_enum::open_list_) {
+		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Expected an open list scope."));
+	}
+
+	parser_scope_result block_scope = find_list_scope(it, end);
+	if (!block_scope.valid) {
+		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid block scope."));
+	}
+
+	if (block_scope.is_empty()) {
+		return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Empty block."));
+	}
+
+	begin = block_scope.contained_begin();
+	end = block_scope.contained_end();
+	it = begin;
+	astnode node(astnode_enum::functional_block_, begin, end);
+
+	// Find and parse all statements in the block.
+	while (it < end && it->type() != tk_enum::eof_) {
+		// Get the scope of the statement stating from the first token to the last matching semicolon.
+		parser_scope_result statement_scope;
+
+		auto parse_statement = [&it, &statement_scope, &end, &node](auto&& parsing_process, tk_enum open, tk_enum close)->void {
+			statement_scope = find_statement(open, close, it, end);
+			// If the statement is empty, skip it.
+			if (statement_scope.is_empty()) {
+				std::cout << "WARNING ParsePragmaticBlock: Empty statement." << std::endl;
+			}
+			if (!statement_scope.valid) {
+				throw std::runtime_error("ParsePragmaticBlock: Invalid statement scope.");
+			}
+			auto parse_result = parsing_process(statement_scope.scope_begin(), statement_scope.scope_end());
+			if (!parse_result.valid()) {
+				throw std::runtime_error("ParsePragmaticBlock: Invalid statement." + parse_result.error_message());
+			}
+			node.push_back(parse_result.expected());
+			it = parse_result.always();
+		};
+		auto parse_open_statement = [&it, &statement_scope, &end, &node](auto&& parsing_process, tk_enum open, tk_enum close)->void {
+			statement_scope = find_open_statement(open, close, it, end);
+			// If the statement is empty, skip it.
+			if (statement_scope.is_empty()) {
+				std::cout << "WARNING ParsePragmaticBlock: Empty statement." << std::endl;
+			}
+			if (!statement_scope.valid) {
+				throw std::runtime_error("ParsePragmaticBlock: Invalid statement scope.");
+			}
+			auto parse_result = parsing_process(statement_scope.scope_begin(), statement_scope.scope_end());
+			if (!parse_result.valid()) {
+				throw std::runtime_error("ParsePragmaticBlock: Invalid statement.");
+			}
+			node.push_back(parse_result.expected());
+			it = parse_result.always();
+		};
+
+		if (it->type_is(tk_enum::alnumus_)) { // Var Declaration
+			auto var_def = parse_directive_var(it, end);
+			if (!var_def.valid()) {
+				return expected_parse_result::make_failure(var_def.always(), ca_error::parser::invalid_expression(
+					var_def.always(), "ParsePragmaticBlock: Invalid var definition." + var_def.error_message()));
+			}
+			node.push_back(var_def.expected());
+			it = var_def.always();
+		}
+		else if (it->type_is(tk_enum::open_frame_)) { // Function declaration.
+			auto func_def = parse_directive_func(it, end);
+			if (!func_def.valid()) {
+				return expected_parse_result::make_failure(func_def.always(), ca_error::parser::invalid_expression(
+					func_def.always(), "ParsePragmaticBlock: Invalid function definition." + func_def.error_message()));
+			}
+			node.push_back(func_def.expected());
+			it = func_def.always();
+		}
+		else if (it->type_is(tk_enum::use_)) {
+			auto type_alias = parse_directive_type(it, end);
+			if (!type_alias.valid()) {
+				return expected_parse_result::make_failure(type_alias.always(), ca_error::parser::invalid_expression(
+					type_alias.always(), "ParsePragmaticBlock: Invalid type alias." + type_alias.error_message()));
+			}
+			node.push_back(type_alias.expected());
+			it = type_alias.always();
+
+		}
+		else if (it->type_is(tk_enum::class_)) { // Class declaration
+			auto class_decl = parse_directive_class(it, end);
+			if (!class_decl.valid()) {
+				return expected_parse_result::make_failure(class_decl.always(), ca_error::parser::invalid_expression(
+					class_decl.always(), "ParsePragmaticBlock: Invalid class declaration." + class_decl.error_message()));
+			}
+			node.push_back(class_decl.expected());
+			it = class_decl.always();
+		}
+		else {
+			if (it->type() == tk_enum::if_) {
+				parse_statement(&parse_directive_if, tk_enum::if_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::while_) {
+				parse_statement(&parse_directive_while, tk_enum::while_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::on_) {
+				parse_statement(&parse_directive_on, tk_enum::on_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::for_) {
+				parse_statement(&parse_directive_for, tk_enum::for_, tk_enum::eos_);
+			}
+			else if (it->type() == tk_enum::return_){
+				parse_statement(&parse_directive_return, tk_enum::return_, tk_enum::eos_);
+			}
+			else {
+				return expected_parse_result::make_failure(it, ca_error::parser::invalid_expression(it, "ParsePragmaticBlock: Invalid statement."));
+			}
+		}
+	}
+
+	return expected_parse_result::make_success(block_scope.scope_end(), node);
+}
+	
+expected_parse_result parse_directive_on(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	// Expecting an #on directive on begin.
+	if (begin->type() != tk_enum::on_) {
+		return expected_parse_result::make_failure(begin, 
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveOn: Expected an #on directive."));
+	}
+
+	cursor.advance();
+
+	// Expecting a conditional expression.
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following on directive.");
+	}
+	auto expr = parse_primary_expression(conditional_scope.contained_begin(), conditional_scope.contained_end());
+	if (!expr.valid()) {
+		return expected_parse_result::make_failure(conditional_scope.scope_begin()
+			, "Invalid #on conditional statement format. Expected an expression." + expr.error_message());
+	}
+
+	// next is a list scope.
+	parser_scope_result on_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!on_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #on block format. Expected a functional block.");
+	}
+
+	// inside the on block , expecting #if directives.
+	auto conditional_it = on_block_scope.contained_begin();
+	sl_vector<astnode> conditionals;
+	while(conditional_it < on_block_scope.contained_end()) {
+		if (conditional_it->type_is(tk_enum::if_)) {
+			auto cond = parse_directive_if(conditional_it, on_block_scope.contained_end());
+			if (!cond.valid()) {
+				return cond; // error
+			}
+			conditional_it = cond.always();
+			conditionals.push_back(cond.expected());
+		}
+		else {
+			return expected_parse_result::make_failure(conditional_it,
+				"Invalid #on block format. Expected an #if directive.");
+		}
+	}
+	cursor.advance_to(on_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(conditional_it,
+			"Invalid #on block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::on_, begin, on_block_scope.scope_end() };
+	node.push_back(expr.expected());
+	node.push_back({astnode_enum::on_block_, on_block_scope.scope_begin(), on_block_scope.scope_end()});
+	for (auto& c : conditionals) {
+		node.push_back(c);
+	}
+
+	return expected_parse_result::make_success(on_block_scope.scope_end() + 1, node);
+};
+
+expected_parse_result parse_directive_while(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	// Expecting an #while directive on begin.
+	if (begin->type() != tk_enum::while_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveWhile: Expected an #while directive."));
+	}
+
+	cursor.advance();
+
+	// Expecting a conditional expression.
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following while directive.");
+	}
+	auto expr = parse_primary_expression(conditional_scope.contained_begin(), conditional_scope.contained_end());
+	if (!expr.valid()) {
+		return expected_parse_result::make_failure(conditional_scope.scope_begin()
+			, "Invalid #while conditional statement format. Expected an expression." + expr.error_message());
+	}
+
+	// next is a list scope.
+	parser_scope_result while_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!while_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #while block format. Expected a functional block.");
+	}
+
+	// inside the while block , expecting #if directives.
+	auto while_block = parse_functional_block(while_block_scope.scope_begin(), while_block_scope.scope_end());
+	if (!while_block.valid()) {
+		return expected_parse_result::make_failure(while_block.always(),
+			"Invalid #while block format. Invalid functional block." + while_block.error_message());
+	}
+
+
+	cursor.advance_to(while_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(while_block.always(),
+			"Invalid #while block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::while_, begin, while_block_scope.scope_end() };
+	node.push_back(expr.expected());
+	node.push_back(while_block.expected());
+
+	return expected_parse_result::make_success(while_block_scope.scope_end()+1, node);
+}
+
+expected_parse_result parse_directive_for(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+
+	if (begin->type() != tk_enum::for_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveFor: Expected an #for directive."));
+	}
+
+	cursor.advance();
+
+	parser_scope_result conditional_scope = find_scope(cursor.get_it(), cursor.end());
+	if (!conditional_scope.valid) {
+		return expected_parse_result::make_failure(*cursor
+			, "Invalid Scope following for directive.");
+	}
+
+	auto conditional_scope_statements = find_seperated_paren_scopes(conditional_scope,tk_enum::eos_);
+	sl_vector<astnode> conditions;
+	for (auto& s : conditional_scope_statements) {
+		auto expr = parse_primary_expression(s.contained_begin(), s.contained_end());
+		if (!expr.valid()) {
+		return expected_parse_result::make_failure(s.scope_begin()
+				, "Invalid #for conditional statement format. Expected an expression." + expr.error_message());
+		}
+		conditions.push_back(expr.expected());
+	}
+
+	parser_scope_result for_block_scope = find_list_scope(conditional_scope.scope_end(), cursor.end());
+	if (!for_block_scope.valid) {
+		return expected_parse_result::make_failure(conditional_scope.scope_end(),
+			"Invalid #for block format. Expected a functional block.");
+	}
+
+	auto for_block = parse_functional_block(for_block_scope.scope_begin(), for_block_scope.scope_end());
+	if (!for_block.valid()) {
+		return expected_parse_result::make_failure(for_block.always(),
+			"Invalid #for block format. Invalid functional block." + for_block.error_message());
+	}
+
+	cursor.advance_to(for_block_scope.scope_end());
+	// Expecting an eos
+	if (!cursor.type_is(tk_enum::eos_)) {
+		return expected_parse_result::make_failure(for_block.always(),
+			"Invalid #for block format. Expected an eos.");
+	}
+
+	astnode node{ astnode_enum::for_, begin, for_block_scope.scope_end()};
+	for (auto& c : conditions) {
+		node.push_back(c);
+	}
+	node.push_back(for_block.expected());
+
+	return expected_parse_result::make_success(for_block_scope.scope_end() + 1, node);
+};
+
+expected_parse_result parse_directive_return(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	if (begin->type() != tk_enum::return_) {
+		return expected_parse_result::make_failure(begin,
+			ca_error::parser::invalid_expression(
+				begin, "ParseDirectiveReturn: Expected a return directive."));
+	}
+
+	cursor.advance();
+
+	// expecting a value statement.
+	auto value_statement = parse_value_statement(cursor.get_it(), cursor.end());
+	if (!value_statement.valid()) {
+		return expected_parse_result::make_failure(cursor.get_it(),
+			"ParseDirectiveReturn: Invalid return statement format. Expected a value statement." + value_statement.error_message());
+	}
+
+	astnode node{ astnode_enum::return_, begin, value_statement.always() };
+	node.push_back(value_statement.expected());
+	return expected_parse_result::make_success(value_statement.always(), node);
+}
+ //Main paring method.
+astnode parse_program(tk_vector_cit begin, tk_vector_cit end) {
+	tk_cursor cursor(begin, end);
+	// Program will be in the form:
+	// #enter{}#start{}
+	// Or it will be a pragmatic block. {} is optional.
+	// So if a program does not begin with #enter, then it is a pragmatic block.
+	// Else this is the "main" file. Inside of #enter is a pragmatic block.
+	// Inside of #start is a functional block.
+
+	if (cursor.type_is(tk_enum::enter_)) {
+		auto program = astnode(astnode_enum::program_);
+		cursor.advance();
+		auto enter_scope = find_list(*cursor, end);
+		auto enter_block = parse_pragmatic_block(enter_scope.scope_begin(), enter_scope.scope_end());
+		if (enter_block.valid()) {
+			program.push_back(enter_block.expected());
+		}
+		else {
+			throw std::runtime_error("parse_program: Invalid pragmatic block. Attempting to parse #enter block. Error:" + enter_block.error_message());
+		}
+		cursor.advance_to(enter_scope.scope_end());
+
+		// Check if #start is next.
+		if (cursor.type_is(tk_enum::start_)) {
+			cursor.advance();
+			auto start_scope = find_list(*cursor, end);
+			auto start_block = parse_functional_block(start_scope.scope_begin(), start_scope.scope_end());
+			if (start_block.valid()) {
+				program.push_back(start_block.expected());
+			}
+			else {
+				throw std::runtime_error("parse_program: Invalid functional block. Attempting to parse #start block. Error:" + enter_block.error_message());
+			}
+		}
+		else {
+			throw std::runtime_error("parse_program: Invalid program. No start block following #enter block.");
+		}
+		return program;
+	}
+	else {
+			throw std::runtime_error("parse_program: Invalid program. Attempting to parse a pragmatic block. Did you #enter?");
+	}
+}
+
+} // end namespace caoco

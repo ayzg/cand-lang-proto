@@ -1,0 +1,7 @@
+// Candil Standard Library
+// Version 0.0.0
+// 2019-12-01
+{
+	true = 1b;
+	false = 0b;
+}

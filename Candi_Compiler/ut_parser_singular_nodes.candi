@@ -1,0 +1,26 @@
+// CSO - Candi Special Object
+&type
+&value
+&identity
+&int
+&int[1 ...10]
+&int[-1 ...-10]
+&int[-1 ...10]
+&int[1 ...-10]
+&uint
+&uint[1 ...10]
+&real
+&byte
+&bit
+//&pointer[type]
+//&pointer[&int]
+//&array[mytype,42] 
+//&array[&int,42] 
+//&array[&uint[0 ...42],666]
+
+// Literals
+'this is a string literal'
+'this is a string literal with a \'quote\' in it'
+1234
+1234.5678
+alnumusliteral

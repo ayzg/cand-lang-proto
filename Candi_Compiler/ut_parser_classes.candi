@@ -1,0 +1,16 @@
+// Empty class definition.
+class Foo {};
+
+// Class definition with member variables.
+class Foo {
+    foo = a;
+    bar;
+};
+
+// Class definition with member functions.
+class Foo {
+    foo = a;
+    bar;
+	//#func foobar {#var a;};
+};
+

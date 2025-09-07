@@ -1,0 +1,34 @@
+#enter {
+	//#include standard;
+
+	#class Wolf {
+		name;
+		[] make_sound(){
+			#return 'howl';
+		}
+	};
+
+
+	#class Dog {
+		name;
+		[] make_sound(){
+			#return 'bark';
+		}
+	};
+
+	wolf = Wolf();
+	dog = Dog();
+
+	animals = {wolf, dog}; 
+
+	[]make_sounds{
+		sounds = {}; 
+		#for (animals) {
+			sounds = animal.make_sound(); // += animal.make_sound(); other assignment ops.
+		};
+		#return sounds;
+	}
+}
+#start {
+	#return make_sounds();
+}

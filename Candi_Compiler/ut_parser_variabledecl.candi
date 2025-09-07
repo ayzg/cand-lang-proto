@@ -1,0 +1,21 @@
+// Anon Var Decl
+foo;
+
+// Anon Var Decl Assingment
+foo = 1;
+
+// Complex Anon Var Decl Assingment
+foo = 1 + c * (3 / 4);
+
+
+// Type constrained Var Decl
+foo int;
+
+// Type Contrained Var Decl Assingment
+foo Int = 1;
+
+// Type Expression Constrained Var Decl
+foo [int,Int];
+
+// Type Expression Constrained Var Decl Assingment
+foo [int,Int] = 1;
