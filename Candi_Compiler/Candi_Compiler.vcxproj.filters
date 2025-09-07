@@ -1,25 +1,77 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="test.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="test.cpp">
+      <Filter>unit_test</Filter>
+    </ClCompile>
+    <ClCompile Include="LLK_parser.cpp">
+      <Filter>compiler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="syntax_traits.hpp" />
-    <ClInclude Include="parser_utils.hpp" />
-    <ClInclude Include="ast_node.hpp" />
-    <ClInclude Include="char_traits.hpp" />
-    <ClInclude Include="parser.hpp" />
-    <ClInclude Include="token.hpp" />
-    <ClInclude Include="tokenizer.hpp" />
-    <ClInclude Include="constant_evaluator.hpp" />
     <ClInclude Include="global_dependencies.hpp" />
-    <ClInclude Include="unit_test_util.hpp" />
-    <ClInclude Include="cand_errors.hpp" />
-    <ClInclude Include="preprocessor.hpp" />
-    <ClInclude Include="cand_constants.hpp" />
-    <ClInclude Include="macro_expander.hpp" />
+    <ClInclude Include="tokenizer.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="preprocessor.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="parser.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="constant_evaluator.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="macro_expander.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="char_traits.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="unit_test_util.hpp">
+      <Filter>unit_test</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_syntax.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler_error.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="token_iterator.hpp">
+      <Filter>compiler_common</Filter>
+    </ClInclude>
+    <ClInclude Include="parenthesizer.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="LLK_parser.hpp">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="token.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_utils.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_errors.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="cand_constants.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="ast_node.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="syntax_traits.hpp">
+      <Filter>depreceated_code</Filter>
+    </ClInclude>
+    <ClInclude Include="global_dependencies\libcsl.hpp">
+      <Filter>global_dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="global_dependencies\libstd_types.hpp">
+      <Filter>global_dependencies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="candi_test_scripts">
@@ -27,6 +79,21 @@
     </Filter>
     <Filter Include="depreceated_scripts">
       <UniqueIdentifier>{afccad54-0f02-4f60-a022-420e013a76e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler">
+      <UniqueIdentifier>{51f6575f-1ece-4c58-86d3-7abbb4385dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler_common">
+      <UniqueIdentifier>{56b25859-e4fc-4990-9dc7-6d8a5df76793}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="unit_test">
+      <UniqueIdentifier>{d35a90ad-f1a8-4b52-8b1f-a211a018d0d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depreceated_code">
+      <UniqueIdentifier>{48f87df0-8493-4cf7-b0b2-42dc1b1e7aab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="global_dependencies">
+      <UniqueIdentifier>{ad7a2913-6c5f-4b0b-9523-e2a9ff2332c6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

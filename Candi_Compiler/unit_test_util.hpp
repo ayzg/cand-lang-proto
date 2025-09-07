@@ -1,5 +1,5 @@
 #pragma once
-#include "gtest/gtest.h"
+//#include "gtest/gtest.h"
 // All unit test dependencies are included here
 #include "char_traits.hpp"
 #include "token.hpp"
@@ -430,5 +430,33 @@ bool test_and_compare_split_parsing_function_from_u8(const caoco::sl_string & te
 	}
 }
 
+// Test a parsing functor given a subset of tokens. Prints the test_name followed by the AST.
+bool test_and_compare_split_parsing_function_from_u82(const caoco::sl_string& test_name,
+	const caoco::astnode& expected_ast,
+	const caoco::sl_u8string& code
+) {
+	auto source_file = caoco::sl::to_char8_vector(code);
+	auto lex_result = caoco::tokenizer(source_file.cbegin(), source_file.cend())();
+	if (!lex_result.valid()) {
+		std::cout << lex_result.error_message() << std::endl;
+		return false;
+	}
+	else {
+		auto result = lex_result.expected();
+
+		std::cout << "[Testing Parsing Method][Test Case:" << test_name << "]" << std::endl;
+		auto parse_result = caoco::expression_split_and_simplify2(result.cbegin(), result.cend());
+		EXPECT_TRUE(parse_result.valid());
+		if (!parse_result.valid()) {
+			std::cout << parse_result.error_message() << std::endl;
+		}
+		else {
+			auto parsed_ast = parse_result.expected();
+			print_ast(parsed_ast);
+			EXPECT_TRUE(compare_ast(parse_result.expected(), expected_ast));
+		}
+		return true;
+	}
+}
 
 

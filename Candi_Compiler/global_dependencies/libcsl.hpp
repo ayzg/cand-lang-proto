@@ -1,11 +1,9 @@
 #pragma once
 #include "libstd_types.hpp"
 
-
-namespace caoco {
-
 	// A cool trick which allows for strings to be passed as template parameters using C++20 lambdas
 	#define LAMBDA_STRING(str) []() consteval { return #str; }
+	#define LAMBDA_U8STRING(str) []() consteval { return u8#str; }
 
 	// Partial Expected
 	template <typename ExpectedT, typename AlwaysT>
@@ -155,7 +153,7 @@ namespace caoco {
 		sl_vector<char8_t> to_u8vec(const char* str) {
 			sl_vector<char8_t> vec;
 			for (int i = 0; str[i] != '\0'; i++) {
-				vec.push_back(str[i]);
+				vec.push_back(static_cast<char8_t>(str[i]));
 			}
 			return vec;
 		}
@@ -197,4 +195,3 @@ namespace caoco {
 		}
 
 	}
-}

@@ -19,7 +19,12 @@ namespace caoco {
 		enum class e_operation : int {
 			binary_ = 0,
 			unary_ = 1,
-			none_ = 2
+			none_ = 2,
+			variadic_ = 3,
+			prefix_ = 4,
+			postfix_ = 5,
+			scope_entry_ = 6,
+			scope_exit_ = 7,
 		};
 		enum class e_tk_trait : sl_size {
 			priority_ = 0,
@@ -101,6 +106,7 @@ namespace caoco {
 		CAOCO_TK_TRAIT(left_shift_assignment_,priority::assignment, right_, binary_, left_shift_assignment_), // <<=
 		CAOCO_TK_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_, right_shift_assignment_), // >>=
 
+		CAOCO_TK_TRAIT(at_operator_,priority::unary, left_, variadic_, at_operator_), // @ operator
 		// Keywords
 		CAOCO_TK_TRAIT(aint_,priority::max, left_, none_, aint_), // aint
 
@@ -156,6 +162,8 @@ namespace caoco {
 		CAOCO_AST_TRAIT(right_shift_assignment_,priority::assignment, right_, binary_), // >>=
 		CAOCO_AST_TRAIT(expression_, priority::max, left_, none_), // expression
 
+		CAOCO_AST_TRAIT(at_operator_,priority::unary, left_, variadic_), // @ operator
+
 		CAOCO_AST_TRAIT(aint_,priority::max, left_, none_), // aint
 		CAOCO_AST_TRAIT(generic_list_,priority::max, left_, none_), // generic list
 
@@ -167,9 +175,12 @@ namespace caoco {
 		e_assoc get_node_associativity(astnode_enum node_type);
 		int get_node_priority(astnode_enum node_type);
 		e_operation get_token_operation(tk_enum token_type);
+		e_operation get_token_operation(const tk& token_type);
 		e_assoc get_token_associativity(tk_enum token_type);
-		int get_token_priority(tk_enum token_type);
+		e_assoc get_token_associativity(const tk& token_type);
 
+		int get_token_priority(tk_enum token_type);
+		int get_token_priority(const tk& token_type);
 
 		SL_CX bool is_opening_scope(const tk & t) {
 			switch (t.type())
@@ -273,6 +284,16 @@ namespace caoco {
 	int syntax::get_token_priority(tk_enum token_type) {
 		return std::get<static_cast<sl_size>(e_tk_trait::priority_)>(token_traits[token_type]);
 	}
+	int syntax::get_token_priority(const tk& token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::priority_)>(token_traits[token_type.type()]);
+	}
 
+	syntax::e_operation syntax::get_token_operation(const tk& token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::operation_)>(token_traits[token_type.type()]);
+	}
+
+	syntax::e_assoc syntax::get_token_associativity(const tk& token_type) {
+		return std::get<static_cast<sl_size>(e_tk_trait::associativity_)>(token_traits[token_type.type()]);
+	}
 
 };// namespace caoco

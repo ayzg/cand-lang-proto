@@ -1,7 +1,7 @@
 #pragma once
 #include "global_dependencies.hpp"
-namespace caoco {
-	namespace char_traits {
+
+namespace char_traits {
 		using const_char_ilist = sl_ilist<const char8_t>;
 		using char_limits = sl_limits<char8_t>;
 
@@ -158,4 +158,3 @@ namespace caoco {
 				[c](const char8_t match) { return match == c; });
 		}
 	};
-};

@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="cand_official_compiler.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="castd">
+      <UniqueIdentifier>{4108feca-d752-4e62-aeb5-79a3341f27fd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="castd\import_stl.h">
+      <Filter>castd</Filter>
+    </ClInclude>
+    <ClInclude Include="castd.h" />
+    <ClInclude Include="castd\expected.h">
+      <Filter>castd</Filter>
+    </ClInclude>
+    <ClInclude Include="castd\system_io.h">
+      <Filter>castd</Filter>
+    </ClInclude>
+    <ClInclude Include="castd\minitest.h">
+      <Filter>castd</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
